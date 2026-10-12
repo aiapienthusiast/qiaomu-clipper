@@ -5,6 +5,7 @@
 	"homepage_url": "https://github.com/joeseesun/qiaomu-clipper",
 	"description": "Save web pages to Obsidian and optionally submit their URL, title and content to Qiaomu RSS reader submissions.",
 	"optional_permissions": [
+		"downloads",
 		"cookies"
 	],
 	"permissions": [

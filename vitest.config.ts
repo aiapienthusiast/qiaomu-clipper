@@ -7,7 +7,7 @@ process.env.TZ = 'America/Los_Angeles';
 export default defineConfig({
 	define: {
 		DEBUG_MODE: false,
-		__LOCAL_EDITION__: true,
+		__LOCAL_EDITION__: process.env.VITEST_EDITION !== 'store',
 	},
 	test: {
 		include: ['src/**/*.test.ts'],

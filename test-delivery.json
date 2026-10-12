@@ -28,6 +28,22 @@
       "origin": "codex/build-test-workflow",
       "files": ["src/utils/build-identity.ts"],
       "tests": ["src/utils/build-identity.test.ts"]
+    },
+    {
+      "id": "store-media-download",
+      "title": "商店版非 YouTube 媒体下载及可选权限",
+      "origin": "codex/store-media-download",
+      "files": [
+        "src/utils/study-download.ts",
+        "src/utils/media-download-policy.ts",
+        "src/utils/browser-media-save.ts"
+      ],
+      "tests": [
+        "src/utils/study-download.test.ts",
+        "src/utils/media-download-policy.test.ts",
+        "src/utils/browser-media-save.test.ts",
+        "src/utils/download-button.test.ts"
+      ]
     }
   ]
 }

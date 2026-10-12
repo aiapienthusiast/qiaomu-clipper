@@ -26,6 +26,7 @@ function assertCoverage(scope, previous) {
 }
 
 function runDeliveryTests(root, scope) {
+	if (scope.features.some(feature => feature.id === 'store-media-download')) execFileSync(process.execPath, [path.join(root, 'scripts/test-store-download.mjs')], { cwd: root, stdio: 'inherit' });
 	const tests = [...new Set(scope.features.flatMap(feature => feature.tests))];
 	if (tests.length) execFileSync(process.execPath, [path.join(root, 'node_modules/vitest/vitest.mjs'), 'run', ...tests], { cwd: root, stdio: 'inherit' });
 	return { ...scope, checkedAt: new Date().toISOString() };
