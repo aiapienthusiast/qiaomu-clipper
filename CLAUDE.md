@@ -29,3 +29,12 @@ Write from the user's point of view. They care about what they get, not how it i
 
 ## Releases and Git
 - Commit and release only when the user says so. Pass `--repo` to `gh`; look for foreign commits before pushing.
+
+## Build and test delivery
+
+- Read `docs/BUILD-TESTING.md`. The user tests in ONE place: `~/Documents/乔木剪藏测试/extension`, in the Chrome profile named `乔木剪藏测试`. Do not give the user a worktree address to install.
+- Default to `npm run build:store && npm run test:prepare`. Use `--edition local` only for standalone-edition testing; the destination stays the same. Never load it into the daily-use profile without an explicit request.
+- Each worktree builds into its own `build/`; only explicit test preparation updates the fixed installation. Reload the actual installed extension and verify its displayed identity and helper connection before saying it is installed/tested.
+- Before delivery, reconcile every requested feature with all relevant worktrees, including uncommitted changes. Update `test-delivery.json`; `test:prepare` runs its regression tests and rejects loss of an already installed feature. A merged site adapter does not establish that AI image input is included. Never bypass this gate by manually copying an old worktree build.
+- `npm run package` is the only extension ZIP writer. Keep immutable candidates in `releases/`; never overwrite versioned archives or copy newer code into an older version-named directory.
+- Extension version comes from package.json; helper version comes from native/VERSION. Build/install/publication are separate evidence boundaries. Preserve other threads' working files and legacy loaded directories until migration is verified.

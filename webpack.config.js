@@ -2,7 +2,8 @@ const path = require('path');
 const fs = require('fs');
 const CopyPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const ZipPlugin = require('zip-webpack-plugin');
+const { outputDir: buildOutputDir } = require('./scripts/build-layout.cjs');
+const { sourceState, writeBuildInfo, assertVersion } = require('./scripts/build-info.cjs');
 const package = require('./package.json');
 const webpack = require('webpack');
 const TerserPlugin = require('terser-webpack-plugin');
@@ -21,6 +22,7 @@ function removeDSStore(dir) {
 }
 
 module.exports = (env, argv) => {
+	if (!['chrome', 'firefox', 'safari'].includes(env.BROWSER) || (env.EDITION && env.EDITION !== 'local')) throw new Error('Unknown browser or edition');
 	const isFirefox = env.BROWSER === 'firefox';
 	const isSafari = env.BROWSER === 'safari';
 	const isProduction = argv.mode === 'production';
@@ -28,16 +30,9 @@ module.exports = (env, argv) => {
 	// (saving media files). The store edition is built from the same source with __LOCAL_EDITION__ false, so that code is not in it at all.
 	const isLocal = env.EDITION === 'local' && !isFirefox && !isSafari;
 
-	const getOutputDir = () => {
-		if (isProduction) {
-			return isFirefox ? 'dist_firefox' : (isSafari ? 'dist_safari' : (isLocal ? 'dist_local' : 'dist'));
-		} else {
-			return isFirefox ? 'dev_firefox' : (isSafari ? 'dev_safari' : (isLocal ? 'dev_local' : 'dev'));
-		}
-	};
-
-	const outputDir = getOutputDir();
-	const browserName = isFirefox ? 'firefox' : (isSafari ? 'safari' : (isLocal ? 'chrome-local' : 'chrome'));
+	const target = isFirefox ? 'firefox' : (isSafari ? 'safari' : (isLocal ? 'chrome-local' : 'chrome-store'));
+	const outputDir = buildOutputDir(target, argv.mode);
+	let source;
 
 	const mainConfig = {
 		mode: argv.mode,
@@ -157,8 +152,20 @@ module.exports = (env, argv) => {
 						from: isFirefox ? "src/manifest.firefox.json" : 
 							  (isSafari ? "src/manifest.safari.json" : "src/manifest.chrome.json"), 
 						to: "manifest.json",
-						// The store assigns its own key; the local edition carries the store item's public key so both get the same extension ID.
-						...(isLocal ? { transform: (content) => { const manifest = JSON.parse(content.toString()); manifest.key = fs.readFileSync(path.resolve(__dirname, 'scripts/chrome-local-key.txt'), 'utf8').trim(); manifest.permissions = Array.from(new Set([...(manifest.permissions || []), 'downloads', 'cookies'])); delete manifest.optional_permissions; return JSON.stringify(manifest, null, '\t'); } } : {})
+						transform: (content) => {
+							const manifest = JSON.parse(content.toString());
+							manifest.version = package.version;
+							if (!isSafari) manifest.version_name = `${package.version} · ${target} · ${isProduction ? 'production' : 'dev'} · ${source.commit.slice(0, 7)}-${source.sourceHash.slice(0, 8)}${source.dirty ? '-dirty' : ''}`;
+							if (!isProduction) manifest.name += ' · DEV';
+							if (isLocal) {
+								manifest.name += ' · 独立版';
+								manifest.key = fs.readFileSync(path.resolve(__dirname, 'scripts/chrome-local-key.txt'), 'utf8').trim();
+								manifest.permissions = Array.from(new Set([...(manifest.permissions || []), 'downloads', 'cookies']));
+								delete manifest.optional_permissions;
+							}
+							return JSON.stringify(manifest, null, '\t');
+						}
+
 					},
 					{ from: "LICENSE", to: "LICENSE.txt" },
 					{ from: "src/popup.html", to: "popup.html" },
@@ -193,12 +200,19 @@ module.exports = (env, argv) => {
 				'DEBUG_MODE': JSON.stringify(!isProduction),
 				'__LOCAL_EDITION__': JSON.stringify(isLocal)
 			}),
-			...(isProduction ? [
-				new ZipPlugin({
-					path: path.resolve(__dirname, 'builds'),
-					filename: `qiaomu-clipper-${package.version}-${browserName}.zip`,
-				})
-			] : [])
+			{
+				apply(compiler) {
+					compiler.hooks.beforeCompile.tap('BuildIdentity', () => {
+						package.version = assertVersion(JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version);
+						source = sourceState();
+					});
+					compiler.hooks.afterEmit.tap('BuildIdentity', () => {
+						if (sourceState().sourceHash !== source.sourceHash) throw new Error('Source changed during build; rebuild');
+						writeBuildInfo(outputDir, { schema: 1, version: package.version, target, mode: argv.mode, ...source, builtAt: new Date().toISOString() });
+					});
+				}
+			}
+
 		]
 	};
 

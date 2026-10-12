@@ -7,7 +7,8 @@ import type { ModelConfig, Provider } from '../types/types';
 import { t } from './ui-text';
 import { opencodeHeaders, supportsOpenCodeGoChat } from './opencode-go';
 export { opencodeHeaders } from './opencode-go';
-export interface ChatTurn { role: 'user' | 'assistant'; content: string }
+import { type ChatTurn, openAIContent, anthropicContent, geminiParts, responsesContent, imageData, validChatTurns } from './chat-content';
+export type { ChatTurn } from './chat-content';
 
 interface StreamOptions {
 	model: ModelConfig;
@@ -39,6 +40,7 @@ export function openAICompatibleBasePath(pathname: string): string {
 const kindOf = (provider: Provider): Kind => {
 	if (provider.oauth) return 'responses';
 	const name = provider.name.toLowerCase();
+	if (/\/responses\/?(?:\?|$)/.test(provider.baseUrl)) return 'responses';
 	if (provider.baseUrl.includes('generativelanguage.googleapis.com')) return 'gemini';
 	if (name.includes('anthropic')) return 'anthropic';
 	if (name.includes('ollama')) return 'ollama';
@@ -59,19 +61,23 @@ function buildRequest(provider: Provider, model: ModelConfig, system: string, me
 		case 'gemini':
 			url = `https://generativelanguage.googleapis.com/v1beta/models/${model.providerModelId}:streamGenerateContent?alt=sse`;
 			headers['X-goog-api-key'] = provider.apiKey;
-			body = { systemInstruction: { parts: [{ text: system }] }, contents: messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })), generationConfig: { maxOutputTokens: 8000 } };
+			body = { systemInstruction: { parts: [{ text: system }] }, contents: messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: geminiParts(m) })), generationConfig: { maxOutputTokens: 8000 } };
 			break;
 		case 'anthropic':
 			headers['x-api-key'] = provider.apiKey;
 			headers['anthropic-version'] = '2023-06-01';
 			headers['anthropic-dangerous-direct-browser-access'] = 'true';
-			body = { model: model.providerModelId, max_tokens: 8000, system, messages, stream: true };
+			body = { model: model.providerModelId, max_tokens: 8000, system, messages: messages.map(m => ({ role: m.role, content: anthropicContent(m) })), stream: true };
 			break;
 		case 'ollama':
-			body = { model: model.providerModelId, messages: [{ role: 'system', content: system }, ...messages], stream: true, options: { num_ctx: 32768 } };
+			body = { model: model.providerModelId, messages: [{ role: 'system', content: system }, ...messages.map(m => ({ role: m.role, content: m.content + (m.images?.length ? '\n' + m.images.map(image => image.label).join('\n') : ''), ...(m.images?.length ? { images: m.images.map(image => imageData(image).data) } : {}) }))], stream: true, options: { num_ctx: 32768 } };
+			break;
+		case 'responses':
+			if (provider.apiKey) headers['Authorization'] = `Bearer ${provider.apiKey}`;
+			body = { model: model.providerModelId, instructions: system, input: messages.map(m => ({ role: m.role, content: responsesContent(m) })), stream: true, store: false };
 			break;
 		default: {
-			const withSystem = [{ role: 'system', content: system }, ...messages];
+			const withSystem = [{ role: 'system', content: system }, ...messages.map(m => ({ role: m.role, content: openAIContent(m) }))];
 			if (provider.baseUrl.includes('openai.azure.com')) {
 				url = provider.baseUrl.replace('{deployment-id}', model.providerModelId);
 				headers['api-key'] = provider.apiKey;
@@ -130,6 +136,7 @@ function streamViaBackground(options: StreamOptions): Promise<string> {
 }
 
 export async function streamChat({ model, system, messages, signal, onDelta, sessionId }: StreamOptions): Promise<string> {
+	if (!validChatTurns(messages)) throw new Error(t('图片数量或大小超出限制，请减少所选图片后重试。'));
 	if (typeof location !== 'undefined' && /^https?:$/.test(location.protocol)) {
 		return streamViaBackground({ model, system, messages, signal, onDelta, sessionId });
 	}
@@ -145,6 +152,7 @@ export async function streamChat({ model, system, messages, signal, onDelta, ses
 	if (!response.ok) {
 		const text = (await response.text()).slice(0, 300);
 		if (kindOf(provider) === 'ollama' && response.status === 403) throw new Error(t('Ollama 拒绝了来自浏览器扩展的请求，请设置 OLLAMA_ORIGINS 后重试。'));
+		if (messages.some(m => m.images?.length) && [400, 413, 415, 422].includes(response.status)) throw new Error(t('图片请求被当前服务拒绝，请减少图片或换一个支持读图的模型。') + ` (${provider.name} ${response.status})`);
 		throw new Error(`${provider.name} ${response.status}: ${text}`);
 	}
 	if (!response.body) throw new Error('The provider returned an empty response.');
