@@ -15,15 +15,20 @@ class InstallTests(unittest.TestCase):
         self.temp.cleanup()
 
     def test_proxy_normalization_preserves_loopback_bypass_and_user_endpoints(self):
-        values = {'NO_PROXY': 'localhost,127.0.0.1,::1/128,.example.org,10.0.0.0/8',
-                  'no_proxy': '[::1],::1,https://internal.example,2001:db8::/32',
-                  'HF_ENDPOINT': 'https://models.example'}
-        with patch.dict(os.environ, values):
-            env = asr.tool_env()
-            self.assertEqual(env['NO_PROXY'], 'localhost,127.0.0.1,::1,.example.org,10.0.0.0/8')
-            self.assertEqual(env['no_proxy'], '::1,::1,https://internal.example,2001:db8::/32')
-            self.assertEqual(env['HF_ENDPOINT'], values['HF_ENDPOINT'])
-            for key, value in values.items(): self.assertEqual(os.environ[key], value)
+        cases = [('NO_PROXY', 'localhost,127.0.0.1,::1/128,.example.org,10.0.0.0/8',
+                  'localhost,127.0.0.1,::1,.example.org,10.0.0.0/8'),
+                 ('no_proxy', '[::1],::1,https://internal.example,2001:db8::/32',
+                  '::1,::1,https://internal.example,2001:db8::/32')]
+        # Windows environment keys are case-insensitive; exercise each spelling
+        # separately rather than setting two different values for the same key.
+        for key, value, expected in cases:
+            with self.subTest(key=key), patch.dict(os.environ, {key: value, 'HF_ENDPOINT': 'https://models.example'}, clear=True):
+                before = dict(os.environ)
+                env = asr.tool_env()
+                actual_key = next(k for k in env if k.lower() == 'no_proxy')
+                self.assertEqual(env[actual_key], expected)
+                self.assertEqual(env['HF_ENDPOINT'], 'https://models.example')
+                self.assertEqual(dict(os.environ), before)
         with patch.dict(os.environ, {}, clear=True):
             env = asr.tool_env()
             self.assertNotIn('NO_PROXY', env)
