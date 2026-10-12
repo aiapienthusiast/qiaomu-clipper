@@ -94,7 +94,7 @@
       "origin": "codex/douyin-study-injection",
       "files": [
         "src/utils/reasoning-label.ts",
-        "scripts/check-i18n.cjs",
+        "src/utils/ui-text.ts",
         "src/i18n/catalog.test.ts"
       ],
       "tests": [
