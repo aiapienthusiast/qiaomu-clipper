@@ -1,3 +1,4 @@
+import { startStudyMedia, type StudyPlayback } from './study-playback-handoff';
 import { marked } from 'marked';
 import { patchClipPreview } from './clip-preview';
 import { bindRemotePreviewMedia, preserveRemotePreviewMedia, restoreRemotePreviewPlayback } from './remote-preview-media';
@@ -53,6 +54,7 @@ export interface AudioStudyOptions {
 	webUrl?: string;
 	sourceTabId?: number;
     resumeId?: string;
+	playback?: StudyPlayback;
 }
 const text = (id: string, zh: string, en: string) => { try { return browser.i18n.getMessage(id) || (/^zh/i.test(navigator.language) ? zh : en); } catch { return /^zh/i.test(navigator.language) ? zh : en; } };
 const FILE_PAGE_URL = 'https://qiaomu.local/audio';
@@ -196,6 +198,7 @@ export async function startAudioStudy(options: AudioStudyOptions): Promise<void>
 		const player = mountMediaStudyPlayer(article, holder, src, Boolean(picture), picture?.poster, picture?.audioUrl);
 		bindRemotePreviewMedia(session.draft, player, src, Boolean(picture), picture?.poster, picture?.audioUrl);
         if (session.restored) restoreRemotePreviewPlayback(session.draft, player);
+		if (options.playback) { startStudyMedia(player, options.playback); options.playback = undefined; }
 		if (!picture) player.parentElement!.append(mountAudioControls(document, player, { play: text('audioPlay', '播放', 'Play'), pause: text('audioPause', '暂停', 'Pause'), back: text('audioBack', '后退 15 秒', 'Back 15 s'), forward: text('audioForward', '前进 30 秒', 'Forward 30 s'), speed: text('audioSpeed', '播放速度', 'Playback speed'), seek: text('audioSeek', '播放进度', 'Position') }));
 		return player;
 	};

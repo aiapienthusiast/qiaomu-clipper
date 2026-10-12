@@ -152,3 +152,11 @@ APP_SIGN_ID="Developer ID Application: …" INSTALLER_SIGN_ID="Developer ID Inst
 不带签名变量只会得到仅供测试的未签名包。安装日志在 `$TMPDIR/qiaomu-clipper-install.log`；装完仍未连接时运行包内的 `install.py --check` 查看原因。
 
 助手版本独立记录在 `native/VERSION`；扩展更新不自动要求助手版本相等。安装包组装文件写入 `build/tmp/pkg.*`，归档写入 `releases/helper/<version>/<package-hash>/`，其中 `release.json` 记录签名、公证与源码状态。仅签名、公证通过且源码已提交的包可标记为待发布；归档不会自动发布或安装。
+
+## 豆包逐字 / 逐词时间与跟读高亮
+
+豆包极速版请求启用 show_utterances，保留 utterances[].words 的毫秒时间，并转换为媒体绝对秒数。可选 words 数据经分块偏移、清洗、轮询、缓存及文字稿保留到播放器。Chrome 单条助手回复有 1 MiB 上限，轮询同时按字节预算分页。
+
+播放器有可信词级数据时自动高亮原文，暂停和倍速跟随媒体时间，回退重新计算；中文原文无需翻译模型。译文没有词级对齐，仍按整句显示。缺失、异常或与正文不匹配的时间数据回退普通字幕，不按字数伪造时间。
+
+需同时更新扩展和助手。旧文字稿继续可用，不会自动再次上传；要获得词级数据需用户主动选择豆包重新生成。Qwen 当前安装的只是识别模型，本地精确对齐需另接 Qwen3-ForcedAligner，尚未纳入本次改动。

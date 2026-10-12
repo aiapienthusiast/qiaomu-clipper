@@ -17,6 +17,7 @@ import { describeHelperFailure } from './utils/native-helper-prompt';
 import { callHelper } from './utils/native-helper-call';
 import { incrementStat, loadSettings } from './utils/storage-utils';
 import { enabledChatModels, streamChat } from './utils/chat-llm';
+import { openStudyWithPlayback } from './utils/study-playback-handoff';
 import { audioStudyPath, videoKey, videoStudyPath } from './utils/video-source';
 import { isSiteOn, loadStudySites, siteOf } from './utils/study-sites';
 import { isMediaItemAddress, webMediaAddress } from './utils/web-media-page';
@@ -1281,7 +1282,7 @@ async function openStudyForTab(tabId: number): Promise<boolean> {
 	const path = videoStudyPath(tab.url || '', tabId, tab.title || '') || audioStudyPath(tab.url || '', tab.title || '') || await webStudyPath(tab.url || '', tabId);
 	if (!path) return false;
 	// Open the player immediately; subtitle extraction belongs to the reader.
-	await browser.tabs.create({ url: browser.runtime.getURL(path), openerTabId: tabId });
+	await openStudyWithPlayback(tabId, path, tab.url || '');
 	return true;
 }
 

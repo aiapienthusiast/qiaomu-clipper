@@ -92,3 +92,33 @@ it('switches modes without changing the transcript or duplicating completed tran
  article.querySelector<HTMLButtonElement>('.q-caption-menu [data-value="original"]')!.click();await flush();expect(article.querySelector<HTMLElement>('.q-caption-text')!.hidden).toBe(true);expect(article.querySelector<HTMLElement>('.q-caption-original')!.hidden).toBe(false);expect(state.storage.get('qiaomuPlayerCaptionMode')).toBe('original');
  article.querySelector<HTMLButtonElement>('.q-caption-menu [data-value="off"]')!.click();expect(article.querySelector<HTMLElement>('.q-caption-overlay')!.hidden).toBe(true);expect(article.querySelector('.transcript')!.innerHTML).toBe(before);
 });
+
+it('keeps Doubao word timing through generated lines, cache and sanitized grouped transcript',async()=>{
+ const {toLines}=await import('./subtitle-generation');
+ const {createTranscriptCache}=await import('./youtube-transcript-cache');
+ const words=[{start:10.123,end:10.5,text:'你'},{start:10.8,end:11.234,text:'好'}];
+ const lines=toLines([{start:10.123,end:12,text:'你好！',words}]);
+ const data:Record<string,any>={};const cache=createTranscriptCache({get:async()=>data,set:async v=>{Object.assign(data,v);},remove:async()=>{}});
+ const key='generated:youtube:abcdefghijk';await cache.write(key,lines);
+ const holder=document.createElement('div');holder.innerHTML=DOMPurify.sanitize(transcriptHtml((await cache.read(key))!));
+ expect(readPlayerCues(holder.querySelector('.transcript')!)[0].words).toEqual(words);
+});
+it.each(['youtube','bilibili','native'] as const)('highlights measured Chinese words on %s and rewinds them on seek',async kind=>{
+ state.models=[];const {article,clock}=setup(kind);cleanup();
+ const words=[{start:0,end:.8,text:'你'},{start:1,end:2,text:'好'}];
+ article.querySelector<HTMLElement>('[data-player-cues]')!.dataset.playerCues=JSON.stringify([{start:0,end:3,text:'你好！',words}]);
+ cleanup=mountPlayerCaptions(article,article.querySelector('.transcript')!,article.querySelector('.player-toggle-group')!);
+ clock(1.5);article.querySelector<HTMLButtonElement>('.q-caption-controls button')!.click();await flush();
+ const line=article.querySelector<HTMLElement>('.q-caption-text')!;const spans=line.querySelectorAll<HTMLElement>('.q-caption-word');
+ expect(line.textContent).toBe('你好！');expect(spans).toHaveLength(2);expect(spans[1].dataset.active).toBe('true');expect(getComputedStyle(spans[1]).color).toBe('rgb(255, 224, 102)');
+ clock(.3);expect(spans[0].dataset.active).toBe('true');expect(spans[1].dataset.sung).toBe('false');
+ clock(4);expect(line.hidden).toBe(true);expect(state.stream).not.toHaveBeenCalled();
+});
+it('highlights the original only and does not invent timings for its translation',async()=>{
+ const {article,clock}=setup('native');cleanup();
+ article.querySelector<HTMLElement>('[data-player-cues]')!.dataset.playerCues=JSON.stringify([{start:0,end:2,text:'Hello world!',words:[{start:0,end:.8,text:'Hello'},{start:1,end:2,text:'world'}]}]);
+ cleanup=mountPlayerCaptions(article,article.querySelector('.transcript')!,article.querySelector('.player-toggle-group')!);
+ clock(1.5);article.querySelector<HTMLButtonElement>('.q-caption-controls button')!.click();await flush();
+ expect(article.querySelectorAll('.q-caption-original .q-caption-word')).toHaveLength(2);
+ expect(article.querySelectorAll('.q-caption-text .q-caption-word')).toHaveLength(0);
+});

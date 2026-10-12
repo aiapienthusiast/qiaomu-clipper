@@ -7,10 +7,11 @@ export function captionModeMenu<T extends string>(doc: Document, label: string, 
  const text=doc.createElement('span');button.append(text,createElement(ChevronDown));
  const menu=doc.createElement('div');menu.className='q-caption-menu-items';menu.setAttribute('role','menu');menu.setAttribute('aria-label',label);menu.hidden=true;
  let value=initial;
- const items=options.map(option=>{
+ let items:HTMLButtonElement[]=[];
+ const build=()=>{items=options.map(option=>{
   const item=doc.createElement('button');item.type='button';item.setAttribute('role','menuitemradio');item.dataset.value=option.value;item.append(createElement(Check),doc.createTextNode(option.label));
   item.onclick=()=>{set(option.value);close();onChange(option.value);};menu.append(item);return item;
- });
+ });};build();
  const set=(next:T)=>{value=next;text.textContent=options.find(option=>option.value===next)?.label||'';items.forEach(item=>item.setAttribute('aria-checked',String(item.dataset.value===next)));};
  const close=(focus=true)=>{if(menu.hidden)return;menu.hidden=true;button.setAttribute('aria-expanded','false');if(focus)button.focus();};
  const open=()=>{menu.hidden=false;button.setAttribute('aria-expanded','true');items[options.findIndex(option=>option.value===value)]?.focus();};
@@ -38,5 +39,5 @@ html .q-caption-menu-items button{width:100%!important;justify-content:flex-star
 html .q-caption-menu-items button[aria-checked=false] svg{visibility:hidden}
 `;doc.head.append(style);
  }
- return {element:root,button,set,close,destroy:()=>{doc.removeEventListener('pointerdown',outside);root.remove();}};
+ return {element:root,button,set,close,setOptions:(next:Array<{value:T;label:string}>)=>{options=next;menu.replaceChildren();build();set(value);},destroy:()=>{doc.removeEventListener('pointerdown',outside);root.remove();}};
 }

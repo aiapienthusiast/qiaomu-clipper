@@ -1,3 +1,5 @@
+import { startStudyPlayback, type StudyPlayback } from './study-playback-handoff';
+import { transcriptHeadingTools } from './transcript-heading';
 import { marked } from 'marked';
 import type { ClipPreview } from './clip-preview';
 import { prepareLocalPreviewTranscript } from './local-preview-media';
@@ -15,7 +17,6 @@ import { withReliableBilibili } from './bilibili-captions';
 import { transcriptHtml } from './youtube-dom-transcript';
 import { createTranscriptCache } from './youtube-transcript-cache';
 import { toLines } from './subtitle-generation';
-import { reloadPage } from './page-reload';
 import { createBarGeneration } from './bar-generation';
 import { buildGenerationPanel, GENERATION_STYLE, type GenUi } from './subtitle-generation-panel';
 import { generationStrings } from './subtitle-generation-strings';
@@ -48,7 +49,7 @@ export function firstWithTranscript<T extends { content?: string }>(jobs: Promis
 }
 
 // Render the learning page before doing any page fetch or subtitle extraction.
-export async function startYouTubeStudy(url: string, sourceTabId: number, initialTitle: string, onReady: (result: any) => Promise<void>, mountShell?: () => {chat: {toggle: () => boolean}; ready: () => void}, restoredDraft?: ClipPreview): Promise<void> {
+export async function startYouTubeStudy(url: string, sourceTabId: number, initialTitle: string, onReady: (result: any) => Promise<void>, mountShell?: () => {chat: {toggle: () => boolean}; ready: () => void}, restoredDraft?: ClipPreview, playback?: StudyPlayback): Promise<void> {
 	if (!videoKey(url)) throw new Error(t('无效的视频链接'));
 	const title = initialTitle.replace(/\s*- YouTube$/, '') || t('YouTube 视频学习');
 	Object.defineProperty(document, 'URL', { value: url, configurable: true });
@@ -58,16 +59,11 @@ export async function startYouTubeStudy(url: string, sourceTabId: number, initia
 	document.title = title;
 	await Reader.apply(document);
 	const article = document.querySelector('article')!;
+	startStudyPlayback(article, playback);
 	const shell = mountShell?.();
 	await mountYouTubeStudy(document, article, title, url, shell?.chat);
 	const status = article.querySelector<HTMLElement>('.youtube-study-status')!;
-    if (restoredDraft) {
-        const content = document.createElement('div'); content.className = 'qiaomu-restored-study';
-        content.innerHTML = DOMPurify.sanitize(await marked.parse(restoredDraft.clip.markdown)); article.append(content);
-        const transcript = prepareLocalPreviewTranscript(content);
-        if (transcript) await Reader.attachYouTubeTranscript(document, transcript, restoredDraft.clip.title, shell?.chat);
-        status.textContent = ''; shell?.ready(); return;
-    }
+
 	const clip = document.getElementById('qiaomu-reader-clip') as HTMLButtonElement | null;
 	if (clip) clip.disabled = true;
 	const retry = document.createElement('button');
@@ -77,7 +73,7 @@ export async function startYouTubeStudy(url: string, sourceTabId: number, initia
 	let loading = false;
 	let captionLanguages: Array<{id:string;label:string}> = [], captionSelected = '';
 	let studyResult: any = { content: '', title };
-	let loaded = false, remade = false; // `remade`: the generated transcript replaces one already on the page
+	let loaded = false;
 
 	// Videos without subtitles: offer to generate them on this computer (the helper does the work; see subtitle-generation.ts).
 	const key = videoKey(url)!;
@@ -89,14 +85,23 @@ export async function startYouTubeStudy(url: string, sourceTabId: number, initia
 	// The same flow as the transcript bar on the video page: one press starts it once an engine or service is chosen.
 	const generation = createBarGeneration({
 		videoKey: () => key, bar: () => ({ setGeneration: (ui: GenUi | null) => panel.show(ui ?? { kind: 'offer' }) }) as never,
-		apply: (_key, lines, done) => { if (done) { remade = loaded; void attachGenerated(lines); } },
+		apply: (_key, lines, done) => { if (done) { void attachGenerated(lines); } },
 		revert: () => { panel.show({ kind: 'offer' }); },
-		// Made again with another model: the page's transcript is wired once, so it is read again from the saved copy by loading the page again.
-		save: (k, lines) => { void Promise.resolve(genCache?.write(`generated:${k}`, lines)).then(() => { if (remade) { status.textContent = t('新的文字稿已生成，正在刷新…'); reloadPage(); } }); },
+		save: (k, lines) => { void genCache?.write(`generated:${k}`, lines).catch(() => { status.textContent = t('本地保存失败，请重试'); }); },
 		openSettings: () => { window.open(browser.runtime.getURL('settings.html?section=asr-models'), '_blank'); },
 	});
 	const panel = buildGenerationPanel(document, generationStrings(text), generation.actions);
 	retry.after(panel.element);
+ const mountRegenerate = () => {
+  const transcript = article.querySelector(TRANSCRIPT_SELECTOR); if (!transcript) return;
+  const tools = transcriptHeadingTools(transcript); if (tools.querySelector('.q-transcript-regenerate')) return;
+  const button = document.createElement('button'); button.type = 'button'; button.className = 'q-transcript-regenerate';
+  button.title = t('换模型生成字幕'); button.setAttribute('aria-label', button.title); button.setAttribute('aria-haspopup', 'dialog');
+  button.textContent = t('换模型生成字幕');
+  button.onclick = () => { if (!generation.active) generation.actions.regenerate?.(); };
+  tools.append(button, panel.element);
+ };
+
 
 	async function load() {
 		if (loading || loaded) return;
@@ -170,6 +175,8 @@ export async function startYouTubeStudy(url: string, sourceTabId: number, initia
 			const heading = document.querySelector('main h1'); if (heading) heading.textContent = nextTitle;
 			studyResult = result;
 			await onReady(result);
+            const saved = await genCache?.read(`generated:${key}`);
+            if (saved?.length) { await attachGenerated(saved); panel.show({ kind: 'generated' }); return; }
 			if (!transcript || !transcriptText(content)) {
 				// Nothing from the platform: a transcript generated on this computer earlier is used instead.
 				const made = await genCache?.read(`generated:${key}`);
@@ -179,7 +186,7 @@ export async function startYouTubeStudy(url: string, sourceTabId: number, initia
 				throw new Error(t('暂未获取到字幕，视频可能没有字幕或尚未加载完成，请重试'));
 			}
 			await Reader.attachYouTubeTranscript(document, transcript, nextTitle, shell?.chat);
-			loaded = true; panel.show(null);
+			loaded = true; panel.show(null); mountRegenerate();
 			let currentContent = result.content;
 			mountStudyCaptionLanguage(article, captionLanguages, captionSelected, async language => {
 				const answer = await browser.runtime.sendMessage({ action: 'qiaomuStudyTranscript', sourceTabId, url, language }) as { html?: string; selected?: string };
@@ -191,7 +198,7 @@ export async function startYouTubeStudy(url: string, sourceTabId: number, initia
 				previous.replaceWith(next.cloneNode(true));
 				await onReady({ ...result, content: source.innerHTML }); currentContent = source.innerHTML;
 				article.dispatchEvent(new CustomEvent('qiaomu-transcript-replaced')); article.querySelector(TRANSCRIPT_SELECTOR)?.remove();
-				await Reader.attachYouTubeTranscript(document, next, nextTitle, shell?.chat);
+				await Reader.attachYouTubeTranscript(document, next, nextTitle, shell?.chat); mountRegenerate();
 			});
 			shell?.ready();
 			if (clip) clip.disabled = false;
@@ -212,11 +219,21 @@ export async function startYouTubeStudy(url: string, sourceTabId: number, initia
 	attachGenerated = async lines => {
 		const raw = transcriptHtml(lines);
 		const holder = document.createElement('div'); holder.innerHTML = DOMPurify.sanitize(raw);
-		const transcript = holder.querySelector<HTMLElement>(TRANSCRIPT_SELECTOR); if (!transcript || loaded) return;
-		await onReady({ ...studyResult, content: (studyResult.content || '') + raw });
+		const transcript = holder.querySelector<HTMLElement>(TRANSCRIPT_SELECTOR); if (!transcript) return;
+		const content = document.createElement('div'); content.innerHTML = DOMPurify.sanitize(studyResult.content || '');
+        const previous = content.querySelector(TRANSCRIPT_SELECTOR); if (previous) previous.replaceWith(transcript.cloneNode(true)); else content.append(transcript.cloneNode(true));
+        await onReady({ ...studyResult, content: content.innerHTML });
+		if (loaded) { article.dispatchEvent(new CustomEvent('qiaomu-transcript-replaced')); article.querySelector(TRANSCRIPT_SELECTOR)?.remove(); }
 		await Reader.attachYouTubeTranscript(document, transcript, document.title, shell?.chat);
-		loaded = true; status.textContent = ''; retry.hidden = true; shell?.ready(); if (clip) clip.disabled = false;
+		loaded = true; mountRegenerate(); status.textContent = ''; retry.hidden = true; shell?.ready(); if (clip) clip.disabled = false;
 	};
+    if (restoredDraft) {
+        const content = document.createElement('div'); content.className = 'qiaomu-restored-study';
+        content.innerHTML = DOMPurify.sanitize(await marked.parse(restoredDraft.clip.markdown)); article.append(content);
+        const transcript = prepareLocalPreviewTranscript(content);
+        if (transcript) await Reader.attachYouTubeTranscript(document, transcript, restoredDraft.clip.title, shell?.chat);
+        loaded = true; mountRegenerate(); status.textContent = ''; shell?.ready(); return;
+    }
 	retry.addEventListener('click', () => { void load(); });
 	// Do not await subtitles: the caller and player remain usable immediately.
 	void load();

@@ -17,7 +17,7 @@ JOB_KEEP_SECONDS = 3 * 86400
 RESULT_KEEP_SECONDS = 60 * 86400
 MAX_POLL_SEGMENTS = 2000
 # Bump when recognition changes invalidate cached results (v3: silence guard for Whisper).
-RESULT_VERSION = 3
+RESULT_VERSION = 4
 MLX_MODEL = 'mlx-community/whisper-large-v3-turbo'
 MLX_MODEL_DIR = 'models--mlx-community--whisper-large-v3-turbo'
 # A native host starts with a bare PATH (no Homebrew), so look where these tools are normally installed.
@@ -601,7 +601,11 @@ def clean_segments(segments):
         low = text.lower()
         if segment['end'] - segment['start'] <= 6 and len(text) <= 40 and any(low.startswith(x) or low == x for x in HALLUCINATIONS): continue
         if len(out) >= 2 and out[-1]['text'] == text and out[-2]['text'] == text: continue
-        out.append({'start': segment['start'], 'end': max(segment['end'], segment['start']), 'text': text})
+        cue = {'start': segment['start'], 'end': max(segment['end'], segment['start']), 'text': text}
+        from asr_cloud import clean_words
+        words = clean_words(segment.get('words'), cue['start'], cue['end'])
+        if words: cue['words'] = words
+        out.append(cue)
     return out
 
 # ---- job control --------------------------------------------------------------------------------------------------
@@ -661,7 +665,7 @@ def prune(base):
                 if now - entry.stat().st_mtime > keep and not (entry.is_dir() and read_state(entry).get('state') in RUNNING): shutil.rmtree(entry, ignore_errors=True) if entry.is_dir() else entry.unlink()
             except OSError: pass
 def view(directory, state, since=0):
-    segments = []; next_index = since
+    segments = []; next_index = since; payload_bytes = 0
     try:
         with (directory / 'segments.jsonl').open(encoding='utf8') as f:
             for index, line in enumerate(f):
@@ -669,7 +673,13 @@ def view(directory, state, since=0):
                 if len(segments) >= MAX_POLL_SEGMENTS: break
                 try: item = json.loads(line)
                 except ValueError: break  # a line still being written
-                segments.append(item); next_index = index + 1
+                # Chrome caps helper replies at 1 MiB. Word timings make a count-only limit unsafe.
+                size = len(json.dumps(item, ensure_ascii=False).encode('utf8')) + 2
+                if size > 700_000 and 'words' in item:
+                    item.pop('words')  # corrupt/oversized optional alignment must not break the native channel
+                    size = len(json.dumps(item, ensure_ascii=False).encode('utf8')) + 2
+                if segments and payload_bytes + size > 700_000: break
+                segments.append(item); next_index = index + 1; payload_bytes += size
     except OSError: pass
     keys = ('id', 'videoKey', 'state', 'stage', 'progress', 'processedSec', 'totalSec', 'engine', 'language', 'error', 'errorCode', 'cached', 'segmentCount')
     return {'ok': True, **{k: state.get(k) for k in keys}, 'segments': segments, 'next': next_index}
