@@ -327,11 +327,13 @@ export async function startAudioStudy(options: AudioStudyOptions): Promise<void>
 		status.textContent = text('webReading', '正在读取这个网址…', 'Reading this address…');
 		const official = isXiaoe ? null : await readTedMedia(address, async url => { const reply = await browser.runtime.sendMessage({ action: 'fetchProxy', url, options: {} }) as { text?: string }; return reply?.text || ''; });
 		const isDouyin = siteOf(address)?.id === 'douyin';
+		const isXhs = siteOf(address)?.id === 'xiaohongshu';
 		// The video host of Douyin may refuse a stranger's page as referrer; sending none works (checked on a live item).
 		if (isDouyin) { const meta = document.createElement('meta'); meta.name = 'referrer'; meta.content = 'no-referrer'; document.head.append(meta); }
 		const source = () => browser.runtime.sendMessage({ action: 'qiaomuWebStudySource', url: address, sourceTabId: options.sourceTabId }).catch(() => null) as Promise<import('./asr-client').WebInfo | null>;
 		const { info, cookies, sourceUrl }: { info: AsrReply<WebInfo>; cookies?: CookieBrowser; sourceUrl?: string } = official ? { info: official, cookies: undefined }
 			: isDouyin ? { ...await probeDouyinPage(address, status, holder, source), cookies: undefined }
+			: isXhs ? { ...await probeDouyinPage(address, status, holder, source, 2, '小红书'), cookies: undefined }
 			: isXiaoe ? await (async () => {
 				const read = () => browser.runtime.sendMessage({ action: 'qiaomuXiaoeLive', url: address }) as Promise<XiaoeAnswer>;
 				const found = await probeXiaoeLive(status, holder, read, url => { browser.tabs.create({ url, active: true }).catch(() => { window.open(url, '_blank', 'noopener'); }); });
@@ -365,7 +367,7 @@ export async function startAudioStudy(options: AudioStudyOptions): Promise<void>
 		// 小鹅通: the helper downloads the replay playlist itself; this page plays it only where the browser plays HLS.
 		const xiaoeMedia = isXiaoe ? info.mediaUrl || undefined : undefined;
 		if (isXiaoe && info.mediaUrl && !document.createElement('video').canPlayType('application/vnd.apple.mpegurl')) info.mediaUrl = null;
-		key = await webKey(sourceUrl || address); registerWebSource(key, sourceUrl || address, isDouyin || siteOf(address)?.id === 'channels' ? info.audioUrl || info.mediaUrl || undefined : xiaoeMedia);
+		key = await webKey(sourceUrl || address); registerWebSource(key, sourceUrl || address, isDouyin || isXhs || siteOf(address)?.id === 'channels' ? info.audioUrl || info.mediaUrl || undefined : xiaoeMedia);
 		if (cookies) useWebCookies(key, cookies);
         session.draft.studySource = address;
 		void recordStudy({ url: address, title: info.title, path: `reader.html?study=web&url=${encodeURIComponent(address)}`, kind: 'web' });

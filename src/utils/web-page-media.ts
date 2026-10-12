@@ -90,6 +90,7 @@ export function isDouyinMedia(page: string, media: unknown): media is string {
 }
 
 export function readPageMedia(doc: Document, page: string, media?: WebMedia): WebInfo | undefined {
+	if (xhsAddress(page)) return readXhsMedia(doc, page);
 	if (!media || !('currentSrc' in media) || !isDouyinMedia(page, media.currentSrc)) return;
 	const title = (doc.querySelector('h1')?.textContent || doc.title).trim().slice(0, 600);
 	return { ok: true, title, author: '', seconds: Number.isFinite(media.duration) ? media.duration : null,
@@ -198,3 +199,4 @@ export const isTikTokPage = (address: string): boolean => { try { const u = new 
 // A tab may lend its player when it is TikTok and is not showing a different video page. A feed tab is allowed: the study reader opened from
 // a feed item has only the feed to ask, and the length of the video (checked by the caller) tells the item from its preloaded neighbours.
 export const tabMayLendTikTokMedia = (tabUrl: string, wantedPath: string): boolean => isTikTokPage(tabUrl) && (!tiktokVideoPath(tabUrl) || tiktokVideoPath(tabUrl) === wantedPath);
+import { readXhsMedia, xhsAddress } from './xiaohongshu';

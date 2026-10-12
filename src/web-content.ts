@@ -1,5 +1,6 @@
 import { createContentText } from './utils/content-i18n';
 import { readPageMedia } from './utils/web-page-media';
+import { xhsVideo } from './utils/xiaohongshu';
 import { readTedMedia } from './utils/ted-media';
 import { placeWebBar, WEB_BAR_STYLE } from './utils/web-bar-placement';
 import type { PanelSegment } from './utils/youtube-panel-actions';
@@ -56,7 +57,7 @@ try {
 		};
 		const pageMedia = (url: string) => readPageMedia(document, url, media());
 		// Explicit study requests can still read the visible player on a feed; only automatic mounting requires a detail route.
-		const media = () => isX && xStatus(location.href) ? mainTweet()?.querySelector<HTMLMediaElement>('video, audio') ?? undefined : activeWebMedia(document);
+		const media = () => siteOf(location.href)?.id === 'xiaohongshu' ? xhsVideo(document, location.href) : isX && xStatus(location.href) ? mainTweet()?.querySelector<HTMLMediaElement>('video, audio') ?? undefined : activeWebMedia(document);
 		api.runtime.onMessage.addListener((message, _sender, reply) => { if (message.action === 'qiaomuWebMediaSource') reply({ url: post(), info: pageMedia(post() || '') }); });
 		const tweetText = () => (mainTweet()?.querySelector('[data-testid="tweetText"]')?.textContent || document.title).replace(/\s+/g, ' ').trim().slice(0, 120);
 
@@ -133,7 +134,7 @@ try {
 					onLanguage: language => { const mine = key; void readOfficial(language).then(official => { if (key !== mine || !official?.segments.length) return; officialReady = true; lines = official.segments; bar?.setLanguages(official.languages, official.language); updateBar(); }); },
 					retry: load, seek: seconds => { const player = media(); if (player && 'currentTime' in player) { player.currentTime = seconds; void player.play().catch(() => {}); } },
 					getTime: () => { const player = media(); return player && 'currentTime' in player ? player.currentTime : undefined; }, initialOpen: false, theme: 'x',
-					generation: { strings: generationStrings(text), actions: { ...generation.actions, request: () => { const player = media(); if (siteOf(location.href)?.id === 'douyin' && player && 'currentSrc' in player && player.currentSrc.startsWith('blob:')) { void api.runtime.sendMessage({ action: 'qiaomuTripleKey', command: 'read' }); return; } generation.actions.request(); } } }, getSegments: async () => lines,
+					generation: { strings: generationStrings(text), actions: { ...generation.actions, request: () => { const player = media(); if (siteOf(location.href)?.id === 'xiaohongshu' || (siteOf(location.href)?.id === 'douyin' && player && 'currentSrc' in player && player.currentSrc.startsWith('blob:'))) { void api.runtime.sendMessage({ action: 'qiaomuTripleKey', command: 'read' }); return; } generation.actions.request(); } } }, getSegments: async () => lines,
 				} as Parameters<typeof buildTranscriptBar>[1]);
 				host.append(bar.element); where = place(host, tweet); paint(bar.element, where); load();
 			} finally { mounting = false; }

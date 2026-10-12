@@ -721,5 +721,8 @@
 	"编辑内容保存失败，请留在当前页面重试或先导出文字。": "Your edits could not be saved. Stay here and retry, or export your text first.",
  "草稿已在另一个页面修改。请先复制或下载当前文字，再重新打开最新草稿。": "This draft was changed in another page. Copy or download your current text before reopening the latest draft.",
  "仅显示当前支持的聊天模型": "Only currently supported chat models",
- "此 OpenCode Go 模型或端点尚不支持，请从聊天模型列表中选择。": "This OpenCode Go model or endpoint is not supported yet. Choose a model from the chat model list."
+ "此 OpenCode Go 模型或端点尚不支持，请从聊天模型列表中选择。": "This OpenCode Go model or endpoint is not supported yet. Choose a model from the chat model list.",
+  "先回到{0}页面，让这条视频播放几秒，再点「重新读取」。": "Go back to {0}, play this video for a few seconds, then click “Read again”.",
+  "还是没读到。请确认{0}页面里这条视频正在播放，且没有切换到别的视频。": "Still unavailable. Make sure this video is playing on {0} and you have not switched to another video.",
+  "笔记还没加载完成，请在原页面打开笔记后重试。": "The note has not finished loading. Open it on the original page, then try again."
 }

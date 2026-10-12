@@ -65,3 +65,15 @@ it('keeps explicit study shortcut media discovery available on an X profile with
  expect(reply).toHaveBeenCalledWith(expect.objectContaining({url:'https://x.com/vista8/status/12345'}));
  expect(document.querySelector('.qiaomu-x')).toBeNull();
 });
+
+it('places the Xiaohongshu bar inside the current video note and removes it for photos or the feed', async () => {
+ const id='6abc2b40000000000a023366',url=`https://www.xiaohongshu.com/explore/${id}`;
+ vi.stubGlobal('location',{href:url});
+ document.body.innerHTML=`<video id="feed"></video><div class="note-detail-mask" note-id="${id}"><div id="noteContainer" data-type="video"><video></video><div class="interaction-container"><div class="note-scroller"><div class="note-content"><h1 id="detail-title">视频</h1></div><div class="comments-container">评论</div></div></div></div></div>`;
+ await import('./web-content');await flush();
+ const host=document.querySelector('.qiaomu-web-bar')!;expect(host.parentElement?.className).toBe('note-scroller');expect(host.previousElementSibling?.className).toBe('note-content');
+ const reply=vi.fn();env.messages[0]({action:'qiaomuWebMediaSource'},null,reply);expect(reply).toHaveBeenCalledWith(expect.objectContaining({url}));
+ document.querySelector('#noteContainer')!.setAttribute('data-type','normal');await flush();expect(document.querySelector('.qiaomu-web-bar')).toBeNull();
+ const photoReply=vi.fn();env.messages[0]({action:'qiaomuWebMediaSource'},null,photoReply);expect(photoReply).toHaveBeenCalledWith({url:null,info:undefined});
+ vi.stubGlobal('location',{href:'https://www.xiaohongshu.com/explore'});await flush();expect(document.querySelector('.qiaomu-web-bar')).toBeNull();
+});

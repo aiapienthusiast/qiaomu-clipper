@@ -55,6 +55,7 @@ jobs:
       - run: python -m unittest discover -s native -p 'test_asr_recovery.py'
       - run: python -m unittest discover -s native -p 'test_asr_page_media.py'
       - run: python -m unittest discover -s native -p 'test_asr_xiaoe.py'
+      - run: python -m unittest discover -s native -p 'test_asr_xhs.py'
       - run: python -m unittest discover -s native -p 'test_install_check.py'
       - if: runner.os == 'Linux'
         run: python -m unittest discover -s native -p 'test_*.py'
