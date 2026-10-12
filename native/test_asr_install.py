@@ -14,7 +14,8 @@ class InstallTests(unittest.TestCase):
         for p in self.patches: p.stop()
         self.temp.cleanup()
 
-    def test_proxy_normalization_preserves_loopback_bypass_and_user_endpoints(self):
+    @patch.object(asr, 'tool_dirs', return_value=[])
+    def test_proxy_normalization_preserves_loopback_bypass_and_user_endpoints(self, _tool_dirs):
         cases = [('NO_PROXY', 'localhost,127.0.0.1,::1/128,.example.org,10.0.0.0/8',
                   'localhost,127.0.0.1,::1,.example.org,10.0.0.0/8'),
                  ('no_proxy', '[::1],::1,https://internal.example,2001:db8::/32',
