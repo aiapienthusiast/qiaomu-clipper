@@ -18,6 +18,7 @@ import { enabledChatModels, streamChat } from './utils/chat-llm';
 import { audioStudyPath, videoKey, videoStudyPath } from './utils/video-source';
 import { isSiteOn, loadStudySites, siteOf } from './utils/study-sites';
 import { isMediaItemAddress, webMediaAddress } from './utils/web-media-page';
+import { getXhsPageMedia, snapshotXhsPlayer } from './utils/xiaohongshu';
 import { followXiaoeLink, readXiaoeLive, xiaoeParts, fetchXiaoePlaylist } from './utils/xiaoe';
 import { hasStoredHighlights } from './utils/url-utils';
 import { cookiesGranted, handleAsrMessage, handleLearningNativeMessage } from './utils/local-save';
@@ -1259,7 +1260,7 @@ async function openNoteCard(tabId: number, quote?: string): Promise<void> {
 async function webStudyPath(url: string, tabId: number): Promise<string | null> {
 	const site = siteOf(url); if (!site || site.builtin || !isSiteOn(await loadStudySites(), site.id)) return null;
 	let post = webMediaAddress(url);
-	try { const source = await browser.tabs.sendMessage(tabId, { action: 'qiaomuWebMediaSource' }) as { url?: unknown } | undefined; if (typeof source?.url === 'string' && siteOf(source.url)?.id === site.id) post = webMediaAddress(source.url); } catch { /* adapter not loaded */ }
+	try { const source = await browser.tabs.sendMessage(tabId, { action: 'qiaomuWebMediaSource' }) as { url?: unknown } | undefined; if (site.id === 'xiaohongshu' && !source?.url) return null; if (typeof source?.url === 'string' && siteOf(source.url)?.id === site.id) post = webMediaAddress(source.url); } catch { if (site.id === 'xiaohongshu') return null; /* adapter not loaded */ }
 	if (!post) return null;
 	try {
 		const [result] = await browser.scripting.executeScript({ target: { tabId }, func: () => Boolean(document.querySelector('video, audio, iframe[src*="player.vimeo.com"], iframe[src*="player.twitch.tv"], iframe[src*="dailymotion.com"], [data-testid="videoPlayer"], meta[property="og:video"], meta[property="og:video:url"], meta[property="og:audio"]')) });
@@ -1481,6 +1482,10 @@ browser.runtime.onMessage.addListener((raw: unknown, sender) => {
 	const request = raw as { action?: string; url?: string; sourceTabId?: number };
 	if (request?.action !== 'qiaomuWebStudySource') return;
 	if (sender.id !== browser.runtime.id || !sender.url?.startsWith(browser.runtime.getURL('reader.html')) || typeof request.url !== 'string') return Promise.resolve(null);
+	if (siteOf(request.url)?.id === 'xiaohongshu') return getXhsPageMedia(request.url, request.sourceTabId, browser.tabs, async tabId => {
+		const [result] = await browser.scripting.executeScript({ target: { tabId }, world: 'MAIN', func: snapshotXhsPlayer });
+		return result?.result as ReturnType<typeof snapshotXhsPlayer> | undefined;
+	}).then(info => info || null);
 	return getWebPageMedia(request.url, request.sourceTabId, browser.tabs, async tabId => {
 		const [result] = await browser.scripting.executeScript({ target: { tabId }, func: snapshotDouyinPlayer });
 		const snapshot = result?.result as ReturnType<typeof snapshotDouyinPlayer> | undefined;

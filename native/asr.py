@@ -334,7 +334,19 @@ def channels_media(page, media):
         return public_https(media) and p.port in (None, 443) and not p.fragment and p.hostname == 'finder.video.qq.com' and bool(re.fullmatch(r'/(?:[0-9]+/){2}stodownload', p.path))
     except ValueError: return False
 
-def page_media(page, media): return douyin_media(page, media) or channels_media(page, media)
+def xhs_media(page, media):
+    from urllib.parse import urlparse
+    if not isinstance(page, str) or not isinstance(media, str) or len(media) > 8000: return False
+    try:
+        p, m = urlparse(page), urlparse(media)
+        return (public_https(page) and p.hostname in ('www.xiaohongshu.com', 'xiaohongshu.com') and p.port in (None, 443)
+                and bool(re.fullmatch(r'/(?:explore|discovery/item)/[a-f0-9]{24}/?', p.path))
+                and public_https(media) and m.port in (None, 443) and not m.fragment
+                and bool(re.fullmatch(r'sns-video-[a-z0-9-]+\.xhscdn\.com', m.hostname or ''))
+                and m.path.endswith(('.mp4', '.m4a')))
+    except ValueError: return False
+
+def page_media(page, media): return douyin_media(page, media) or channels_media(page, media) or xhs_media(page, media)
 
 XIAOE_SHOP = re.compile(r'https://(app[0-9a-z]{6,24})\.(?:h5\.(?:xiaoeknow|xiaoe-tech)\.com|(?:h5\.)?xet\.(?:citv\.cn|pomoho\.com))/v4/course/alive/(l_[0-9a-z_]{8,64})\?app_id=(app[0-9a-z]{6,24})', re.I)
 XIAOE_MEDIA_HOSTS = ('xiaoeknow.com', 'xet.tech', 'xiaoe-tech.com', 'xiaoecloud.com')
