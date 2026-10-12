@@ -1,6 +1,6 @@
 {
 	"name": "qiaomu-clipper",
-	"version": "1.17.0",
+	"version": "1.18.0",
 	"description": "Save web clips to Obsidian and Qiaomu RSS.",
 	"bin": {
 		"obsidian-clipper": "./build/cli/cli.cjs"
@@ -27,6 +27,7 @@
 		"build:api": "node scripts/build-api.mjs",
 		"dev": "npm run dev:chrome",
 		"test": "npm run test:workflow && vitest run",
+		"test:store-download": "node scripts/test-store-download.mjs",
 		"test:watch": "vitest",
 		"update-locales": "ts-node --project scripts/tsconfig.json scripts/update-locales.ts",
 		"check-strings": "ts-node --project scripts/tsconfig.json scripts/check-unused-strings.ts",

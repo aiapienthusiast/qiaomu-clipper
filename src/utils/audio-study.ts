@@ -26,9 +26,7 @@ import type { PanelSegment } from './youtube-panel-actions';
 import { durationText, parsePodcastPage, plainToHtml, type PodcastEpisode } from './podcast-page';
 import { siteOf, xStatus } from './study-sites';
 import { measureMediaDuration, pickTikTokMedia } from './web-page-media';
-// Used only behind __LOCAL_EDITION__: the store build never reaches them, so its bundler drops them (checked by scripts/check-editions.mjs).
-import { mountDownloadButton } from './download-button';
-import { guessChoice } from './media-download';
+import { mountStudyDownload } from './study-download';
 import { mountAudioControls } from './audio-controls';
 import { recordStudy } from './study-home';
 import { fetchFeed, rssKey, webKey } from './podcast-feed';
@@ -254,7 +252,7 @@ export async function startAudioStudy(options: AudioStudyOptions): Promise<void>
 
 	// An episode with a cover, a show, a date and show notes: from a Xiaoyuzhou page or from an RSS feed.
 	// `post`: a short text that belongs with the media (a post's words), shown under the heading rather than behind a tab.
-	const present = async (episode: { title: string; show: string; cover?: string; date?: string; seconds?: number; audio: string; audioUrl?: string; picture?: boolean; notesHtml: string; notesLabel?: string; post?: string }) => {
+	const present = async (episode: { title: string; show: string; cover?: string; date?: string; seconds?: number; sourceUrl?: string; audio: string; audioUrl?: string; picture?: boolean; notesHtml: string; notesLabel?: string; post?: string }) => {
 		title = session.restored ? session.draft.clip.title : episode.title || initialTitle; document.title = title; setPageTitle(title);
 		const heading = document.querySelector('main h1'); if (heading) heading.textContent = title;
 		// The show, the date and the length, with the cover: what the listener knows the episode by.
@@ -266,41 +264,7 @@ export async function startAudioStudy(options: AudioStudyOptions): Promise<void>
 		hero.append(about); holder.before(hero);
 		if (episode.post) { const post = document.createElement('div'); post.className = 'qiaomu-post-text'; post.innerHTML = DOMPurify.sanitize(episode.post); sourceHtml = post.outerHTML; holder.before(post); }
 		const player = episode.audio ? showPlayer(episode.audio, episode.picture ? { poster: episode.cover, audioUrl: episode.audioUrl } : undefined) : undefined;
-		// Local edition: save the file being played. A video whose picture and sound are two files would need merging; that is not offered.
-		if (__LOCAL_EDITION__ && player && episode.audio && /^https:\/\//.test(episode.audio) && !/\.m3u8(?:$|\?)/i.test(episode.audio) && !(episode.picture && episode.audioUrl)) {
-			const url = episode.audio, video = Boolean(episode.picture), name = title;
-			void (async () => {
-				const CHOICE_KEY = 'qiaomuDownloadChoice';
-				const kind = guessChoice(url, video);
-				const remembered = ((await browser.storage.local.get(CHOICE_KEY)) as Record<string, string | undefined>)[CHOICE_KEY];
-				// An audio page keeps its controls in the player card; a video page has a row under the player: layout icons on the left,
-				// the switches on the right (that row appears once the transcript is attached, and may be rebuilt), so follow it.
-				const host = document.createElement('div'); host.className = 'qiaomu-dl-host';
-				const place = () => {
-					const card = article.querySelector<HTMLElement>('.player-container'), tools = article.querySelector<HTMLElement>('.qa-tools');
-					const row = card?.querySelector<HTMLElement>(':scope > .player-toggles');
-					const target = !video && tools ? tools : (row || card); if (!target) return;
-					if (host.parentElement !== target) {
-						host.style.cssText = target === card ? 'grid-column:2;grid-row:3;justify-self:end;padding:8px 0 0;line-height:normal' : target === tools ? 'margin-inline-start:auto' : 'display:inline-flex;margin-inline-start:16px;line-height:normal';
-						target.append(host);
-					}
-				};
-				place(); if (!host.parentElement) return;
-				new MutationObserver(place).observe(article, { childList: true, subtree: true });
-				mountDownloadButton(host, {
-					title: name, remembered,
-					choices: [{ id: kind.kind, label: video ? t('视频') : t('音频'), url, kind: kind.kind, ext: kind.ext }],
-					onRemember: id => { void browser.storage.local.set({ [CHOICE_KEY]: id }); },
-					save: async (blob, filename) => {
-						const objectUrl = URL.createObjectURL(blob);
-						const id = await browser.downloads.download({ url: objectUrl, filename: t('乔木剪藏/{0}', [filename]), saveAs: false, conflictAction: 'uniquify' });
-						const finished = (delta: { id: number; state?: { current?: string } }) => { if (delta.id === id && delta.state?.current && delta.state.current !== 'in_progress') { browser.downloads.onChanged.removeListener(finished); URL.revokeObjectURL(objectUrl); } };
-						browser.downloads.onChanged.addListener(finished);
-						return { reveal: () => { void browser.downloads.show(id); } };
-					},
-				});
-			})().catch(error => { console.warn('[qiaomu] download control not shown:', error); /* a missing control must never stop the study page */ });
-		}
+		if (player) void mountStudyDownload(article, player, { title, sourceUrl: episode.sourceUrl || options.feed || url, mediaUrl: episode.audio, video: Boolean(episode.picture), split: Boolean(episode.picture && episode.audioUrl) }).catch(error => { console.warn('[qiaomu] download control not shown:', error); });
 		// The show notes next to the transcript: tabs, so neither pushes the other off the screen.
 		if (episode.notesHtml) {
 			const tabs = document.createElement('div'); tabs.className = 'qiaomu-audio-tabs'; tabs.setAttribute('role', 'tablist');
@@ -373,7 +337,7 @@ export async function startAudioStudy(options: AudioStudyOptions): Promise<void>
 		void recordStudy({ url: address, title: info.title, path: `reader.html?study=web&url=${encodeURIComponent(address)}`, kind: 'web' });
 		// A post on X says something of its own: its words stay with the media. A long description of another site waits behind a tab.
 		const words = (info.description ?? '').trim(), isPost = Boolean(xStatus(address)), short = isPost || words.length <= 400;
-		await present({ title: info.title, show: info.author || info.site, cover: info.thumbnail ?? undefined, date: info.date ?? undefined, seconds: info.seconds ?? undefined, audio: info.mediaUrl ?? '', audioUrl: info.audioUrl, picture: info.video && Boolean(info.mediaUrl), ...(words && short ? { post: plainToHtml(words) } : {}), ...(words && !short ? { notesHtml: plainToHtml(words), notesLabel: text('audioTabAbout', '简介', 'Description') } : { notesHtml: '' }) });
+		await present({ sourceUrl: sourceUrl || address, title: info.title, show: info.author || info.site, cover: info.thumbnail ?? undefined, date: info.date ?? undefined, seconds: info.seconds ?? undefined, audio: info.mediaUrl ?? '', audioUrl: info.audioUrl, picture: info.video && Boolean(info.mediaUrl), ...(words && short ? { post: plainToHtml(words) } : {}), ...(words && !short ? { notesHtml: plainToHtml(words), notesLabel: text('audioTabAbout', '简介', 'Description') } : { notesHtml: '' }) });
 		if (!info.mediaUrl) { const note = document.createElement('p'); note.className = 'qiaomu-shows-note'; note.append(document.createTextNode(siteOf(address)?.id === 'tiktok' ? t('没能取到这条视频的播放地址（它在原页面里正常播放，需要原来的 TikTok 页面保持打开）。字幕照常生成，对照时请在原页面播放：') : isXiaoe ? t('这个浏览器不能直接播放小鹅通的回放，所以这里不提供播放器；字幕照常生成，对照时请在小鹅通里播放：') : t('这个网站没有给出可以直接播放的声音，所以这里不提供播放器；字幕照常生成，对照时请在原页面播放：'))); const link = document.createElement('a'); link.href = address; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = t('打开原页面'); note.append(link); holder.before(note); }
         if (session.restored) {
             const content = article.querySelector<HTMLElement>('.qiaomu-restored-study')!;

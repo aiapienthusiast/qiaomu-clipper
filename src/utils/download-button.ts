@@ -1,15 +1,18 @@
 import { createElement, Check, ChevronDown, Download } from 'lucide';
-import { DownloadChoice, defaultChoice, downloadFileName, downloadProblem, fetchMediaBlob, humanSize } from './media-download';
+import { DownloadChoice, DownloadError, defaultChoice, downloadFileName, downloadProblem, fetchMediaBlob, humanSize } from './media-download';
 
 import { t } from './ui-text';
-// The "download" control under a player (local edition only). One press saves the default file; the arrow lists what else this item
+// The "download" control under a player. One press saves the default file; the arrow lists what else this item
 // offers. While it runs the control itself shows the progress, so nothing jumps and no dialog opens.
 
 export interface DownloadButtonOptions {
 	title: string;
+	sourceUrl: string;
+	// Called synchronously from the click, before network work, to request optional permission.
+	beforeDownload?(): Promise<void>;
 	choices: DownloadChoice[];
 	// Puts the finished file where the person keeps downloads; returns something to reveal it with.
-	save(blob: Blob, filename: string): Promise<{ reveal?: () => void } | void>;
+	save(blob: Blob, filename: string, signal?: AbortSignal): Promise<{ reveal?: () => void } | void>;
 	remembered?: string;
 	onRemember?(id: string): void;
 	fetchBlob?: typeof fetchMediaBlob;
@@ -74,9 +77,11 @@ export function mountDownloadButton(host: HTMLElement, options: DownloadButtonOp
 		const cancel = node('button', 'qiaomu-dl-link', t('取消')); cancel.type = 'button'; cancel.addEventListener('click', () => controller?.abort());
 		showState('running', text, bar, cancel);
 		try {
-			const blob = await fetchBlob(choice.url, { signal: controller.signal, onProgress: (done, total) => { if (total) { const percent = Math.min(99, Math.floor(done / total * 100)); text.textContent = t('正在下载 {0}%', [percent]); fill.style.width = `${percent}%`; } else text.textContent = t('正在下载 {0}', [humanSize(done)]); } });
+			await options.beforeDownload?.();
+			if (controller.signal.aborted) throw new DownloadError('cancelled', t('已取消'));
+			const blob = await fetchBlob(choice.url, { sourceUrl: options.sourceUrl, signal: controller.signal, onProgress: (done, total) => { if (total) { const percent = Math.min(99, Math.floor(done / total * 100)); text.textContent = t('正在下载 {0}%', [percent]); fill.style.width = `${percent}%`; } else text.textContent = t('正在下载 {0}', [humanSize(done)]); } });
 			text.textContent = t('正在保存…'); fill.style.width = '100%';
-			const saved = await options.save(blob, downloadFileName(options.title, choice.ext));
+			const saved = await options.save(blob, downloadFileName(options.title, choice.ext), controller.signal);
 			const link = node('button', 'qiaomu-dl-link', t('在访达中显示')); link.type = 'button';
 			link.addEventListener('click', () => saved && saved.reveal?.());
 			const again = node('button', 'qiaomu-dl-link', t('再存一份')); again.type = 'button'; again.addEventListener('click', showIdle);

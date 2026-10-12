@@ -754,5 +754,8 @@
  "已读取 {0}/{1} 张图片": "{0}/{1} Bilder gelesen",
  "{0} 张读取失败": "{0} konnten nicht gelesen werden",
  "未能读取所选图片。请保持原网页打开后重试，或选择仅正文。": "Bilder konnten nicht gelesen werden. Originalseite geöffnet lassen und erneut versuchen oder Nur Text wählen.",
- "未读取：图 {0}": "Nicht gelesen: Bild {0}"
+ "未读取：图 {0}": "Nicht gelesen: Bild {0}",
+ "此来源不支持媒体下载": "Für diese Quelle ist kein Mediendownload verfügbar",
+ "未获得下载权限，请再次点击下载并允许。": "Die Downloadberechtigung wurde nicht erteilt. Klicke erneut auf Herunterladen und erlaube sie.",
+ "仅下载你有权保存的内容": "Lade nur Inhalte herunter, die du speichern darfst"
 }

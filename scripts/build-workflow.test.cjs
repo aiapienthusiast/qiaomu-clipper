@@ -22,8 +22,8 @@ function fixture(t) {
 		for (const target of ['chrome-store', 'chrome-local']) {
 			const dir = path.join(root, 'build/production', target);
 			fs.mkdirSync(dir, { recursive: true });
-			fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({ manifest_version: 3, name: 'Fixture', version: '1.17.0', permissions: target === 'chrome-local' ? ['downloads', 'cookies'] : [], ...(target === 'chrome-local' ? { key } : { optional_permissions: ['cookies'] }) }));
-			fs.writeFileSync(path.join(dir, 'content.js'), target === 'chrome-local' ? 'qiaomuDownloadChoice qiaomu-dl-style qiaomu-dl-menu' : 'store payload');
+			fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({ manifest_version: 3, name: 'Fixture', version: '1.17.0', permissions: target === 'chrome-local' ? ['downloads', 'cookies'] : [], ...(target === 'chrome-local' ? { key } : { optional_permissions: ['cookies', 'downloads'] }) }));
+			fs.writeFileSync(path.join(dir, 'content.js'), target === 'chrome-local' ? 'qiaomuDownloadChoice qiaomu-dl-style qiaomu-dl-menu' : 'store payload qiaomu-dl-style googlevideo.com youtube-nocookie.com');
 			writeBuildInfo(dir, { schema: 1, target, mode: 'production', version: '1.17.0', ...state });
 		}
 	}
@@ -51,7 +51,7 @@ test('one fixed test path switches editions, retains previous, leaves production
 	assert.match(manifest.name, /商店版测试/);
 	assert.ok(manifest.key);
 	assert.deepEqual(manifest.permissions, []);
-	assert.equal(fs.readFileSync(path.join(destination, 'content.js'), 'utf8'), 'store payload');
+	assert.equal(fs.readFileSync(path.join(destination, 'content.js'), 'utf8'), 'store payload qiaomu-dl-style googlevideo.com youtube-nocookie.com');
 	assert.equal(fs.readFileSync(path.join(f.store, 'manifest.json'), 'utf8'), original);
 	f.run('prepare-test.mjs', '--root', f.home, '--edition', 'local');
 	manifest = JSON.parse(fs.readFileSync(path.join(destination, 'manifest.json')));
