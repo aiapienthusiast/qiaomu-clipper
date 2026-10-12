@@ -20,6 +20,17 @@ python3 native/install.py --check
 
 输出 `problems` 会指出原因：未注册、扩展 ID 不在允许列表（商店版与本地加载版 ID 不同）、库路径失效等。多数情况重新运行安装命令即可修复。
 
+### Windows
+
+Windows 目前使用源码安装助手。先安装 Python 3.9+，下载或克隆本仓库，在仓库目录打开 PowerShell，运行：
+
+```powershell
+python native/install.py
+python native/install.py --check
+```
+
+没有 `python` 命令时可改用 `py -3`。安装会注册检测到的浏览器；检查返回 `ok: true` 后回扩展点击「重新检查」。升级使用同一流程，已选笔记库会保留。需要明确指定扩展时添加 `--extension-id` 参数。
+
 ### 让 AI agent 代装
 
 笔记卡片提示本地助手没连上时，点「让 AI 帮我安装」会复制一段已带上本机扩展 ID 的话。安装器现在不会因为库的问题整体失败：没找到库或有多个库时照样装好助手（多个库先用最近打开的），并在输出的 `notes` / `vaultChoices` 里说明，之后可用 `--vault` 或扩展设置指定；商店版扩展 ID 始终放行；重新运行会保留已选的库。

@@ -3,6 +3,9 @@ import { t } from './ui-text';
 // The local helper is the one piece a person cannot install from the browser. When it is missing, say why in plain words and
 // hand over a message an AI assistant can act on, with this browser's own extension ID so nobody has to find or guess it.
 export const HELPER_REPO = 'https://github.com/joeseesun/qiaomu-clipper';
+export const helperInstallUrl = (platform: string): string => platform === 'mac'
+	? `${HELPER_REPO}/releases/latest/download/qiaomu-clipper-helper.pkg`
+	: `${HELPER_REPO}/blob/main/native/README.md#${platform === 'win' ? 'windows' : '本地静默剪藏助手'}`;
 export type HelperProblem = 'not-installed' | 'not-allowed' | 'not-running' | 'outdated' | 'unknown';
 
 // The helper reports its protocol number with the diary target. Helpers from before the number existed stay accepted; only a
