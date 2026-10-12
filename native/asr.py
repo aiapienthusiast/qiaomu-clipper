@@ -16,8 +16,8 @@ MAX_DURATION = 4 * 3600
 JOB_KEEP_SECONDS = 3 * 86400
 RESULT_KEEP_SECONDS = 60 * 86400
 MAX_POLL_SEGMENTS = 2000
-# Bump when a change in how audio is recognised makes older cached results wrong (v2: the Chinese prompt no longer biases automatic detection).
-RESULT_VERSION = 2
+# Bump when recognition changes invalidate cached results (v3: silence guard for Whisper).
+RESULT_VERSION = 3
 MLX_MODEL = 'mlx-community/whisper-large-v3-turbo'
 MLX_MODEL_DIR = 'models--mlx-community--whisper-large-v3-turbo'
 # A native host starts with a bare PATH (no Homebrew), so look where these tools are normally installed.
@@ -1033,14 +1033,33 @@ def fits_language(text, language):
     """Background in another script than the speech would pull it the wrong way (a Chinese prompt on English audio)."""
     cjk = len(re.findall(r'[\u4e00-\u9fff]', text)) > len(text) * 0.15
     return not text or (language == 'en' and not cjk) or (language in ('zh', 'ja', 'ko') and cjk) or language not in ('en', 'zh', 'ja', 'ko')
+def silent_pcm(wav):
+    """Reject only near-digital silence; do not label quiet speech or music as non-speech.
+    The converted input is mono s16 PCM. Read in bounded blocks; unknown formats keep the normal recogniser error path.
+    """
+    import array, wave
+    try:
+        with wave.open(str(wav), 'rb') as audio:
+            if audio.getsampwidth() != 2 or audio.getnchannels() != 1: return False
+            while True:
+                block = audio.readframes(16000)
+                if not block: return True
+                samples = array.array('h', block)
+                if sys.byteorder != 'little': samples.byteswap()
+                # -70 dBFS peak: well below ordinary speech, including quiet recordings.
+                if any(abs(sample) > 10 for sample in samples): return False
+    except (OSError, EOFError, wave.Error): return False
+
 def recognise(directory, spec, wav, total, env, found, tools):
+    if found['id'] in ('mlx', 'faster-whisper', 'whispercpp') and silent_pcm(wav):
+        raise Failed('没有识别到语音内容')
     language = spec.get('language') or 'auto'
     meta = page_meta(directory, spec); short = asr_context.prompt(meta); long = asr_context.background(meta, asr_context.BUDGET_QWEN)
     short = short if fits_language(short, language) else ''; long = long if fits_language(long, language) else ''
     model_missing = not found['modelReady']
     write_state(directory, state='downloadingModel' if model_missing else 'transcribing', stage='首次使用，正在下载识别模型（约 %.1f GB），请稍候' % (eng.ENGINES.get(found['id'], {}).get('sizeMb', 1600) / 1000) if model_missing else '正在识别语音', progress=18)
     if found['id'] == 'mlx':
-        command = [found['path'], str(wav), '--model', found['model'], '--condition-on-previous-text', 'False', '--output-dir', str(directory), '--output-name', 'whisper', '--output-format', 'json', '--verbose', 'True']
+        command = [found['path'], str(wav), '--model', found['model'], '--condition-on-previous-text', 'False', '--word-timestamps', 'True', '--hallucination-silence-threshold', '2', '--output-dir', str(directory), '--output-name', 'whisper', '--output-format', 'json', '--verbose', 'True']
         if language != 'auto': command += ['--language', language]
         # Only when Chinese was asked for: a Chinese prompt on automatic detection pulls other languages toward Chinese.
         # What the page says about the video goes in the same prompt, at the end, where Whisper weighs it most.

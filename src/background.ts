@@ -24,6 +24,7 @@ import { cookiesGranted, handleAsrMessage, handleLearningNativeMessage } from '.
 import { enableYouTubeEmbedRule, disableYouTubeEmbedRule } from './utils/youtube-embed-rules';
 
 import { t } from './utils/ui-text';
+import { helperInstallUrl } from './utils/helper-install';
 import { pruneHandedFiles } from './utils/file-handoff';
 void pruneHandedFiles();
 browser.runtime.onMessage.addListener(handleLearningNativeMessage);
@@ -741,6 +742,12 @@ browser.runtime.onMessage.addListener((request: unknown, sender: browser.Runtime
 			const query = domain ? `?domain=${encodeURIComponent(domain)}` : '';
 			browser.tabs.create({ url: browser.runtime.getURL(`highlights.html${query}`) });
 			sendResponse({ success: true });
+			return true;
+		}
+
+		if (typedRequest.action === "openHelperInstall") {
+			void browser.runtime.getPlatformInfo().then(platform => browser.tabs.create({ url: helperInstallUrl(platform.os) }))
+				.then(() => sendResponse({ success: true }), error => sendResponse({ success: false, error: String(error) }));
 			return true;
 		}
 

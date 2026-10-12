@@ -1,6 +1,6 @@
 import { stampOf } from './bilibili-captions';
 import type { SetupReason } from './subtitle-generation';
-import { DIALOG_STYLE, buildConfirmDialog } from './subtitle-generation-dialog';
+import { DIALOG_STYLE, buildConfirmDialog, type ConfirmDialog } from './subtitle-generation-dialog';
 
 // The part of the transcript bar that offers, explains and shows the progress of "generate subtitles" for a video that has
 // none. It only draws what it is told and reports button presses; the bar and the generation controller do the rest.
@@ -31,7 +31,7 @@ export function buildGenerationPanel(doc: Document, strings: GenerationStrings, 
 	const meter = doc.createElement('div'); meter.className = 'qiaomu-yt-gen-meter'; meter.hidden = true; const fill = doc.createElement('i'); meter.append(fill);
 	const row = doc.createElement('div'); row.className = 'qiaomu-yt-gen-actions';
 	element.append(text, code, meter, row);
-	let current: GenUi | null = null, dialog: HTMLElement | undefined; const dialogState: { language: string; remember?: boolean } = { language: 'auto' };
+	let current: GenUi | null = null, dialog: ConfirmDialog | undefined; const dialogState: { language: string; remember?: boolean } = { language: 'auto' };
 	const button = (label: string, onPress: (button: HTMLButtonElement) => void, primary = false, className = 'qiaomu-yt-gen-button') => {
 		const el = doc.createElement('button'); el.type = 'button'; el.className = className + (primary ? ' is-primary' : ''); el.textContent = label;
 		// The site's player can swallow clicks; act on the press and ignore the click that follows it.
@@ -43,6 +43,11 @@ export function buildGenerationPanel(doc: Document, strings: GenerationStrings, 
 	const setupText = (reason: SetupReason) => reason === 'helper-offline' ? strings.setupOffline : reason === 'helper-outdated' ? strings.setupOutdated : reason === 'busy' ? strings.setupBusy : reason === 'cloud-not-configured' ? strings.setupCloud : strings.setupMissing;
 	const clock = (seconds?: number) => (seconds === undefined || !Number.isFinite(seconds) ? '' : stampOf(seconds));
 	const show = (ui: GenUi | null) => {
+		if (dialog?.isConnected && (ui?.kind === 'checking' || ui?.kind === 'confirm')) {
+			current = ui; element.hidden = true;
+			if (ui.kind === 'checking') dialog.setBusy(true); else dialog.update(ui);
+			return;
+		}
 		dialog?.remove(); dialog = undefined;
 		current = ui; element.hidden = !ui; if (!ui) return;
 		element.dataset.kind = ui.kind; code.hidden = true; meter.hidden = true; row.replaceChildren();

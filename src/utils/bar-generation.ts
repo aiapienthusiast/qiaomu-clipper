@@ -61,7 +61,7 @@ export interface BarGeneration { actions: GenerationActions; sync: () => void; m
 // start straight away (the "remember" box, or the setting), the press starts the job at once; the confirm step comes back only when
 // something has to be installed first, or when the viewer asks to do it another way.
 export function createBarGeneration(options: BarGenerationOptions): BarGeneration {
-	const uiByKey = new Map<string, GenUi>(); let jobKey = '', lastLanguage = savedLanguage(), pendingTarget: InstallTarget | undefined, selected = '', via = '', force = false, generation: Generation;
+	const uiByKey = new Map<string, GenUi>(); let revision = 0; let jobKey = '', lastLanguage = savedLanguage(), pendingTarget: InstallTarget | undefined, selected = '', via = '', force = false, generation: Generation;
 	const sync = () => { const key = options.videoKey(); options.bar()?.setGeneration((key && uiByKey.get(key)) || null); };
 	const set = (key: string, ui: GenUi | null) => { if (ui) uiByKey.set(key, ui); else uiByKey.delete(key); sync(); };
 	const language = () => lastLanguage === 'auto' ? {} : { language: lastLanguage };
@@ -84,9 +84,9 @@ export function createBarGeneration(options: BarGenerationOptions): BarGeneratio
 	};
 	generation = createGeneration(onEvent, options.deps, options.intervalMs, options.onJob);
 	const request = (ask = false) => {
-		const key = options.videoKey(); if (!key) return; jobKey = key; set(key, { kind: 'checking' });
+		const key = options.videoKey(); if (!key) return; const mine = ++revision; jobKey = key; set(key, { kind: 'checking' });
 		void generation.prepare(key).then(status => {
-			if (jobKey !== key || !status) return;
+			if (mine !== revision || jobKey !== key || !status) return;
 			const { target, ...ui } = confirmFor(status); pendingTarget = target; selected = ui.selected ?? ''; via = viaOf(status);
 			if (status.ready && !target && !ask && !options.alwaysConfirm && status.choices?.auto) { run(key); return; }
 			set(key, ui);
@@ -105,27 +105,27 @@ export function createBarGeneration(options: BarGenerationOptions): BarGeneratio
 			set(key, { kind: 'running', stage: '', progress: 0, modelDownload: false });
 			generation.run(key, { jobId });
 		},
-		reset() { generation.dispose(); jobKey = ''; },
+		reset() { ++revision; generation.dispose(); jobKey = ''; uiByKey.clear(); },
 		actions: {
 			request: () => { force = false; request(); },
 			confirm(chosenLanguage, remembered) {
-				const key = options.videoKey(); if (!key) return; jobKey = key; lastLanguage = chosenLanguage || 'auto'; rememberLanguage(lastLanguage);
+				const key = options.videoKey(); if (!key || uiByKey.get(key)?.kind === 'checking') return; jobKey = key; lastLanguage = chosenLanguage || 'auto'; rememberLanguage(lastLanguage);
 				if (remembered !== undefined) remember(remembered);
 				if (pendingTarget) { set(key, { kind: 'installing', stage: '', progress: 0 }); generation.install(pendingTarget); return; }
 				run(key);
 			},
-			// A different engine or service: save it as the default and show the confirm step again for it.
+			// Save the selected model, then refresh costs and installation needs in the existing dialog.
 			choose(value) {
-				const choice = choiceOf(value); const key = options.videoKey(); if (!key || !choice) return;
+				const choice = choiceOf(value); const key = options.videoKey(); if (!key || !choice) return; const mine = ++revision;
 				set(key, { kind: 'checking' });
-				void (options.choose ?? asrChoose)({ ...choice, videoKey: key }).then(reply => { if (jobKey !== key) return; if (!reply.ok) { set(key, { kind: 'failed', error: reply.error }); return; } request(true); }).catch(() => { if (jobKey === key) set(key, { kind: 'failed', error: t('与本地助手的连接中断，任务可能仍在后台进行，稍后重新点击即可继续查看') }); });
+				void (options.choose ?? asrChoose)({ ...choice, videoKey: key }).then(reply => { if (mine !== revision || jobKey !== key) return; if (!reply.ok) { set(key, { kind: 'failed', error: reply.error }); return; } request(true); }).catch(() => { if (mine === revision && jobKey === key) set(key, { kind: 'failed', error: t('与本地助手的连接中断，任务可能仍在后台进行，稍后重新点击即可继续查看') }); });
 			},
 			// Make them again another way (different engine or service); the new result replaces the old one.
 			regenerate() { force = true; request(true); },
-			setup(reason) { if (reason !== 'busy') void browser.runtime.sendMessage({ action: 'openSettings', section: reason === 'helper-offline' || reason === 'helper-outdated' ? 'clip' : 'asr-models' }); },
+			setup(reason) { if (reason !== 'busy') void browser.runtime.sendMessage(reason === 'helper-offline' || reason === 'helper-outdated' ? { action: 'openHelperInstall' } : { action: 'openSettings', section: 'asr-models' }); },
 			addService() { options.openSettings?.(); },
 			// The viewer closed the dialog without choosing: back to the plain offer.
-			dismiss() { const key = options.videoKey(); if (key) set(key, null); },
+			dismiss() { const key = options.videoKey(); ++revision; jobKey = ''; if (key) set(key, null); },
 			cancel() { generation.cancel(); },
 			// The viewer agreed to lend this browser's login for this one download.
 			async confirmWithLogin() { const key = options.videoKey(); if (!key) return;

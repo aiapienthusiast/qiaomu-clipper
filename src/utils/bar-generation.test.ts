@@ -195,7 +195,7 @@ it.each([['helper-offline', 'clip'], ['helper-outdated', 'clip'], ['cloud-not-co
  const send = vi.spyOn(browser.runtime, 'sendMessage').mockResolvedValue(undefined as never);
  const { gen, full } = make();
  gen.actions.setup!(reason);
- expect(send).toHaveBeenCalledWith({ action: 'openSettings', section });
+ expect(send).toHaveBeenCalledWith(reason.startsWith('helper-') ? { action: 'openHelperInstall' } : { action: 'openSettings', section });
  expect(full.start).not.toHaveBeenCalled();
 });
 
@@ -204,4 +204,23 @@ it('lets a file page require confirmation without changing automatic starts on o
  gen.actions.request();await settle();expect(full.start).not.toHaveBeenCalled();expect(shown[shown.length-1]).toMatchObject({kind:'confirm',selected:'cloud:sf'});
  expect(viaOf({ ...base,mode:'cloud',cloudLabel:'硅基流动',cloudModel:'Qwen3-ASR' })).toContain('Qwen3-ASR');
  gen.actions.confirm();await settle();expect(full.start).toHaveBeenCalledOnce();
+});
+
+it('opens installation directly for a missing or outdated helper', async () => {
+ const send=vi.spyOn(browser.runtime,'sendMessage').mockResolvedValue({success:true} as never).mockClear();
+ const {gen}=make();
+ gen.actions.setup!('helper-offline'); gen.actions.setup!('helper-outdated');
+ expect(send).toHaveBeenNthCalledWith(1,{action:'openHelperInstall'});
+ expect(send).toHaveBeenNthCalledWith(2,{action:'openHelperInstall'});
+ send.mockRestore();
+});
+
+it('does not reopen a dismissed model dialog when its selection request finishes late', async () => {
+ let resolve!: (reply:any)=>void;
+ const choose=vi.fn(()=>new Promise<any>(done=>{resolve=done;}));
+ const {full}=make({status:vi.fn(async()=>ready())});
+ const gen=createBarGeneration({videoKey:()=>current,bar:()=>({setGeneration:(ui:GenUi|null)=>shown.push(ui)}) as any,apply:vi.fn(),revert:vi.fn(),save:vi.fn(),deps:full,choose});
+ gen.actions.regenerate!();await settle();gen.actions.choose!('local:mlx-qwen3');
+ gen.actions.dismiss!();resolve({ok:true});await settle();
+ expect(shown[shown.length - 1]).toBeNull();expect(full.status).toHaveBeenCalledTimes(1);expect(full.start).not.toHaveBeenCalled();
 });
