@@ -10,7 +10,7 @@ function fixture(t) {
 	const root = fs.mkdtempSync(path.join(os.tmpdir(), 'clipper-build-test-'));
 	t.after(() => fs.rmSync(root, { recursive: true, force: true }));
 	fs.mkdirSync(path.join(root, 'scripts'));
-	for (const file of ['build-layout.cjs', 'build-info.cjs', 'test-delivery.cjs', 'prepare-test.mjs', 'package.mjs', 'check-editions.mjs', 'chrome-local-key.txt']) fs.copyFileSync(path.join(__dirname, file), path.join(root, 'scripts', file));
+	for (const file of ['build-layout.cjs', 'build-info.cjs', 'test-delivery.cjs', 'prepare-test.mjs', 'package.mjs', 'check-editions.mjs', 'chrome-local-key.txt', 'check-development-base.cjs']) fs.copyFileSync(path.join(__dirname, file), path.join(root, 'scripts', file));
 	fs.writeFileSync(path.join(root, 'scripts/check-i18n.cjs'), `if (require('node:fs').existsSync(require('node:path').join(__dirname, '../i18n-fails'))) throw new Error('Missing translation fixture');`);
 	fs.writeFileSync(path.join(root, 'test-delivery.json'), JSON.stringify({ schema: 1, features: [] }));
 	fs.writeFileSync(path.join(root, '.gitignore'), 'build/\nreleases/\ntesting/\nnode_modules\n');
@@ -155,4 +155,42 @@ test('translation failure blocks packaging and preserves the fixed test installa
  assert.equal(fs.readFileSync(path.join(f.home,'extension/manifest.json'),'utf8'),before);
  assert.throws(()=>f.run('package.mjs','--targets','chrome-store'), /Missing translation fixture/);
  assert.equal(fs.existsSync(path.join(f.root,'releases')),false);
+});
+
+
+test('refuses an older version even when its own build and scope are valid', t => {
+ const f = fixture(t); f.run('prepare-test.mjs', '--root', f.home);
+ const file = path.join(f.home, 'extension/build-info.json');
+ const installed = JSON.parse(fs.readFileSync(file)); installed.version = '1.18.1';
+ fs.writeFileSync(file, JSON.stringify(installed));
+ const before = fs.readFileSync(file, 'utf8');
+ assert.throws(() => f.run('prepare-test.mjs', '--root', f.home), /older than fixed test install|Refusing to downgrade/);
+ assert.equal(fs.readFileSync(file, 'utf8'), before);
+});
+
+test('refuses the same version from a checkout missing installed commits', t => {
+ const f = fixture(t);
+ const git = (...args) => execFileSync('git', args, { cwd: f.root, stdio: 'pipe' });
+ const base = git('rev-parse', 'HEAD').toString().trim();
+ fs.writeFileSync(path.join(f.root, 'new-fix.ts'), 'later fix');
+ git('add', '.'); git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'core.hooksPath=/dev/null', 'commit', '-m', 'later fix');
+ f.build(); f.run('prepare-test.mjs', '--root', f.home);
+ const file = path.join(f.home, 'extension/build-info.json'); const before = fs.readFileSync(file, 'utf8');
+ git('checkout', '--detach', base); f.build();
+ assert.throws(() => f.run('prepare-test.mjs', '--root', f.home), /must include (fixed test|installed) commit/);
+ assert.equal(fs.readFileSync(file, 'utf8'), before);
+});
+
+
+test('development preflight rejects a stale checkout and accepts its latest mainline', t => {
+ const f = fixture(t);
+ const { checkDevelopmentBase } = require('./check-development-base.cjs');
+ const git = (...args) => execFileSync('git', args, { cwd: f.root, stdio: 'pipe' });
+ const base = git('rev-parse', 'HEAD').toString().trim();
+ fs.writeFileSync(path.join(f.root, 'new-fix.ts'), 'later fix'); git('add', '.');
+ git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'core.hooksPath=/dev/null', 'commit', '-m', 'later fix');
+ const latest = git('rev-parse', 'HEAD').toString().trim(); git('update-ref', 'refs/remotes/origin/main', latest);
+ assert.equal(checkDevelopmentBase(f.root, f.home).commit, latest);
+ git('checkout', '--detach', base);
+ assert.throws(() => checkDevelopmentBase(f.root, f.home), /does not include origin\/main/);
 });

@@ -25,6 +25,21 @@ function assertCoverage(scope, previous) {
 	if (missing.length) throw new Error(`Refusing to remove tested features: ${missing.map(feature => feature.title).join(', ')}`);
 }
 
+// An older checkout can pass its own tests while removing newer installed fixes.
+function assertBuildBase(root, candidate, installed) {
+ if (!installed) return;
+ const versionParts = version => String(version).split('.').map(Number);
+ const next = versionParts(candidate.version), previous = versionParts(installed.version);
+ for (let i = 0; i < Math.max(next.length, previous.length); i++) {
+  const difference = (next[i] || 0) - (previous[i] || 0);
+  if (difference < 0) throw new Error(`Refusing to downgrade fixed test install: ${installed.version} -> ${candidate.version}`);
+  if (difference > 0) break;
+ }
+ if (!/^[a-f0-9]{40}$/.test(installed.commit || '') || !/^[a-f0-9]{40}$/.test(candidate.commit || '')) throw new Error('Missing test build commit identity');
+ try { execFileSync('git', ['merge-base', '--is-ancestor', installed.commit, candidate.commit], { cwd: root, stdio: 'pipe' }); }
+ catch { throw new Error(`Test build must include installed commit ${installed.commit}; integrate current test changes before delivery`); }
+}
+
 function runDeliveryTests(root, scope) {
 	if (scope.features.some(feature => feature.id === 'douyin-study-source')) execFileSync(process.execPath, [path.join(root, 'scripts/check-injected-functions.cjs')], { cwd: root, stdio: 'inherit' });
 	if (scope.features.some(feature => feature.id === 'store-media-download')) execFileSync(process.execPath, [path.join(root, 'scripts/test-store-download.mjs')], { cwd: root, stdio: 'inherit' });
@@ -33,4 +48,4 @@ function runDeliveryTests(root, scope) {
 	return { ...scope, checkedAt: new Date().toISOString() };
 }
 
-module.exports = { readDelivery, assertCoverage, runDeliveryTests };
+module.exports = { readDelivery, assertCoverage, assertBuildBase, runDeliveryTests };

@@ -15,7 +15,7 @@ export interface ClipPreview {
     native: boolean;
     properties?: Property[];
     createdAt?: number;
-    transcriptExport?: { source: string; previous: string; mode?: 'original' | 'translated' | 'bilingual' };
+    transcriptExport?: { source: string; previous: string; mode?: 'original' | 'translated' | 'bilingual' | 'display' };
     readerAppendix?: string;
     localMedia?: LocalPreviewMedia;
     remoteMedia?: RemotePreviewMedia;
