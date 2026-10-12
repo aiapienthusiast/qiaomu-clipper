@@ -159,3 +159,12 @@ it('offers an actionable helper repair inside a cloud test failure, without savi
  expect(setup).not.toBeNull(); expect(saved()).toBeUndefined();
  setup.click(); expect(el('asr-modal').style.display).toBe('none');
 });
+
+// The helper omits unsupported engines instead of returning supported:false.
+it('recommends only the engines in the helper catalogue on Windows and Intel Macs', async () => {
+ helper([engine('faster-whisper')]); await open();
+ expect(recLocal().textContent).toContain('faster-whisper');
+ expect(Array.from(el<HTMLSelectElement>('asr-default').options).map(o => o.value)).toEqual(['local:auto', 'local:faster-whisper']);
+ document.querySelector<HTMLElement>('#asr-add')!.click();
+ expect(el('asr-modal-body').textContent).not.toContain('MLX');
+});

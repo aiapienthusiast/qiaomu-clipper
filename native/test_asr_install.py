@@ -14,6 +14,27 @@ class InstallTests(unittest.TestCase):
         for p in self.patches: p.stop()
         self.temp.cleanup()
 
+    @patch.object(asr, 'tool_dirs', return_value=[])
+    def test_proxy_normalization_preserves_loopback_bypass_and_user_endpoints(self, _tool_dirs):
+        cases = [('NO_PROXY', 'localhost,127.0.0.1,::1/128,.example.org,10.0.0.0/8',
+                  'localhost,127.0.0.1,::1,.example.org,10.0.0.0/8'),
+                 ('no_proxy', '[::1],::1,https://internal.example,2001:db8::/32',
+                  '::1,::1,https://internal.example,2001:db8::/32')]
+        # Windows environment keys are case-insensitive; exercise each spelling
+        # separately rather than setting two different values for the same key.
+        for key, value, expected in cases:
+            with self.subTest(key=key), patch.dict(os.environ, {key: value, 'HF_ENDPOINT': 'https://models.example'}, clear=True):
+                before = dict(os.environ)
+                env = asr.tool_env()
+                actual_key = next(k for k in env if k.lower() == 'no_proxy')
+                self.assertEqual(env[actual_key], expected)
+                self.assertEqual(env['HF_ENDPOINT'], 'https://models.example')
+                self.assertEqual(dict(os.environ), before)
+        with patch.dict(os.environ, {}, clear=True):
+            env = asr.tool_env()
+            self.assertNotIn('NO_PROXY', env)
+            self.assertNotIn('HF_ENDPOINT', env)
+
     def test_duration_comes_from_ffmpeg_when_there_is_no_ffprobe(self):
         output = subprocess.CompletedProcess([], 1, stderr='  Duration: 01:02:03.50, start: 0.000000, bitrate: 128 kb/s')
         with patch.object(asr.subprocess, 'run', return_value=output):

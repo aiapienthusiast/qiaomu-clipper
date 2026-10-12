@@ -90,6 +90,11 @@ def find_tool(name):
     return found or (eng.private_ffmpeg() if name == 'ffmpeg' else None)
 def tool_env():
     env = dict(os.environ); env['PATH'] = os.pathsep.join(tool_dirs() + [env.get('PATH', '')]); env['PYTHONUNBUFFERED'] = '1'; env['PYTHONIOENCODING'] = 'utf-8'
+    # HTTPX accepts bare IPv6 loopback, but bracketed and /128 spellings are
+    # parsed as an invalid port. Preserve the bypass instead of deleting it.
+    for key in ('NO_PROXY', 'no_proxy'):
+        if key in env:
+            env[key] = ','.join('::1' if item.strip() in ('[::1]', '::1/128', '[::1]/128') else item for item in env[key].split(','))
     return env
 def tool_version(path, flag='--version'):
     try: return subprocess.run([path, flag], capture_output=True, text=True, timeout=10).stdout.strip().splitlines()[0][:60]

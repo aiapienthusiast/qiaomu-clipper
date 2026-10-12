@@ -30,7 +30,7 @@ export async function initializeAsrSettings(): Promise<void> {
 	// ---- what exists --------------------------------------------------------------------------------------------------
 	const localInfo = (id: string) => engines?.find(item => item.id === id);
 	// Until the helper answers every engine is listed; afterwards only the ones this computer can run.
-	const localList = () => LOCAL_ENGINES.filter(item => engines === undefined || localInfo(item.id)?.supported !== false);
+	const localList = () => LOCAL_ENGINES.filter(item => engines === undefined || (localInfo(item.id) !== undefined && localInfo(item.id)?.supported !== false));
 	const options = (): Array<[Recognizer, string]> => [
 		['local:auto', t('本机 · 自动（用已安装的最快的）')],
 		...localList().map(item => [`local:${item.id}`, t('本机 · {0}{1}', [item.name, localInfo(item.id)?.installed ? '' : t('（未安装）')])] as [Recognizer, string]),
