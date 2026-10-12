@@ -757,5 +757,14 @@
  "未读取：图 {0}": "Not read: image {0}",
  "此来源不支持媒体下载": "Media download is not supported for this source",
  "未获得下载权限，请再次点击下载并允许。": "Download permission was not granted. Click Download again and allow it.",
- "仅下载你有权保存的内容": "Only download content you have permission to save"
+ "仅下载你有权保存的内容": "Only download content you have permission to save",
+ "中国区套餐": "China plan",
+ "不思考": "No reasoning",
+ "最低": "Minimal",
+ "低": "Low",
+ "中等": "Medium",
+ "高": "High",
+ "很高": "Extra high",
+ "最大": "Maximum",
+ "极深": "Ultra"
 }

@@ -4,6 +4,7 @@ import { webMediaAddress, type WebMedia } from './web-media-page';
 import { t } from './ui-text';
 // Serialized by scripting.executeScript: keep this function self-contained.
 // This also works when an older content script no longer answers after an update.
+// Do not call imported helpers here, including t(): localize in getWebPageMedia.
 export function snapshotDouyinPlayer(): { url: string; info?: WebInfo; observed?: true; candidates?: string[] } {
 	const page = new URL(location.href), id = page.pathname.match(/^\/video\/(\d+)/)?.[1] || page.searchParams.get('modal_id') || page.searchParams.get('vid');
 	if (page.protocol !== 'https:' || !['www.douyin.com', 'douyin.com'].includes(page.hostname) || !/^\d+$/.test(id || '')) return { url: '' };
@@ -40,7 +41,7 @@ export function snapshotDouyinPlayer(): { url: string; info?: WebInfo; observed?
 		for (const name of plain) { const key = new URL(name).searchParams.get('l') || ''; if (key) byGroup.set(key, [...(byGroup.get(key) || []), name]); }
 		const candidates = [...byGroup.values()].map(names => names.map(name => ({ name, rate: Number(new URL(name).searchParams.get('br')) || Infinity })).sort((x, y) => x.rate - y.rate)[0].name);
 		if (candidates.length && candidates.length <= 6 && Number.isFinite(visible.duration)) {
-			return { url, observed: true, candidates, info: { ok: true, title, author: '', site: t('抖音'), video: true, thumbnail: null, seconds: visible.duration, mediaUrl: candidates[0], description: title } };
+			return { url, observed: true, candidates, info: { ok: true, title, author: '', site: 'Douyin', video: true, thumbnail: null, seconds: visible.duration, mediaUrl: candidates[0], description: title } };
 		}
 		const navigation = performance.getEntriesByType('navigation')[0];
 		if (!navigation) return { url };
@@ -51,10 +52,10 @@ export function snapshotDouyinPlayer(): { url: string; info?: WebInfo; observed?
 		const audio = distinct(files.filter(name => new URL(name).pathname.includes('/media-audio-')));
 		const picture = distinct(files.filter(name => new URL(name).pathname.includes('/media-video-')));
 		if (audio.length !== 1 || picture.length !== 1 || !new URL(audio[0]).searchParams.get('l') || new URL(audio[0]).searchParams.get('l') !== new URL(picture[0]).searchParams.get('l')) return { url };
-		return { url, info: { ok: true, title, author: '', site: t('抖音'), video: true, thumbnail: null,
+		return { url, info: { ok: true, title, author: '', site: 'Douyin', video: true, thumbnail: null,
 			seconds: Number.isFinite(visible.duration) ? visible.duration : null, mediaUrl: picture[0], audioUrl: audio[0], description: title } };
 	}
-	return { url, info: { ok: true, title, author: '', site: t('抖音'), video: true,
+	return { url, info: { ok: true, title, author: '', site: 'Douyin', video: true,
 		seconds: Number.isFinite(video.duration) ? video.duration : null, thumbnail: null,
 		mediaUrl: video.currentSrc || video.src, description: title } };
 }

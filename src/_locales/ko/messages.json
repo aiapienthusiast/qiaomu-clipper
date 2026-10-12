@@ -2174,24 +2174,24 @@
 		"message": "하이라이트에 추가"
 	},
 	"pdGroupPlan": {
-		"message": "Coding plans"
+		"message": "코딩 요금제"
 	},
 	"pdMagpieNote": {
-		"message": "Sign in to subscriptions such as Claude in Magpie and enable models, then load the model list here. Local keys are optional; remote gateways require HTTPS and a key."
+		"message": "Magpie에서 Claude 등의 구독 계정으로 로그인하고 모델을 활성화한 다음 여기서 모델 목록을 불러오세요. 로컬 연결의 키는 선택 사항입니다. 원격 게이트웨이는 HTTPS와 키가 필요합니다."
 	},
 	"pdDetectMagpie": {
-		"message": "Detect Magpie"
+		"message": "Magpie 감지"
 	},
 	"pdMagpieFailed": {
-		"message": "Magpie not detected. Check the URL, gateway key and service."
+		"message": "Magpie를 찾을 수 없습니다. URL, 게이트웨이 키, 서비스 상태를 확인하세요."
 	},
 	"pdMagpieSecure": {
-		"message": "Remote Magpie requires HTTPS and a gateway key. URLs must not contain credentials or query parameters."
+		"message": "원격 Magpie는 HTTPS와 게이트웨이 키가 필요합니다. URL에는 인증 정보나 쿼리 매개변수를 포함할 수 없습니다."
 	},
 	"pdEffort": {
-		"message": "Reasoning effort"
+		"message": "추론 깊이"
 	},
 	"pdEffortDefault": {
-		"message": "Model default"
+		"message": "모델 기본값"
 	}
 }

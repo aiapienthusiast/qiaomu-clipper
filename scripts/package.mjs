@@ -16,6 +16,7 @@ while (args.length) {
 	else throw new Error(`Unknown option: ${arg}`);
 }
 if (!selected.length || new Set(selected).size !== selected.length || selected.some(t => !targets.includes(t))) throw new Error('Unknown or duplicate target');
+execFileSync(process.execPath, [path.join(root, 'scripts/check-i18n.cjs')], { cwd: root, stdio: 'inherit' });
 // Always check both Chrome editions before delivering either one.
 if (selected.some(t => t.startsWith('chrome-'))) execFileSync(process.execPath, [path.join(root, 'scripts/check-editions.mjs')], { cwd: root, stdio: 'inherit' });
 const infos = selected.map(target => verifyBuild(outputDir(target), { target }));

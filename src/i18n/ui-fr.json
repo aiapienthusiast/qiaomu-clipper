@@ -757,5 +757,14 @@
  "未读取：图 {0}": "Non lue : image {0}",
  "此来源不支持媒体下载": "Le téléchargement de médias n’est pas disponible pour cette source",
  "未获得下载权限，请再次点击下载并允许。": "Autorisation de téléchargement refusée. Cliquez à nouveau sur Télécharger et autorisez-la.",
- "仅下载你有权保存的内容": "Téléchargez uniquement les contenus que vous avez le droit de conserver"
+ "仅下载你有权保存的内容": "Téléchargez uniquement les contenus que vous avez le droit de conserver",
+ "中国区套餐": "Forfait pour la Chine",
+ "不思考": "Sans raisonnement",
+ "最低": "Minimal",
+ "低": "Faible",
+ "中等": "Moyen",
+ "高": "Élevé",
+ "很高": "Très élevé",
+ "最大": "Maximum",
+ "极深": "Ultraprofond"
 }

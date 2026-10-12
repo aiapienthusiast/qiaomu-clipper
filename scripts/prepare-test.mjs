@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { root, outputDir } = require('./build-layout.cjs');
@@ -18,6 +19,7 @@ while (args.length) {
 }
 if (!['store', 'local'].includes(edition)) throw new Error('Edition must be store or local');
 if (!testRoot || !path.isAbsolute(testRoot) || path.resolve(testRoot) === path.parse(testRoot).root || path.resolve(testRoot) === os.homedir()) throw new Error('Choose a dedicated absolute testing folder');
+execFileSync(process.execPath, [path.join(root, 'scripts/check-i18n.cjs')], { cwd: root, stdio: 'inherit' });
 const source = outputDir(`chrome-${edition}`);
 const info = verifyBuild(source, { target: `chrome-${edition}` });
 if (fs.existsSync(testRoot) && fs.lstatSync(testRoot).isSymbolicLink()) throw new Error('Testing folder must not be a symlink');

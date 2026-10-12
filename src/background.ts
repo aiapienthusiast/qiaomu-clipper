@@ -1374,10 +1374,8 @@ browser.runtime.onMessage.addListener((raw: unknown, sender) => {
 			if (!tab.url || videoKey(tab.url) !== videoKey(request.sourceUrl!)) return { error: t('原视频页面已切换') };
 			const results = await browser.scripting.executeScript({
 				target: { tabId: request.sourceTabId! },
-				func: async (href: string) => {
-					const response = await fetch(href, { credentials: 'include', headers: { Accept: 'application/json' } });
-					return { ok: response.ok, status: response.status, text: await response.text() };
-				},
+				func: (href: string) => fetch(href, { credentials: 'include', headers: { Accept: 'application/json' } })
+					.then(response => response.text().then(text => ({ ok: response.ok, status: response.status, text }))),
 				args: [target.href],
 			});
 			return results[0]?.result || { error: t('原视频页面没有返回结果') };

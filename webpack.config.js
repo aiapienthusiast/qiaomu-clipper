@@ -26,8 +26,8 @@ module.exports = (env, argv) => {
 	const isFirefox = env.BROWSER === 'firefox';
 	const isSafari = env.BROWSER === 'safari';
 	const isProduction = argv.mode === 'production';
-	// The local edition is the Chrome build people load from GitHub: fixed extension ID, and features the Web Store would not accept
-	// (saving media files). The store edition is built from the same source with __LOCAL_EDITION__ false, so that code is not in it at all.
+	if (isProduction) require('node:child_process').execFileSync(process.execPath, [path.join(__dirname, 'scripts/check-i18n.cjs')], { cwd: __dirname, stdio: 'inherit' });
+	// The standalone Chrome edition has a fixed unpacked ID. The store build keeps its stricter media-source policy.
 	const isLocal = env.EDITION === 'local' && !isFirefox && !isSafari;
 
 	const target = isFirefox ? 'firefox' : (isSafari ? 'safari' : (isLocal ? 'chrome-local' : 'chrome-store'));

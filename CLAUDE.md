@@ -38,3 +38,9 @@ Write from the user's point of view. They care about what they get, not how it i
 - Before delivery, reconcile every requested feature with all relevant worktrees, including uncommitted changes. Update `test-delivery.json`; `test:prepare` runs its regression tests and rejects loss of an already installed feature. A merged site adapter does not establish that AI image input is included. Never bypass this gate by manually copying an old worktree build.
 - `npm run package` is the only extension ZIP writer. Keep immutable candidates in `releases/`; never overwrite versioned archives or copy newer code into an older version-named directory.
 - Extension version comes from package.json; helper version comes from native/VERSION. Build/install/publication are separate evidence boundaries. Preserve other threads' working files and legacy loaded directories until migration is verified.
+
+## Page injection and translations
+
+Functions passed to `scripting.executeScript({ func })` run without the extension module closure. Keep them self-contained: return raw page data and localize after returning to the extension; pass input through `args`. Do not add imported helpers (including `t`) or async syntax that needs transpiler helpers. Run `npm run check:injections` and exercise serialized functions, not only direct calls.
+
+New UI wording must include translations in all nine full locales. `npm run check:i18n` runs automatically in production builds, packaging and fixed test preparation. The legacy `update-locales` generator covers only `_locales` messages; do not assume it updates UI/helper catalogs or changed text under existing keys. Translation API failures must stop instead of storing fallback text as a completed translation.

@@ -5,29 +5,59 @@
       "id": "x-media-controls",
       "title": "X 列表工具条、助手安装入口和模型选择修复",
       "origin": "PR #71",
-      "files": ["src/web-content.ts", "src/utils/helper-install.ts", "src/utils/subtitle-generation-panel.ts"],
-      "tests": ["src/web-content.test.ts", "src/utils/helper-install.test.ts", "src/utils/subtitle-generation-panel.test.ts", "src/utils/bar-generation.test.ts"]
+      "files": [
+        "src/web-content.ts",
+        "src/utils/helper-install.ts",
+        "src/utils/subtitle-generation-panel.ts"
+      ],
+      "tests": [
+        "src/web-content.test.ts",
+        "src/utils/helper-install.test.ts",
+        "src/utils/subtitle-generation-panel.test.ts",
+        "src/utils/bar-generation.test.ts"
+      ]
     },
     {
       "id": "xiaohongshu-adapter",
       "title": "小红书图文、视频学习及字幕请求修复",
       "origin": "PR #72, #73",
-      "files": ["src/utils/xiaohongshu.ts", "src/utils/local-save.ts"],
-      "tests": ["src/utils/xiaohongshu.test.ts", "src/utils/local-save-learning.test.ts"]
+      "files": [
+        "src/utils/xiaohongshu.ts",
+        "src/utils/local-save.ts"
+      ],
+      "tests": [
+        "src/utils/xiaohongshu.test.ts",
+        "src/utils/local-save-learning.test.ts"
+      ]
     },
     {
       "id": "article-image-chat",
       "title": "AI 读取实际图片、单图提问和长图分段",
       "origin": "docs/IMAGE-CHAT-INTEGRATION.json",
-      "files": ["src/utils/chat-content.ts", "src/utils/chat-images.ts", "src/utils/chat-image-source.ts", "src/utils/clip-chat.ts", "src/utils/chat-llm.ts"],
-      "tests": ["src/utils/chat-content.test.ts", "src/utils/chat-images.test.ts", "src/utils/clip-chat-images.test.ts", "src/utils/chat-history.test.ts"]
+      "files": [
+        "src/utils/chat-content.ts",
+        "src/utils/chat-images.ts",
+        "src/utils/chat-image-source.ts",
+        "src/utils/clip-chat.ts",
+        "src/utils/chat-llm.ts"
+      ],
+      "tests": [
+        "src/utils/chat-content.test.ts",
+        "src/utils/chat-images.test.ts",
+        "src/utils/clip-chat-images.test.ts",
+        "src/utils/chat-history.test.ts"
+      ]
     },
     {
       "id": "build-identity",
       "title": "测试版本与构建来源显示",
       "origin": "codex/build-test-workflow",
-      "files": ["src/utils/build-identity.ts"],
-      "tests": ["src/utils/build-identity.test.ts"]
+      "files": [
+        "src/utils/build-identity.ts"
+      ],
+      "tests": [
+        "src/utils/build-identity.test.ts"
+      ]
     },
     {
       "id": "store-media-download",
@@ -43,6 +73,34 @@
         "src/utils/media-download-policy.test.ts",
         "src/utils/browser-media-save.test.ts",
         "src/utils/download-button.test.ts"
+      ]
+    },
+    {
+      "id": "douyin-study-source",
+      "title": "抖音沉浸学习视频读取与注入隔离回归",
+      "origin": "codex/douyin-study-injection",
+      "files": [
+        "src/utils/web-page-media.ts",
+        "src/utils/web-study-probe.ts"
+      ],
+      "tests": [
+        "src/utils/web-page-media.test.ts",
+        "src/utils/web-study-probe.test.ts"
+      ]
+    },
+    {
+      "id": "recent-feature-translations",
+      "title": "九种界面语言、近期功能译文与参数隔离检查",
+      "origin": "codex/douyin-study-injection",
+      "files": [
+        "src/utils/reasoning-label.ts",
+        "src/utils/ui-text.ts",
+        "src/i18n/catalog.test.ts"
+      ],
+      "tests": [
+        "src/i18n/catalog.test.ts",
+        "src/utils/recent-features-i18n.test.ts",
+        "src/utils/i18n-automation.test.ts"
       ]
     }
   ]

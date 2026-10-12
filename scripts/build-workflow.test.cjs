@@ -11,6 +11,7 @@ function fixture(t) {
 	t.after(() => fs.rmSync(root, { recursive: true, force: true }));
 	fs.mkdirSync(path.join(root, 'scripts'));
 	for (const file of ['build-layout.cjs', 'build-info.cjs', 'test-delivery.cjs', 'prepare-test.mjs', 'package.mjs', 'check-editions.mjs', 'chrome-local-key.txt']) fs.copyFileSync(path.join(__dirname, file), path.join(root, 'scripts', file));
+	fs.writeFileSync(path.join(root, 'scripts/check-i18n.cjs'), `if (require('node:fs').existsSync(require('node:path').join(__dirname, '../i18n-fails'))) throw new Error('Missing translation fixture');`);
 	fs.writeFileSync(path.join(root, 'test-delivery.json'), JSON.stringify({ schema: 1, features: [] }));
 	fs.writeFileSync(path.join(root, '.gitignore'), 'build/\nreleases/\ntesting/\nnode_modules\n');
 	fs.writeFileSync(path.join(root, 'package.json'), '{"version":"1.17.0"}\n');
@@ -143,4 +144,15 @@ test('missing feature source or failing regression checks leave the installed bu
 	f.build();
 	assert.throws(() => f.run('prepare-test.mjs', '--root', f.home));
 	assert.equal(fs.readFileSync(installed, 'utf8'), before);
+});
+
+// A failed language gate must not produce a deliverable or replace a working test install.
+test('translation failure blocks packaging and preserves the fixed test installation', t => {
+ const f=fixture(t); f.run('prepare-test.mjs','--root',f.home);
+ const before=fs.readFileSync(path.join(f.home,'extension/manifest.json'),'utf8');
+ fs.writeFileSync(path.join(f.root,'i18n-fails'),'missing'); f.build();
+ assert.throws(()=>f.run('prepare-test.mjs','--root',f.home), /Missing translation fixture/);
+ assert.equal(fs.readFileSync(path.join(f.home,'extension/manifest.json'),'utf8'),before);
+ assert.throws(()=>f.run('package.mjs','--targets','chrome-store'), /Missing translation fixture/);
+ assert.equal(fs.existsSync(path.join(f.root,'releases')),false);
 });
