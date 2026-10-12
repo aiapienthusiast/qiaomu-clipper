@@ -190,7 +190,7 @@ export function responsesRequest(oauth: OAuthCredentials, model: ModelConfig, sy
 		headers.version = CODEX_VERSION;
 	}
 	const input = messages.map(m => ({ type: 'message', role: m.role, content: [{ type: m.role === 'assistant' ? 'output_text' : 'input_text', text: m.content }] }));
-	return { url, init: { method: 'POST', headers, credentials: 'omit', body: JSON.stringify({ model: model.providerModelId, instructions: system, input, store: false, stream: true }) } };
+	return { url, init: { method: 'POST', headers, credentials: 'omit', body: JSON.stringify({ model: model.providerModelId, instructions: system, input, ...(model.reasoningEffort && model.reasoningEfforts?.includes(model.reasoningEffort) ? { reasoning: { effort: model.reasoningEffort } } : {}), store: false, stream: true }) } };
 }
 
 export function responsesText(line: string): string {

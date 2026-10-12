@@ -2,7 +2,7 @@ import { BRAND_ICONS } from './provider-icons';
 import { CHATGPT_BASE, CODEX_BASE } from './oauth/accounts';
 
 import { t } from './ui-text';
-export type ProviderGroup = 'account' | 'provider' | 'relay' | 'local';
+export type ProviderGroup = 'account' | 'provider' | 'relay' | 'local' | 'plan';
 
 export interface CatalogEntry {
 	id: string;
@@ -22,6 +22,14 @@ export interface CatalogEntry {
 
 // Ordered as the picker shows them: logging in is easier than pasting a key, so it comes first.
 export const CATALOG: CatalogEntry[] = [
+	{ id: 'magpie', name: 'Magpie', group: 'local', sub: 'Claude · Codex · Copilot · Kimi · Qoder · ZCode · Trae · MiniMax', baseUrl: 'http://127.0.0.1:3425/v1/chat/completions', apiKeyRequired: false, apiKeyUrl: 'https://usemagpie.ai/docs/start' },
+	{ id: "glm-coding", name: "智谱 GLM · Coding Plan", group: 'plan', sub: 'Coding / Token Plan', baseUrl: "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions", apiKeyUrl: "https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys", apiKeyRequired: true },
+	{ id: "zai-coding", name: "Z.ai · Coding Plan", group: 'plan', sub: 'Coding / Token Plan', baseUrl: "https://api.z.ai/api/coding/paas/v4/chat/completions", apiKeyUrl: "https://z.ai/manage-apikey/apikey-list", apiKeyRequired: true },
+	{ id: "kimi-code", name: "Kimi Code · 国内套餐", group: 'plan', sub: 'Coding / Token Plan', baseUrl: "https://api.kimi.com/coding/v1/chat/completions", apiKeyUrl: "https://www.kimi.com/code/console", apiKeyRequired: true },
+	{ id: "minimax-plan", name: "MiniMax · Token Plan", group: 'plan', sub: 'Coding / Token Plan', baseUrl: "https://api.minimaxi.com/v1/chat/completions", apiKeyUrl: "https://platform.minimaxi.com/subscribe/coding-plan", apiKeyRequired: true },
+	{ id: "bailian-plan", name: "百炼 · Token Plan", group: 'plan', sub: 'Coding / Token Plan', baseUrl: "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions", apiKeyUrl: "https://bailian.console.aliyun.com/cn-beijing/subscription/token-plan/personal", apiKeyRequired: true },
+	{ id: "mimo-plan", name: "小米 MiMo · Token Plan", group: 'plan', sub: 'Coding / Token Plan', baseUrl: "https://token-plan-cn.xiaomimimo.com/v1/chat/completions", apiKeyUrl: "https://platform.xiaomimimo.com/token-plan", apiKeyRequired: true },
+	{ id: "doubao-coding", name: "火山方舟 · Coding Plan", group: 'plan', sub: 'Coding / Token Plan', baseUrl: "https://ark.cn-beijing.volces.com/api/coding/v3/chat/completions", apiKeyUrl: "https://console.volcengine.com/ark", apiKeyRequired: true },
 	{ id: 'chatgpt', name: 'ChatGPT', group: 'account', sub: 'Plus · Pro · Business', icon: 'openai', baseUrl: `${CHATGPT_BASE}/responses`, apiKeyRequired: false, signIn: 'chatgpt' },
 	{ id: 'codex', name: 'Codex', group: 'account', get sub() { return t('ChatGPT 套餐里的 Codex'); }, icon: 'codex', baseUrl: `${CODEX_BASE}/responses`, apiKeyRequired: false, signIn: 'codex' },
 
@@ -58,7 +66,7 @@ export const CATALOG: CatalogEntry[] = [
 	{ id: 'lmstudio', name: 'LM Studio', group: 'local', get sub() { return t('本机 :1234'); }, baseUrl: 'http://127.0.0.1:1234/v1/chat/completions', apiKeyRequired: false, hue: 200 }
 ];
 
-export const GROUP_ORDER: ProviderGroup[] = ['account', 'relay', 'provider', 'local'];
+export const GROUP_ORDER: ProviderGroup[] = ['account', 'relay', 'plan', 'provider', 'local'];
 
 const HOST_ICONS: Array<[RegExp, keyof typeof BRAND_ICONS]> = [
 	[/chatgpt\.com|api\.openai\.com/, 'openai'], [/anthropic\.com/, 'anthropic'], [/googleapis\.com/, 'gemini'], [/deepseek/, 'deepseek'],

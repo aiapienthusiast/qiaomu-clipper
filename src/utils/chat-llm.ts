@@ -1,3 +1,4 @@
+import { magpieKey } from './magpie';
 import { generalSettings, saveSettings } from './storage-utils';
 import { freshOAuth, responsesRequest, responsesText } from './oauth/accounts';
 import browser from './browser-polyfill';
@@ -49,6 +50,7 @@ export function enabledChatModels(): ModelConfig[] {
 }
 
 function buildRequest(provider: Provider, model: ModelConfig, system: string, messages: ChatTurn[], sessionId?: string): { url: string; init: RequestInit } {
+	provider = { ...provider, apiKey: magpieKey(provider) };
 	const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(opencodeHeaders(provider.baseUrl, sessionId) || {}) };
 	const name = provider.name.toLowerCase();
 	let url = provider.baseUrl;
@@ -78,7 +80,7 @@ function buildRequest(provider: Provider, model: ModelConfig, system: string, me
 				url = normalizeOpenAIChatEndpoint(provider.baseUrl);
 				if (name.includes('hugging')) url = provider.baseUrl.replace('{model-id}', model.providerModelId);
 				if (provider.apiKey) headers['Authorization'] = `Bearer ${provider.apiKey}`;
-				body = { model: model.providerModelId, messages: withSystem, stream: true, ...(name.includes('deepseek') ? { thinking: { type: 'disabled' } } : {}) };
+				body = { model: model.providerModelId, messages: withSystem, stream: true, ...(provider.presetId === 'magpie' && model.reasoningEffort && model.reasoningEfforts?.includes(model.reasoningEffort) ? { reasoning_effort: model.reasoningEffort } : {}), ...(name.includes('deepseek') ? { thinking: { type: 'disabled' } } : {}) };
 			}
 		}
 	}

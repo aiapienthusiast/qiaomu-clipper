@@ -2172,5 +2172,26 @@
 	},
 	"contextAddHighlight": {
 		"message": "加入划线"
+	},
+	"pdGroupPlan": {
+		"message": "Coding 套餐"
+	},
+	"pdMagpieNote": {
+		"message": "先在 Magpie 中登录 Claude 等订阅并启用模型，再到这里获取模型列表。本机密钥可留空，远程网关需要 HTTPS 和密钥。"
+	},
+	"pdDetectMagpie": {
+		"message": "检测 Magpie"
+	},
+	"pdMagpieFailed": {
+		"message": "未检测到 Magpie，请检查地址、网关密钥和服务状态。"
+	},
+	"pdMagpieSecure": {
+		"message": "远程 Magpie 必须使用 HTTPS 并填写网关密钥；地址不能带账号或查询参数。"
+	},
+	"pdEffort": {
+		"message": "思考深度"
+	},
+	"pdEffortDefault": {
+		"message": "使用模型默认值"
 	}
 }
