@@ -4,6 +4,8 @@ const native=vi.hoisted(()=>vi.fn());
 const asrStore=vi.hoisted(()=>({data:{} as Record<string,unknown>}));
 vi.mock('./browser-polyfill',()=>({default:{tabs:{create:(...args:unknown[])=>tabs(...args)},permissions:{contains:async()=>true},runtime:{id:'test-id',getURL:(path:string)=>`chrome-extension://test-id/${path}`,sendNativeMessage:(...args:unknown[])=>native(...args)},storage:{local:{get:async(key:string)=>({[key]:asrStore.data[key]}),set:async(value:Record<string,unknown>)=>{Object.assign(asrStore.data,value);}}}}}));
 import { handleLearningNativeMessage } from './local-save';
+import browser from './browser-polyfill';
+import { asrStart, registerWebSource } from './asr-client';
 const sender={id:'test-id',url:'chrome-extension://test-id/reader.html'};
 beforeEach(()=>{ native.mockReset(); asrStore.data={}; });
 it('rejects other extensions, malformed IDs and unrelated requests without native writes',async()=>{
@@ -264,4 +266,34 @@ it('passes Xiaoetong replay media without exporting browser login to the helper'
  const url='https://appfixture123.h5.xiaoeknow.com/v4/course/alive/l_fixture123456?app_id=appfixture123',mediaUrl='https://video.xet.tech/fixture.m3u8?sign=fixture';
  await handleAsrMessage({action:'qiaomuAsr',payload:{mode:'start',videoKey:'web:'+'a'.repeat(12),web:{url,mediaUrl}}},sender);
  expect(native.mock.calls[0][1]).toMatchObject({web:{url,mediaUrl}});expect(native.mock.calls[0][1].cookies).toBeUndefined();expect(native.mock.calls[0][1].cookiesTxt).toBeUndefined();
+});
+
+it.each(['mp4','m4a'])('delivers Xiaohongshu %s from the reader client through the background to native without cookies',async extension=>{
+ const url='https://www.xiaohongshu.com/explore/6abc2b40000000000a023366?xsec_token=fixture',mediaUrl=`https://sns-video-bd.xhscdn.com/stream/fixture.${extension}?sign=fixture`,key='web:123456abcdef';
+ asrStore.data.qiaomuAsrSettings={mode:'local',engine:'mlx-qwen3',autoLogin:true,profiles:[],routes:{}};
+ native.mockResolvedValue({ok:true,id:'a'.repeat(32),state:'queued',segments:[]});
+ const send=vi.fn(request=>handleAsrMessage(request,sender));
+ const original=browser.runtime.sendMessage;
+ browser.runtime.sendMessage=send as typeof browser.runtime.sendMessage;
+ try {
+  registerWebSource(key,url,mediaUrl);
+  expect(await asrStart(key,'auto',false,'chrome')).toMatchObject({ok:true,state:'queued'});
+  expect(native).toHaveBeenCalledTimes(1);
+  expect(native.mock.calls[0][1]).toMatchObject({action:'asrStart',videoKey:key,engine:'mlx-qwen3',web:{url,mediaUrl}});
+  expect(native.mock.calls[0][1].cookies).toBeUndefined();
+  expect(native.mock.calls[0][1].cookiesTxt).toBeUndefined();
+ } finally { browser.runtime.sendMessage=original; }
+});
+
+it('rejects forged Xiaohongshu source/media/sender before contacting native',async()=>{
+ const url='https://www.xiaohongshu.com/explore/6abc2b40000000000a023366',mediaUrl='https://sns-video-bd.xhscdn.com/stream/fixture.mp4';
+ for(const [source,media,from] of [
+  [url,'https://sns-video-bd.xhscdn.com.evil.org/fixture.mp4',sender],
+  [url,mediaUrl.replace('https:','http:'),sender],
+  [url,mediaUrl.replace('.mp4','.html'),sender],
+  ['https://example.com/explore/6abc2b40000000000a023366',mediaUrl,sender],
+  [url,mediaUrl,{...sender,id:'foreign-extension'}],
+  [url,mediaUrl,{id:sender.id,url:'https://www.xiaohongshu.com/explore/aaaaaaaaaaaaaaaaaaaaaaaa'}],
+ ] as const) expect(await handleAsrMessage({action:'qiaomuAsr',payload:{mode:'start',videoKey:'web:123456abcdef',web:{url:source,mediaUrl:media}}},from)).toMatchObject({ok:false});
+ expect(native).not.toHaveBeenCalled();
 });
