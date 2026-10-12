@@ -138,6 +138,99 @@
         "src/utils/youtube-controls.test.ts",
         "src/utils/reader-preview-shell.test.ts"
       ]
+    },
+    {
+      "id": "doubao-word-captions",
+      "title": "豆包逐字/逐词时间与播放器卡拉 OK 高亮",
+      "origin": "codex/doubao-karaoke",
+      "files": [
+        "src/utils/caption-words.ts",
+        "src/utils/asr-client.ts",
+        "src/utils/subtitle-generation.ts",
+        "src/utils/player-captions.ts",
+        "src/utils/youtube-dom-transcript.ts"
+      ],
+      "tests": [
+        "src/utils/caption-words.test.ts",
+        "src/utils/player-captions.test.ts",
+        "src/utils/subtitle-generation.test.ts",
+        "src/utils/youtube-transcript-cache.test.ts"
+      ]
+    },
+    {
+      "id": "player-caption-interaction",
+      "title": "字幕拖动、样式预览、原生菜单避让、倍速与沉浸全屏",
+      "origin": "本次播放器交互改进",
+      "files": [
+        "src/utils/caption-appearance.ts",
+        "src/utils/caption-style-editor.ts",
+        "src/utils/player-caption-interaction.ts",
+        "src/utils/embedded-player-interaction.ts",
+        "src/youtube-embed-content.ts",
+        "src/managers/caption-settings.ts",
+        "src/utils/caption-geometry.ts"
+      ],
+      "tests": [
+        "src/utils/caption-appearance.test.ts",
+        "src/utils/player-caption-interaction.test.ts",
+        "src/utils/embedded-player-interaction.test.ts",
+        "src/utils/player-captions.test.ts",
+        "src/utils/caption-mode-menu.test.ts",
+        "src/utils/caption-geometry.test.ts"
+      ]
+    },
+    {
+      "id": "subtitle-edit-controls",
+      "title": "文稿换模型单入口、开源字体、稳定悬停拖动、空格与K播放控制、全屏自动隐藏与3倍速",
+      "origin": "本次字幕交互整合",
+      "files": [
+        "src/utils/youtube-study-loader.ts",
+        "src/utils/caption-fonts.ts",
+        "src/utils/caption-style-editor.ts",
+        "src/utils/player-caption-interaction.ts",
+        "src/utils/embedded-player-interaction.ts"
+      ],
+      "tests": [
+        "src/utils/youtube-study-loader.test.ts",
+        "src/utils/caption-fonts.test.ts",
+        "src/utils/caption-appearance.test.ts",
+        "src/utils/player-caption-interaction.test.ts",
+        "src/utils/embedded-player-interaction.test.ts"
+      ]
+    },
+    {
+      "id": "study-playback-handoff",
+      "title": "沉浸学习和三次 A 暂停原页、从原进度自动播放",
+      "origin": "本次学习入口播放交接需求",
+      "files": [
+        "src/utils/study-playback-handoff.ts",
+        "src/background.ts",
+        "src/core/reader-view.ts",
+        "src/utils/audio-study.ts",
+        "src/utils/youtube-study-loader.ts",
+        "src/utils/embedded-player-interaction.ts"
+      ],
+      "tests": [
+        "src/utils/study-playback-handoff.test.ts",
+        "src/utils/embedded-player-interaction.test.ts",
+        "src/utils/audio-study.test.ts",
+        "src/utils/youtube-study-loader.test.ts"
+      ]
+    },
+    {
+      "id": "study-tips-shortcuts",
+      "title": "可关闭的小技巧、K/空格播放暂停、J/L十秒跳转及字幕标题遮挡修复",
+      "origin": "本次学习页收尾",
+      "files": [
+        "src/utils/study-tips.ts",
+        "src/utils/player-caption-interaction.ts",
+        "src/utils/transcript-heading.ts"
+      ],
+      "tests": [
+        "src/utils/study-tips.test.ts",
+        "src/utils/player-caption-interaction.test.ts",
+        "src/utils/embedded-player-interaction.test.ts"
+      ]
     }
   ]
 }

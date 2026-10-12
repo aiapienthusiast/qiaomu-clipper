@@ -3,7 +3,7 @@ import browser from './browser-polyfill';
 import { t } from './ui-text';
 // Subtitle generation for videos without subtitles runs in the local helper (yt-dlp + ffmpeg + Whisper). The browser only
 // asks it to start, polls its progress and reads the lines it has produced; audio never passes through the extension.
-export interface AsrSegment { start: number; end: number; text: string }
+export interface AsrSegment { start: number; end: number; text: string; words?: import('./caption-words').CaptionWord[] }
 export type AsrState = 'queued' | 'downloading' | 'converting' | 'downloadingModel' | 'transcribing' | 'completed' | 'failed' | 'cancelled';
 export interface AsrJob { ok: true; id: string; videoKey: string; state: AsrState; stage: string; progress: number; processedSec?: number | null; totalSec?: number | null; engine?: string | null; language?: string | null; error?: string | null; errorCode?: string | null; cached?: boolean | null; segmentCount?: number | null; segments: AsrSegment[]; next: number }
 // A local recognition engine this computer could use: `installed` says whether it is ready now, `managed` whether the helper can install it.

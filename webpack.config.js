@@ -43,6 +43,7 @@ module.exports = (env, argv) => {
 			'youtube-panel': './src/youtube-panel-content.ts',
 			'bilibili-panel': './src/bilibili-panel-content.ts',
 			'bilibili-embed': './src/bilibili-embed-content.ts',
+			'youtube-embed': './src/youtube-embed-content.ts',
 			'xiaoyuzhou-panel': './src/xiaoyuzhou-content.ts',
 			'web-panel': './src/web-content.ts',
 			'note-card': ['./src/note-card-content.ts', './src/note-card.scss'],
@@ -161,7 +162,7 @@ module.exports = (env, argv) => {
 								manifest.name += ' · 独立版';
 								manifest.key = fs.readFileSync(path.resolve(__dirname, 'scripts/chrome-local-key.txt'), 'utf8').trim();
 								manifest.permissions = Array.from(new Set([...(manifest.permissions || []), 'downloads', 'cookies']));
-								delete manifest.optional_permissions;
+								manifest.optional_permissions = (manifest.optional_permissions || []).filter(permission => !['downloads', 'cookies'].includes(permission));
 							}
 							return JSON.stringify(manifest, null, '\t');
 						}
