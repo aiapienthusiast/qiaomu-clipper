@@ -102,6 +102,42 @@
         "src/utils/recent-features-i18n.test.ts",
         "src/utils/i18n-automation.test.ts"
       ]
+    },
+    {
+      "id": "player-chinese-captions",
+      "title": "播放器原文/中文/双语字幕、文稿翻译与剪藏内容独立控制",
+      "origin": "本次播放器字幕需求",
+      "files": [
+        "src/utils/player-captions.ts",
+        "src/utils/reader-transcript.ts",
+        "src/utils/youtube-dom-transcript.ts",
+        "src/utils/youtube-captions.ts",
+        "src/utils/bilibili-captions.ts",
+        "src/utils/youtube-transcript-cache.ts",
+        "src/utils/subtitle-generation.ts",
+        "src/bilibili-embed-content.ts",
+        "src/utils/caption-mode-menu.ts",
+        "src/utils/caption-clock.ts",
+        "src/utils/youtube-study.ts",
+        "src/utils/youtube-translation.ts",
+        "src/utils/transcript-export.ts",
+        "src/utils/clip-preview.ts",
+        "src/styles/reader/transcripts.scss"
+      ],
+      "tests": [
+        "src/utils/player-captions.test.ts",
+        "src/utils/youtube-captions.test.ts",
+        "src/utils/bilibili-captions.test.ts",
+        "src/utils/youtube-transcript-cache.test.ts",
+        "src/utils/subtitle-generation.test.ts",
+        "src/utils/caption-clock.test.ts",
+        "src/utils/youtube-study.test.ts",
+        "src/utils/youtube-translation.test.ts",
+        "src/utils/transcript-export.test.ts",
+        "src/utils/caption-mode-menu.test.ts",
+        "src/utils/youtube-controls.test.ts",
+        "src/utils/reader-preview-shell.test.ts"
+      ]
     }
   ]
 }

@@ -35,8 +35,7 @@ export async function mountYouTubeStudy(doc: Document, article: HTMLElement, tit
 	const text = transcriptText(article);
 	const transcript = article.querySelector(TRANSCRIPT_SELECTOR);
 	if (transcript) transcriptHeadingTools(transcript).append(feedback); else article.append(feedback);
-	const toggleGroup = article.querySelector<HTMLElement>('.player-toggle-group');
-	const controls = toggleGroup || feedback;
+	const controls = transcript ? transcriptHeadingTools(transcript) : feedback;
 	let chat: ReturnType<typeof mountClipChat> | undefined = existingChat;
 	if (!text) {
 		status.textContent = article.dataset.videoPlatform === 'bilibili'

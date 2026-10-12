@@ -11,8 +11,9 @@ import browser from './utils/browser-polyfill';
 	// Chrome tells an embed who its parent is; where it does not (Firefox), the checks on the messages themselves still hold.
 	if (parent && parent !== ownOrigin) return;
 	const video = () => document.querySelector<HTMLVideoElement>('video');
-	const tell = () => { const v = video(); if (v) window.parent.postMessage({ qiaomuPlayer: 'time', time: v.currentTime, paused: v.paused }, ownOrigin); };
+	const tell = () => { const v = video(); if (v) window.parent.postMessage({ qiaomuPlayer: 'time', time: v.currentTime, paused: v.paused, buffering: v.readyState < 3 || v.seeking, rate: v.playbackRate }, ownOrigin); };
 	window.setInterval(tell, 400);
+ for(const type of ['playing','pause','waiting','seeking','seeked','ratechange','loadedmetadata'])document.addEventListener(type,tell,true);
 	window.addEventListener('message', event => {
 		if (event.source !== window.parent || event.origin !== ownOrigin) return;
 		const data = event.data as { qiaomuPlayer?: string; time?: unknown; play?: unknown } | null, v = video();

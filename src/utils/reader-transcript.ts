@@ -1,3 +1,4 @@
+import { mountPlayerCaptions } from './player-captions';
 import { getMessage } from './i18n';
 import { bilibiliEmbedUrl, isBilibiliEmbed, PLAYER_SELECTOR, TRANSCRIPT_SELECTOR } from './video-source';
 import { LAYOUT_EVENT } from './layout-event';
@@ -112,7 +113,7 @@ export function wireTranscript(
 		return wrapper;
 	};
 	// Pin the video while reading (only meaningful when the video sits above the text) and follow the line being
-	// played. The translation switch is added after these, so it stays the last one in the row.
+	// played. Player subtitles stay here; manuscript translation lives beside Transcript.
 	const pinToggle = createToggle('pin', getMessage('studyPinVideo'), pinDefault, on => {
 		playerContainer.classList.toggle('pin-player', on);
 		article.dispatchEvent(new CustomEvent(LAYOUT_EVENT)); // a pinned video in theater mode is sized to leave room for the text
@@ -182,6 +183,8 @@ export function wireTranscript(
 		}
 	});
 	transcript.style.setProperty('--timestamp-width', Math.ceil(maxWidth) + 'px');
+
+	disposers.push(mountPlayerCaptions(article, transcript, toggleGroup));
 
 	const segmentTimes = segments.map(seg => {
 		const ts = seg.querySelector('.timestamp');

@@ -6,7 +6,8 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { root, outputDir } = require('./build-layout.cjs');
 const { verifyBuild, writeBuildInfo } = require('./build-info.cjs');
-const { readDelivery, assertCoverage, runDeliveryTests } = require('./test-delivery.cjs');
+const { readDelivery, assertCoverage, assertBuildBase, runDeliveryTests } = require('./test-delivery.cjs');
+const { checkDevelopmentBase } = require('./check-development-base.cjs');
 
 const args = process.argv.slice(2);
 let edition = 'store';
@@ -19,6 +20,7 @@ while (args.length) {
 }
 if (!['store', 'local'].includes(edition)) throw new Error('Edition must be store or local');
 if (!testRoot || !path.isAbsolute(testRoot) || path.resolve(testRoot) === path.parse(testRoot).root || path.resolve(testRoot) === os.homedir()) throw new Error('Choose a dedicated absolute testing folder');
+checkDevelopmentBase(root, testRoot);
 execFileSync(process.execPath, [path.join(root, 'scripts/check-i18n.cjs')], { cwd: root, stdio: 'inherit' });
 const source = outputDir(`chrome-${edition}`);
 const info = verifyBuild(source, { target: `chrome-${edition}` });
@@ -45,6 +47,7 @@ try {
 	}
 	const scope = readDelivery(root);
 	const installedInfo = fs.existsSync(destination) ? JSON.parse(fs.readFileSync(path.join(destination, 'build-info.json'), 'utf8')) : null;
+	assertBuildBase(root, info, installedInfo);
 	assertCoverage(scope, installedInfo?.delivery);
 	const delivery = runDeliveryTests(root, scope);
 	fs.cpSync(source, stage, { recursive: true });
