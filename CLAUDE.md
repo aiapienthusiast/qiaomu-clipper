@@ -42,3 +42,5 @@ Write from the user's point of view. They care about what they get, not how it i
 ## Page injection and translations
 
 Functions passed to `scripting.executeScript({ func })` run without the extension module closure. Keep them self-contained: return raw page data and localize after returning to the extension; pass input through `args`. Do not add imported helpers (including `t`) or async syntax that needs transpiler helpers. Run `npm run check:injections` and exercise serialized functions, not only direct calls.
+
+New UI wording must include translations in all nine full locales. `npm run check:i18n` runs automatically in production builds, packaging and fixed test preparation. The legacy `update-locales` generator covers only `_locales` messages; do not assume it updates UI/helper catalogs or changed text under existing keys. Translation API failures must stop instead of storing fallback text as a completed translation.

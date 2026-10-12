@@ -1,6 +1,6 @@
 {
 	"name": "qiaomu-clipper",
-	"version": "1.18.0",
+	"version": "1.18.1",
 	"description": "Save web clips to Obsidian and Qiaomu RSS.",
 	"bin": {
 		"obsidian-clipper": "./build/cli/cli.cjs"
@@ -38,6 +38,7 @@
 		"test:prepare": "node scripts/prepare-test.mjs",
 		"test:workflow": "node --test scripts/build-workflow.test.cjs scripts/check-injected-functions.test.cjs",
 		"check:injections": "node scripts/check-injected-functions.cjs",
+		"check:i18n": "node scripts/check-i18n.cjs",
 		"build:store": "webpack --env BROWSER=chrome --mode production"
 	},
 	"devDependencies": {
