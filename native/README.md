@@ -146,7 +146,9 @@ uv tool install mlx-whisper      # Apple 芯片，首次使用下载约 1.6 GB �
 ```sh
 bash scripts/pkg/fetch-python.sh <python-build-standalone 发布标签> <Python 版本>   # 下载并校验两个架构的 Python
 APP_SIGN_ID="Developer ID Application: …" INSTALLER_SIGN_ID="Developer ID Installer: …" NOTARY_PROFILE=<notarytool 配置名> \
-  bash scripts/pkg/build-pkg.sh --python-arm64 build/python/arm64 --python-x86_64 build/python/x86_64
+  bash scripts/pkg/build-pkg.sh --python-arm64 build/cache/python/<release-tag>/<python-version>/arm64 --python-x86_64 build/cache/python/<release-tag>/<python-version>/x86_64
 ```
 
 不带签名变量只会得到仅供测试的未签名包。安装日志在 `$TMPDIR/qiaomu-clipper-install.log`；装完仍未连接时运行包内的 `install.py --check` 查看原因。
+
+助手版本独立记录在 `native/VERSION`；扩展更新不自动要求助手版本相等。安装包组装文件写入 `build/tmp/pkg.*`，归档写入 `releases/helper/<version>/<package-hash>/`，其中 `release.json` 记录签名、公证与源码状态。仅签名、公证通过且源码已提交的包可标记为待发布；归档不会自动发布或安装。

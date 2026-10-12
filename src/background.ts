@@ -1,3 +1,5 @@
+import { handleChatImageSource } from './utils/chat-image-source';
+import { validChatTurns } from './utils/chat-content';
 import { validChatSession } from './utils/opencode-go';
 import { channelsStudyBridge, parseChannelsShare, readChannelsPlayback } from './utils/channels-study';
 import { protectedPageBridge, snapshotProtectedPage } from './utils/protected-study';
@@ -30,6 +32,7 @@ import { pruneHandedFiles } from './utils/file-handoff';
 void pruneHandedFiles();
 browser.runtime.onMessage.addListener(handleLearningNativeMessage);
 browser.runtime.onMessage.addListener(handleAsrMessage);
+browser.runtime.onMessage.addListener(handleChatImageSource);
 
 // Accept RSS writes only from our own extension pages, never a website content script.
 const qiaomuInFlight = new Map<string, Promise<unknown>>();
@@ -701,6 +704,9 @@ browser.runtime.onMessage.addListener((request: unknown, sender: browser.Runtime
 		}
 
 		if (typedRequest.action === "getActiveTab") {
+			// An embedded clipper belongs to its host tab, even when another
+			// browser window is focused while extraction is running.
+			if (sender.tab?.id) { sendResponse({ tabId: sender.tab.id }); return true; }
 			browser.tabs.query({active: true, currentWindow: true}).then(async (tabs) => {
 				let currentTab = tabs[0];
 				// Fallback for when currentWindow has no tabs (e.g., debugging popup in DevTools)
@@ -1345,7 +1351,7 @@ browser.runtime.onConnect.addListener(port => {
 			const model = enabledChatModels().find(item => item.id === request.modelId);
 			if (!model || typeof request.system !== 'string' || !Array.isArray(request.messages)
 				|| (request.sessionId !== undefined && !validChatSession(request.sessionId))
-				|| request.messages.some((turn: any) => !['user', 'assistant'].includes(turn.role) || typeof turn.content !== 'string')) throw new Error(t('无效的 AI 对话请求'));
+				|| !validChatTurns(request.messages)) throw new Error(t('无效的 AI 对话请求'));
 			await streamChat({ model, system: request.system, sessionId: request.sessionId, messages: request.messages, signal: controller.signal, onDelta: delta => send({ delta }) });
 			send({ done: true });
 		} catch (error) { send({ error: error instanceof Error ? error.message : t('AI 请求失败') }); }

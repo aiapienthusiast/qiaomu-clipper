@@ -16,7 +16,7 @@ function installFixture(catalogue) {
  };
 }
 (async()=>{
- const extension=path.resolve('dist_local'),profile=fs.mkdtempSync(path.join(output,'profile-'));
+ const extension=path.resolve('build/production/chrome-local'),profile=fs.mkdtempSync(path.join(output,'profile-'));
  const context=await chromium.launchPersistentContext(profile,{executablePath:process.env.QIAOMU_EDGE,headless:true,args:[`--disable-extensions-except=${extension}`,`--load-extension=${extension}`],viewport:{width:1280,height:900}});
  const checks=[],errors=[];
  try {

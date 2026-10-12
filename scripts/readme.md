@@ -31,7 +31,7 @@ npm run add-locale fr
 ./scripts/bump-version.sh 1.0.1
 ```
 
-- Updates `version` in `package.json`, all browser manifests, and `dev/manifest.json`
+- Updates the source version in `package.json` and `package-lock.json`; browser manifests receive it during compilation
 - Updates `MARKETING_VERSION` in the Xcode project
 - Increments `CURRENT_PROJECT_VERSION` by 1
 

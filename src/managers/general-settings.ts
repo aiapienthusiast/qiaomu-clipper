@@ -1,3 +1,4 @@
+import { displayBuildIdentity } from '../utils/build-identity';
 import { handleDragStart, handleDragOver, handleDrop, handleDragEnd } from '../utils/drag-and-drop';
 import { initializeIcons } from '../icons/icons';
 import { getCommands } from '../utils/hotkeys';
@@ -146,9 +147,15 @@ async function initializeVersionDisplay(): Promise<void> {
 	const status = document.getElementById('version-status');
 	const link = document.getElementById('changelog-link') as HTMLAnchorElement | null;
 	if (versionNumber) versionNumber.textContent = manifest.version;
+	const testing = versionNumber ? await displayBuildIdentity(versionNumber) : false;
 	if (!status) return;
+	if (testing) { status.textContent = t('测试版由开发流程更新。'); return; }
 	// The store edition is updated by the store. The local edition checks the project's releases once per visit and says so only when it read the answer.
-	if (!__LOCAL_EDITION__) { status.textContent = t('商店会自动更新这个插件。'); return; }
+	if (!__LOCAL_EDITION__) {
+		const installed = await browser.management?.getSelf?.().catch(() => null);
+		status.textContent = installed?.installType === 'normal' ? t('商店会自动更新这个插件。') : t('手动加载的版本需要手动更新。');
+		return;
+	}
 	status.textContent = t('正在检查更新…');
 	void releaseNotesView();
 	const result = await checkForUpdate(manifest.version);
