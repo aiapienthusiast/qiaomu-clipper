@@ -44,6 +44,13 @@
         "src/utils/browser-media-save.test.ts",
         "src/utils/download-button.test.ts"
       ]
+    },
+    {
+      "id": "douyin-study-source",
+      "title": "抖音沉浸学习视频读取与注入隔离回归",
+      "origin": "codex/douyin-study-injection",
+      "files": ["src/utils/web-page-media.ts", "src/utils/web-study-probe.ts"],
+      "tests": ["src/utils/web-page-media.test.ts", "src/utils/web-study-probe.test.ts"]
     }
   ]
 }

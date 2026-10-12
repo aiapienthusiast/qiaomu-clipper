@@ -26,7 +26,7 @@
 		"build:cli": "node scripts/build-cli.mjs",
 		"build:api": "node scripts/build-api.mjs",
 		"dev": "npm run dev:chrome",
-		"test": "npm run test:workflow && vitest run",
+		"test": "npm run test:workflow && npm run check:injections && vitest run",
 		"test:store-download": "node scripts/test-store-download.mjs",
 		"test:watch": "vitest",
 		"update-locales": "ts-node --project scripts/tsconfig.json scripts/update-locales.ts",
@@ -36,7 +36,8 @@
 		"dev:local": "webpack --watch --env BROWSER=chrome --env EDITION=local --mode development",
 		"build:local": "webpack --env BROWSER=chrome --env EDITION=local --mode production",
 		"test:prepare": "node scripts/prepare-test.mjs",
-		"test:workflow": "node --test scripts/build-workflow.test.cjs",
+		"test:workflow": "node --test scripts/build-workflow.test.cjs scripts/check-injected-functions.test.cjs",
+		"check:injections": "node scripts/check-injected-functions.cjs",
 		"build:store": "webpack --env BROWSER=chrome --mode production"
 	},
 	"devDependencies": {
