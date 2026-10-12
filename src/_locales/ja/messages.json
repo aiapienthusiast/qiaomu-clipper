@@ -2174,24 +2174,24 @@
 		"message": "ハイライトに追加"
 	},
 	"pdGroupPlan": {
-		"message": "Coding plans"
+		"message": "コーディングプラン"
 	},
 	"pdMagpieNote": {
-		"message": "Sign in to subscriptions such as Claude in Magpie and enable models, then load the model list here. Local keys are optional; remote gateways require HTTPS and a key."
+		"message": "Magpie で Claude などのサブスクリプションにログインしてモデルを有効にしてから、ここでモデル一覧を取得してください。ローカル接続のキーは省略できます。リモートゲートウェイには HTTPS とキーが必要です。"
 	},
 	"pdDetectMagpie": {
-		"message": "Detect Magpie"
+		"message": "Magpie を検出"
 	},
 	"pdMagpieFailed": {
-		"message": "Magpie not detected. Check the URL, gateway key and service."
+		"message": "Magpie が見つかりません。URL、ゲートウェイのキー、サービスの状態を確認してください。"
 	},
 	"pdMagpieSecure": {
-		"message": "Remote Magpie requires HTTPS and a gateway key. URLs must not contain credentials or query parameters."
+		"message": "リモートの Magpie には HTTPS とゲートウェイのキーが必要です。URL に認証情報やクエリパラメータを含めないでください。"
 	},
 	"pdEffort": {
-		"message": "Reasoning effort"
+		"message": "推論の深さ"
 	},
 	"pdEffortDefault": {
-		"message": "Model default"
+		"message": "モデルの既定値"
 	}
 }

@@ -2174,24 +2174,24 @@
 		"message": "Ajouter aux surlignages"
 	},
 	"pdGroupPlan": {
-		"message": "Coding plans"
+		"message": "Forfaits de programmation"
 	},
 	"pdMagpieNote": {
-		"message": "Sign in to subscriptions such as Claude in Magpie and enable models, then load the model list here. Local keys are optional; remote gateways require HTTPS and a key."
+		"message": "Connectez-vous à vos abonnements, comme Claude, dans Magpie et activez les modèles, puis chargez leur liste ici. La clé est facultative en local ; les passerelles distantes exigent HTTPS et une clé."
 	},
 	"pdDetectMagpie": {
-		"message": "Detect Magpie"
+		"message": "Détecter Magpie"
 	},
 	"pdMagpieFailed": {
-		"message": "Magpie not detected. Check the URL, gateway key and service."
+		"message": "Magpie n’a pas été détecté. Vérifiez l’URL, la clé de la passerelle et l’état du service."
 	},
 	"pdMagpieSecure": {
-		"message": "Remote Magpie requires HTTPS and a gateway key. URLs must not contain credentials or query parameters."
+		"message": "Magpie à distance exige HTTPS et une clé de passerelle. Les URL ne doivent contenir ni identifiants ni paramètres de requête."
 	},
 	"pdEffort": {
-		"message": "Reasoning effort"
+		"message": "Profondeur de raisonnement"
 	},
 	"pdEffortDefault": {
-		"message": "Model default"
+		"message": "Valeur par défaut du modèle"
 	}
 }

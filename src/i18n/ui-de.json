@@ -757,5 +757,14 @@
  "未读取：图 {0}": "Nicht gelesen: Bild {0}",
  "此来源不支持媒体下载": "Für diese Quelle ist kein Mediendownload verfügbar",
  "未获得下载权限，请再次点击下载并允许。": "Die Downloadberechtigung wurde nicht erteilt. Klicke erneut auf Herunterladen und erlaube sie.",
- "仅下载你有权保存的内容": "Lade nur Inhalte herunter, die du speichern darfst"
+ "仅下载你有权保存的内容": "Lade nur Inhalte herunter, die du speichern darfst",
+ "中国区套餐": "Tarif für China",
+ "不思考": "Ohne Nachdenken",
+ "最低": "Minimal",
+ "低": "Niedrig",
+ "中等": "Mittel",
+ "高": "Hoch",
+ "很高": "Sehr hoch",
+ "最大": "Maximal",
+ "极深": "Äußerst tief"
 }

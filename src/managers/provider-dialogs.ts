@@ -1,3 +1,4 @@
+import { reasoningEffortOption } from '../utils/reasoning-label';
 import { detectMagpie, magpieKey } from '../utils/magpie';
 // The two dialogs behind "添加服务商" and "添加模型": a card gallery with brand icons for picking a
 // provider, a short form for it, and a searchable list for picking models. Cards and rows are divs:
@@ -444,7 +445,7 @@ function showModelEditor(dlg: Dialog, model: ModelConfig, done: Done): void {
 	const nameInput = input('text', model.name, t('modelName'));
 	const idInput = input('text', model.providerModelId || '', t('providerModelId'));
   const effort = el('select'); effort.append(new Option(t('pdEffortDefault'), ''));
-  for (const value of model.reasoningEfforts || []) effort.append(new Option(value, value));
+  for (const value of model.reasoningEfforts || []) effort.append(reasoningEffortOption(value));
   effort.value = model.reasoningEffort || '';
   if (model.reasoningEfforts?.length) { const row = el('label', 'pd-field', t('pdEffort')); row.append(effort); dlg.body.append(row); }
 	const error = el('div', 'pd-status is-error');

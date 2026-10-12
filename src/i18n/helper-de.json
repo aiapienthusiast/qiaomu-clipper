@@ -144,5 +144,19 @@
  "回放地址无效，请重新打开学习页": "Die Adresse der Aufzeichnung ist ungültig. Öffnen Sie die Lernseite erneut",
  "回放地址已过期，请重新打开学习页再生成字幕": "Die Adresse der Aufzeichnung ist abgelaufen. Öffnen Sie die Lernseite erneut und erstellen Sie die Untertitel noch einmal",
  "回放下载失败：": "Download der Aufzeichnung fehlgeschlagen: ",
- "正在下载小鹅通回放": "Xiaoe-Aufzeichnung wird heruntergeladen"
+ "正在下载小鹅通回放": "Xiaoe-Aufzeichnung wird heruntergeladen",
+ "cookies 无效": "Ungültige Cookies",
+ "回放下载失败，请重新读取原链接后重试": "Die Aufzeichnung konnte nicht heruntergeladen werden. Lesen Sie den ursprünglichen Link erneut ein und versuchen Sie es noch einmal.",
+ "回放清单无效": "Ungültige Wiedergabeliste der Aufzeichnung",
+ "回放清单包含不允许的地址": "Die Wiedergabeliste der Aufzeichnung enthält eine unzulässige URL",
+ "回放清单包含不支持的外部索引": "Die Wiedergabeliste der Aufzeichnung enthält einen nicht unterstützten externen Index",
+ "回放清单地址无效": "Ungültige URL in der Wiedergabeliste der Aufzeichnung",
+ "无效范围": "Ungültiger Bereich",
+ "回放资源读取超时": "Zeitüberschreitung beim Lesen der Aufzeichnungsressource",
+ "回放片段过大": "Das Segment der Aufzeichnung ist zu groß",
+ "回放清单读取超时": "Zeitüberschreitung beim Lesen der Wiedergabeliste der Aufzeichnung",
+ "回放清单过大": "Die Wiedergabeliste der Aufzeichnung ist zu groß",
+ "回放片段不完整": "Das Segment der Aufzeichnung ist unvollständig",
+ "回放片段读取超时": "Zeitüberschreitung beim Lesen des Segments der Aufzeichnung",
+ "请先在「剪藏与保存」里将静默保存的笔记库切换到 {0}": "Wechseln Sie unter Ausschneiden und Speichern zuerst den Vault für stilles Speichern zu {0}"
 }
