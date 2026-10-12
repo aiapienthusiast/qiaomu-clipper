@@ -14,6 +14,21 @@ class InstallTests(unittest.TestCase):
         for p in self.patches: p.stop()
         self.temp.cleanup()
 
+    def test_proxy_normalization_preserves_loopback_bypass_and_user_endpoints(self):
+        values = {'NO_PROXY': 'localhost,127.0.0.1,::1/128,.example.org,10.0.0.0/8',
+                  'no_proxy': '[::1],::1,https://internal.example,2001:db8::/32',
+                  'HF_ENDPOINT': 'https://models.example'}
+        with patch.dict(os.environ, values):
+            env = asr.tool_env()
+            self.assertEqual(env['NO_PROXY'], 'localhost,127.0.0.1,::1,.example.org,10.0.0.0/8')
+            self.assertEqual(env['no_proxy'], '::1,::1,https://internal.example,2001:db8::/32')
+            self.assertEqual(env['HF_ENDPOINT'], values['HF_ENDPOINT'])
+            for key, value in values.items(): self.assertEqual(os.environ[key], value)
+        with patch.dict(os.environ, {}, clear=True):
+            env = asr.tool_env()
+            self.assertNotIn('NO_PROXY', env)
+            self.assertNotIn('HF_ENDPOINT', env)
+
     def test_duration_comes_from_ffmpeg_when_there_is_no_ffprobe(self):
         output = subprocess.CompletedProcess([], 1, stderr='  Duration: 01:02:03.50, start: 0.000000, bitrate: 128 kb/s')
         with patch.object(asr.subprocess, 'run', return_value=output):
