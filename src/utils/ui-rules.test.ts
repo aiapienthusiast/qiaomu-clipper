@@ -37,3 +37,12 @@ it('styles the study page\'s buttons where they really are: the dialog is append
 	for (const unscoped of ['\n.qiaomu-home-x{', '\n.qiaomu-home-study{', '\n.qiaomu-home-go{']) expect(css).not.toContain(unscoped); // would lose to the app's global button rules
 	expect(css).toMatch(/\.qiaomu-home svg\{mix-blend-mode:normal!important/);
 });
+
+
+it('lets the shared top bar wrap before its actions can leave the viewport', async () => {
+ const { compileString } = await import('sass');
+ const css = compileString(source('../styles/clip-bar.scss')).css;
+ expect(css).toMatch(/\.clip-bar \{[^}]*height: auto;/);
+ expect(css).toMatch(/\.clip-bar \{[^}]*flex-wrap: wrap;/);
+ expect(css).toMatch(/\.clip-bar \.clip-bar-title \{[^}]*flex: 1 1 240px;/);
+});

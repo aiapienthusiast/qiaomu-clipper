@@ -84,15 +84,15 @@ export function buildGenerationPanel(doc: Document, strings: GenerationStrings, 
 }
 
 export const GENERATION_STYLE = DIALOG_STYLE + `
-.qiaomu-yt-gen{display:flex;flex-direction:column;gap:8px;width:100%;margin-top:6px}
+html .qiaomu-yt-gen{display:flex;flex-direction:column;gap:8px;width:100%;min-width:0;max-width:100%;box-sizing:border-box;margin-top:6px}
 .qiaomu-yt-gen[hidden]{display:none}
 .qiaomu-yt-gen[data-kind=offer]{width:auto;margin-top:0}
-.qiaomu-yt-gen-text{margin:0;color:var(--qm-fg2,var(--text-muted,#666));font-size:12px;line-height:18px}.qiaomu-yt-gen-text:empty{display:none}
+html .qiaomu-yt-gen-text{margin:0;min-width:0;overflow-wrap:anywhere;color:var(--qm-fg2,var(--text-muted,#666));font-size:12px;line-height:18px}.qiaomu-yt-gen-text:empty{display:none}
 .qiaomu-yt-gen-code{margin:0;padding:8px 10px;border-radius:6px;background:var(--qm-field,var(--background-secondary,rgba(127,127,127,.12)));color:var(--qm-fg,var(--text-normal,#222));font:12px/18px ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;word-break:break-all;user-select:all}
 .qiaomu-yt-gen-code[hidden],.qiaomu-yt-gen-meter[hidden]{display:none}
 .qiaomu-yt-gen-meter{height:3px;border-radius:2px;background:var(--qm-field,var(--background-secondary,rgba(127,127,127,.12)));overflow:hidden}
 .qiaomu-yt-gen-meter i{display:block;height:100%;background:var(--qm-accent,var(--interactive-accent,#2f6fed));transition:width .4s linear}
-.qiaomu-yt-gen-actions{display:flex;flex-wrap:wrap;gap:4px}
+.qiaomu-yt-gen-actions{display:flex;flex-wrap:wrap;gap:4px;min-width:0;max-width:100%}
 .qiaomu-yt-gen-actions:empty{display:none}
 .qiaomu-yt-gen-language{height:28px;max-width:140px;padding:0 4px 0 8px;border:0;border-radius:6px;background:var(--qm-field,var(--background-secondary,rgba(127,127,127,.12)));box-shadow:none;color:var(--qm-fg2,var(--text-muted,#666));font:inherit;font-size:12px;cursor:pointer}
 .qiaomu-yt-gen-language:focus{outline:none}.qiaomu-yt-gen-language:focus-visible{outline:1px solid var(--qm-accent,var(--interactive-accent,#2f6fed));outline-offset:-2px}
@@ -112,7 +112,7 @@ export const GENERATION_STYLE = DIALOG_STYLE + `
 .qiaomu-yt-gen-remember{display:flex;align-items:center;gap:6px;color:var(--qm-fg2,var(--text-muted,#666));font-size:12px;line-height:18px;cursor:pointer}
 .qiaomu-yt-gen-remember input{margin:0;accent-color:var(--qm-accent,var(--interactive-accent,#2f6fed))}
 /* A real button: a filled shape, not coloured text. Scoped with html + :not() so the app's global button rules (which also style :hover) cannot win. */
-html button.qiaomu-yt-gen-button:not(.qg-x){display:inline-flex;align-items:center;justify-content:center;width:auto;flex:0 0 auto;height:32px;padding:0 14px;border:0;border-radius:8px;background:rgba(127,127,127,.16);box-shadow:none;color:var(--qm-fg,var(--text-normal,#1d1d1f));font:inherit;font-size:13px;font-weight:550;line-height:1;white-space:nowrap;cursor:pointer;transition:background .12s,opacity .12s}
+html button.qiaomu-yt-gen-button:not(.qg-x){display:inline-flex;align-items:center;justify-content:center;width:auto;flex:0 1 auto;max-width:100%;box-sizing:border-box;min-height:32px;height:auto;padding:7px 14px;border:0;border-radius:8px;background:rgba(127,127,127,.16);box-shadow:none;color:var(--qm-fg,var(--text-normal,#1d1d1f));font:inherit;font-size:13px;font-weight:550;line-height:18px;white-space:normal;overflow-wrap:anywhere;cursor:pointer;transition:background .12s,opacity .12s}
 html button.qiaomu-yt-gen-button:not(.qg-x):hover{background:rgba(127,127,127,.28);box-shadow:none;color:var(--qm-fg,var(--text-normal,#1d1d1f))}
 html button.qiaomu-yt-gen-button.is-primary:not(.qg-x){background:var(--qm-fg,var(--text-normal,#1d1d1f));color:var(--qm-bg,var(--background-primary,#fff))}
 html button.qiaomu-yt-gen-button.is-primary:not(.qg-x):hover{background:var(--qm-fg,var(--text-normal,#1d1d1f));color:var(--qm-bg,var(--background-primary,#fff));opacity:.86}

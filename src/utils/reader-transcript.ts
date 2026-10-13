@@ -1,3 +1,4 @@
+import { syncTranscriptHeadingCover } from './transcript-heading';
 import { mountPlayerCaptions } from './player-captions';
 import { getMessage } from './i18n';
 import { bilibiliEmbedUrl, isBilibiliEmbed, PLAYER_SELECTOR, TRANSCRIPT_SELECTOR } from './video-source';
@@ -188,13 +189,18 @@ export function wireTranscript(
 
  // Keep the heading below the pinned player or clip bar, including after resizing/layout changes.
  const headingOffset=()=>{const layout=article.dataset.ytLayout;const pinned=playerContainer.classList.contains('pin-player')&&layout!=='side'&&layout!=='float';const playerTop=parseFloat(getComputedStyle(playerContainer).top)||0;return Math.max(scroll.getStickyOffset(),pinned?playerTop+playerContainer.getBoundingClientRect().height:0);};
- const syncHeading=()=>transcript.style.setProperty('--transcript-heading-top',`${headingOffset()}px`);
+ const syncHeading=()=>{
+  transcript.style.setProperty('--transcript-heading-top',`${headingOffset()}px`);
+  syncTranscriptHeadingCover(transcript);
+ };
+ let headingFrame = 0;
+ const scheduleHeading = () => { if (!headingFrame) headingFrame = requestAnimationFrame(() => { headingFrame = 0; syncHeading(); }); };
  const focusOffset=()=>Math.max(scroll.getFocusOffset?.()??scroll.getStickyOffset()+20,headingOffset()+(transcript.querySelector('.transcript-heading-row')?.getBoundingClientRect().height||0)+20);
- syncHeading();listen(window,'resize',syncHeading);
- const headingResize=typeof ResizeObserver!=='undefined'?new ResizeObserver(syncHeading):undefined;
- for(const element of [playerContainer,doc.querySelector('.clip-bar')])if(element)headingResize?.observe(element);
- const headingLayout=new MutationObserver(syncHeading);headingLayout.observe(article,{attributes:true,attributeFilter:['data-yt-layout']});headingLayout.observe(playerContainer,{attributes:true,attributeFilter:['class']});
- disposers.push(()=>{headingResize?.disconnect();headingLayout.disconnect();transcript.style.removeProperty('--transcript-heading-top');});
+ syncHeading();listen(window,'resize',scheduleHeading);listen(doc,'scroll',scheduleHeading,true);
+ const headingResize=typeof ResizeObserver!=='undefined'?new ResizeObserver(scheduleHeading):undefined;
+ for(const element of [transcript,playerContainer,doc.querySelector('.clip-bar')])if(element)headingResize?.observe(element);
+ const headingLayout=new MutationObserver(scheduleHeading);headingLayout.observe(article,{attributes:true,attributeFilter:['data-yt-layout']});headingLayout.observe(playerContainer,{attributes:true,attributeFilter:['class']});
+ disposers.push(()=>{headingResize?.disconnect();headingLayout.disconnect();if(headingFrame)cancelAnimationFrame(headingFrame);transcript.style.removeProperty('--transcript-heading-top');transcript.style.removeProperty('--transcript-heading-cover');});
 
 	const segmentTimes = segments.map(seg => {
 		const ts = seg.querySelector('.timestamp');
