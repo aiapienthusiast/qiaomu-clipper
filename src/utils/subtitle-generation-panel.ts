@@ -1,3 +1,4 @@
+import { helperDownloadLink } from './helper-install';
 import { stampOf } from './bilibili-captions';
 import type { SetupReason } from './subtitle-generation';
 import { DIALOG_STYLE, buildConfirmDialog, type ConfirmDialog } from './subtitle-generation-dialog';
@@ -67,7 +68,9 @@ export function buildGenerationPanel(doc: Document, strings: GenerationStrings, 
 				text.textContent = setupText(ui.reason); if (ui.hints.length) { code.hidden = false; code.textContent = ui.hints.join('\n'); }
 				if (ui.hints.length) row.append(button(strings.copyCommand, el => { void navigator.clipboard.writeText(ui.hints.join('\n')).then(() => { const old = el.textContent; el.textContent = strings.copied; setTimeout(() => { el.textContent = old; }, 1500); }).catch(() => {}); }));
 				const configurable = ui.reason !== 'busy' && Boolean(actions.setup);
-				if (configurable) row.append(button(ui.reason === 'helper-offline' || ui.reason === 'helper-outdated' ? strings.setupHelper : strings.setupRecognition, () => actions.setup?.(ui.reason), true));
+				const download = (ui.reason === 'helper-offline' || ui.reason === 'helper-outdated') ? helperDownloadLink(doc, 'qiaomu-yt-gen-button is-primary') : undefined;
+				if (download) row.append(download);
+				else if (configurable) row.append(button(ui.reason === 'helper-offline' || ui.reason === 'helper-outdated' ? strings.setupHelper : strings.setupRecognition, () => actions.setup?.(ui.reason), true));
 				row.append(button(strings.recheck, () => actions.request(), !configurable && !ui.hints.length)); break;
 			case 'running': {
 				const progressText = ui.modelDownload ? strings.modelDownloading : [strings.running, ui.via ?? '', ui.totalSec ? `${clock(ui.processedSec ?? 0)} / ${clock(ui.totalSec)}` : ''].filter(Boolean).join(' · ');
@@ -112,10 +115,10 @@ html .qiaomu-yt-gen-text{margin:0;min-width:0;overflow-wrap:anywhere;color:var(-
 .qiaomu-yt-gen-remember{display:flex;align-items:center;gap:6px;color:var(--qm-fg2,var(--text-muted,#666));font-size:12px;line-height:18px;cursor:pointer}
 .qiaomu-yt-gen-remember input{margin:0;accent-color:var(--qm-accent,var(--interactive-accent,#2f6fed))}
 /* A real button: a filled shape, not coloured text. Scoped with html + :not() so the app's global button rules (which also style :hover) cannot win. */
-html button.qiaomu-yt-gen-button:not(.qg-x){display:inline-flex;align-items:center;justify-content:center;width:auto;flex:0 1 auto;max-width:100%;box-sizing:border-box;min-height:32px;height:auto;padding:7px 14px;border:0;border-radius:8px;background:rgba(127,127,127,.16);box-shadow:none;color:var(--qm-fg,var(--text-normal,#1d1d1f));font:inherit;font-size:13px;font-weight:550;line-height:18px;white-space:normal;overflow-wrap:anywhere;cursor:pointer;transition:background .12s,opacity .12s}
-html button.qiaomu-yt-gen-button:not(.qg-x):hover{background:rgba(127,127,127,.28);box-shadow:none;color:var(--qm-fg,var(--text-normal,#1d1d1f))}
-html button.qiaomu-yt-gen-button.is-primary:not(.qg-x){background:var(--qm-fg,var(--text-normal,#1d1d1f));color:var(--qm-bg,var(--background-primary,#fff))}
-html button.qiaomu-yt-gen-button.is-primary:not(.qg-x):hover{background:var(--qm-fg,var(--text-normal,#1d1d1f));color:var(--qm-bg,var(--background-primary,#fff));opacity:.86}
-html button.qiaomu-yt-gen-button:not(.qg-x):focus{outline:none}html button.qiaomu-yt-gen-button:not(.qg-x):focus-visible{outline:1px solid var(--qm-fg,var(--text-normal,#1d1d1f));outline-offset:2px}
+html button.qiaomu-yt-gen-button:not(.qg-x),html a.qiaomu-yt-gen-button:not(.qg-x){display:inline-flex;align-items:center;justify-content:center;width:auto;flex:0 1 auto;max-width:100%;box-sizing:border-box;min-height:32px;height:auto;padding:7px 14px;border:0;border-radius:8px;background:rgba(127,127,127,.16);box-shadow:none;color:var(--qm-fg,var(--text-normal,#1d1d1f));font:inherit;font-size:13px;font-weight:550;line-height:18px;text-decoration:none;white-space:normal;overflow-wrap:anywhere;cursor:pointer;transition:background .12s,opacity .12s}
+html button.qiaomu-yt-gen-button:not(.qg-x):hover,html a.qiaomu-yt-gen-button:not(.qg-x):hover{background:rgba(127,127,127,.28);box-shadow:none;color:var(--qm-fg,var(--text-normal,#1d1d1f))}
+html button.qiaomu-yt-gen-button.is-primary:not(.qg-x),html a.qiaomu-yt-gen-button.is-primary:not(.qg-x){background:var(--qm-fg,var(--text-normal,#1d1d1f));color:var(--qm-bg,var(--background-primary,#fff))}
+html button.qiaomu-yt-gen-button.is-primary:not(.qg-x):hover,html a.qiaomu-yt-gen-button.is-primary:not(.qg-x):hover{background:var(--qm-fg,var(--text-normal,#1d1d1f));color:var(--qm-bg,var(--background-primary,#fff));opacity:.86}
+html button.qiaomu-yt-gen-button:not(.qg-x):focus,html a.qiaomu-yt-gen-button:not(.qg-x):focus{outline:none}html button.qiaomu-yt-gen-button:not(.qg-x):focus-visible,html a.qiaomu-yt-gen-button:not(.qg-x):focus-visible{outline:1px solid var(--qm-fg,var(--text-normal,#1d1d1f));outline-offset:2px}
 .qiaomu-yt-gen[data-kind=generated] .qiaomu-yt-gen-text{font-size:11px}
 `;

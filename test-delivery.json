@@ -188,14 +188,16 @@
         "src/utils/caption-fonts.ts",
         "src/utils/caption-style-editor.ts",
         "src/utils/player-caption-interaction.ts",
-        "src/utils/embedded-player-interaction.ts"
+        "src/utils/embedded-player-interaction.ts",
+        "src/utils/bar-generation.ts"
       ],
       "tests": [
         "src/utils/youtube-study-loader.test.ts",
         "src/utils/caption-fonts.test.ts",
         "src/utils/caption-appearance.test.ts",
         "src/utils/player-caption-interaction.test.ts",
-        "src/utils/embedded-player-interaction.test.ts"
+        "src/utils/embedded-player-interaction.test.ts",
+        "src/utils/bar-generation.test.ts"
       ]
     },
     {
@@ -219,17 +221,37 @@
     },
     {
       "id": "study-tips-shortcuts",
-      "title": "可关闭的小技巧、K/空格播放暂停、J/L十秒跳转及字幕标题遮挡修复",
+      "title": "工具栏下方可关闭的小技巧、26条功能介绍、紧凑字幕语言选择与播放快捷键",
       "origin": "本次学习页收尾",
       "files": [
         "src/utils/study-tips.ts",
         "src/utils/player-caption-interaction.ts",
-        "src/utils/transcript-heading.ts"
+        "src/utils/transcript-heading.ts",
+        "src/utils/study-caption-language.ts",
+        "src/styles/reader/youtube-player-layout.scss"
       ],
       "tests": [
         "src/utils/study-tips.test.ts",
         "src/utils/player-caption-interaction.test.ts",
-        "src/utils/embedded-player-interaction.test.ts"
+        "src/utils/embedded-player-interaction.test.ts",
+        "src/utils/study-caption-language.test.ts"
+      ]
+    },
+    {
+      "id": "storage-quota-recovery",
+      "title": "字幕存储额度修复、缓存容量限制与草稿保护",
+      "origin": "本次存储额度回归修复",
+      "files": [
+        "src/utils/storage-quota.ts",
+        "src/utils/youtube-transcript-cache.ts",
+        "src/utils/youtube-study-loader.ts",
+        "src/manifest.chrome.json"
+      ],
+      "tests": [
+        "src/utils/storage-quota.test.ts",
+        "src/utils/youtube-transcript-cache.test.ts",
+        "src/utils/youtube-study-loader.test.ts",
+        "src/utils/clip-preview.test.ts"
       ]
     },
     {
@@ -251,6 +273,39 @@
         "src/utils/ui-rules.test.ts",
         "src/utils/transcript-export.test.ts",
         "src/utils/clip-bar.test.ts"
+      ]
+    },
+    {
+      "id": "study-helper-recovery",
+      "title": "助手下载安装及重新检查、浏览器登录授权与准确错误分类",
+      "origin": "主工作区未提交修复",
+      "files": [
+        "src/utils/helper-install.ts",
+        "src/managers/general-settings.ts",
+        "src/managers/asr-settings.ts",
+        "src/utils/native-helper-call.ts",
+        "src/utils/local-save.ts"
+      ],
+      "tests": [
+        "src/managers/local-helper-settings.test.ts",
+        "src/managers/asr-settings.test.ts",
+        "src/utils/asr-settings.test.ts",
+        "src/utils/local-save-learning.test.ts"
+      ]
+    },
+    {
+      "id": "native-study-caption-parity",
+      "title": "普通视频共享字幕设置与文稿换模型单入口",
+      "origin": "本次跨播放器整合",
+      "files": [
+        "src/utils/audio-study.ts",
+        "src/utils/transcript-heading.ts",
+        "src/utils/media-study-player.ts"
+      ],
+      "tests": [
+        "src/utils/audio-study.test.ts",
+        "src/utils/reader-transcript-timing.test.ts",
+        "src/utils/media-study-player.test.ts"
       ]
     }
   ]

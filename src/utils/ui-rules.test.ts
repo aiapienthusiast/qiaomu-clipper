@@ -20,7 +20,7 @@ it('scopes our buttons so the app\'s global button rules (and their :hover) cann
 		const css = source(file);
 		expect(css, file).not.toMatch(/\n\.qiaomu-yt-gen-button\{/); // an unscoped rule would lose to buttons.scss
 	}
-	expect(source('./subtitle-generation-panel.ts')).toContain('html button.qiaomu-yt-gen-button:not(.qg-x){display:inline-flex');
+	expect(source('./subtitle-generation-panel.ts')).toMatch(/html button\.qiaomu-yt-gen-button:not\(\.qg-x\)(?:,html a\.qiaomu-yt-gen-button:not\(\.qg-x\))?\{display:inline-flex/);
 	expect(source('./subtitle-generation-dialog.ts')).toMatch(/\.qiaomu-dlg-wrap \.qiaomu-dlg \.qiaomu-dlg-btn\{/);
 });
 

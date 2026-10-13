@@ -1976,7 +1976,7 @@
 		"message": "Lendo este endereço…"
 	},
 	"subtitleGenOffline": {
-		"message": "O assistente local não está conectado. Instale-o ou verifique sua conexão em Recorte e salvamento."
+		"message": "O assistente local não está conectado. Após instalar ou reparar, volte aqui e clique em “Verificar novamente”."
 	},
 	"audioTabAbout": {
 		"message": "Descrição"
@@ -2042,7 +2042,7 @@
 		"message": "Gerado por reconhecimento de fala; pode conter erros de reconhecimento"
 	},
 	"subtitleGenOutdated": {
-		"message": "O assistente local está desatualizado. Atualize-o em Recorte e salvamento e verifique novamente."
+		"message": "O assistente local precisa ser atualizado. Após a instalação, volte aqui e clique em “Verificar novamente”."
 	},
 	"subtitleGenMissing": {
 		"message": "Ferramentas necessárias para gerar legendas estão ausentes. Configure o reconhecimento de fala, instale as ferramentas necessárias ou um mecanismo local, e verifique novamente."

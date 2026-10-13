@@ -21,6 +21,24 @@ it('does not suggest installation or configuration while another task is busy', 
  expect(setup).not.toHaveBeenCalled();
 });
 
+it('shows a styled direct pkg link and recheck on Mac without starting recognition on download', () => {
+ const platform = vi.spyOn(navigator, 'platform', 'get').mockReturnValue('MacIntel');
+ const request = vi.fn(), setup = vi.fn();
+ const panel = buildGenerationPanel(document, generationStrings((_, zh) => zh), {request, setup, confirm: vi.fn(), cancel: vi.fn()});
+ const style = document.createElement('style'); style.textContent = 'button:not(.clickable-icon){width:100%;background:red}' + GENERATION_STYLE;
+ document.head.append(style); document.body.append(panel.element);
+ try {
+  panel.show({kind:'setup',reason:'helper-outdated',hints:[]});
+  const link = panel.element.querySelector('a')!;
+  expect(link.href).toMatch(/latest\/download\/qiaomu-clipper-helper\.pkg$/);
+  expect(link.textContent).toContain('下载安装包');
+  expect(getComputedStyle(link).display).toBe('inline-flex');
+  expect(getComputedStyle(link).width).toBe('auto');
+  expect(request).not.toHaveBeenCalled(); expect(setup).not.toHaveBeenCalled();
+  panel.element.querySelector('button')!.click(); expect(request).toHaveBeenCalledOnce();
+ } finally { platform.mockRestore(); style.remove(); panel.element.remove(); }
+});
+
 it('keeps the same dialog and focus while a selected model is checked, then updates installation in place', () => {
  document.body.innerHTML='';
  const panel = buildGenerationPanel(document, generationStrings((_, zh) => zh), {request:vi.fn(), confirm:vi.fn(), cancel:vi.fn(), choose:vi.fn()});

@@ -10,7 +10,7 @@ import { webMediaAddress } from './web-media-page';
 import { activeProfile, choosePatch, cloudConfig, effectiveFor, isConfigured, isHttpsOrLocal, isLocalService, loadAsrSettings, platformOf, profileLabel, saveAsrSettings, LOCAL_ENGINE_IDS, type AsrSettings } from './asr-settings';
 import { callHelper } from './native-helper-call';
 import { cookiesTxtFor, videoAddress, type BrowserCookie } from './browser-cookies';
-import { t } from './ui-text';
+import { localizeHelperReply, t } from './ui-text';
 export interface LocalSavePayload { requestId: string; content: string; name: string; folder: string; vault: string; behavior: Template['behavior'] }
 export interface LocalSaveResult { ok: boolean; reason?: string; error?: string; cancelled?: boolean; vault?: string; vaultPath?: string; path?: string; relativePath?: string; folder?: string }
 export async function saveLocalClip(payload: LocalSavePayload): Promise<LocalSaveResult> {
@@ -173,14 +173,16 @@ export function handleAsrMessage(request: unknown, sender: { id?: string; url?: 
             const text = cookiesApi ? await cookiesTxtFor(address, details => cookiesApi.getAll(details)) : '';
             if (text) body.cookiesTxt = text;
         }
-        const result = await invokeLearningNative(body)
+        // Classify protocol failures before translation changes their wording.
+        const result = await Promise.resolve().then(() => callHelper(body, false))
             // `unsupported` is also the documented probe result for a website without an extractor.
             // Preserve that result; it says nothing about the helper's version.
             .then(answer => {
                 const reply = answer as { ok?: boolean; error?: string };
-                if (!reply || typeof reply.ok !== 'boolean') return { ok: false, error: 'helper-outdated' };
+                if (!reply || typeof reply.ok !== 'boolean') return { ok: false, error: 'helper-offline' };
                 if (!reply.ok && payload.mode === 'probe' && reply.error === 'unsupported') return answer;
-                return !reply.ok && /不支持|unsupported/i.test(reply.error || '') ? { ok: false, error: 'helper-outdated' } : answer;
+                return !reply.ok && /^(?:不支持的本地操作|unsupported(?: (?:local )?(?:action|operation))?|unknown (?:action|operation))$/i.test(reply.error || '')
+                    ? { ok: false, error: 'helper-outdated' } : localizeHelperReply(answer);
             })
             .catch(() => ({ ok: false, error: 'helper-offline' }));
         return payload.mode === 'status' && (result as { ok?: boolean }).ok ? { ...(result as object), mode: chosen?.mode ?? 'local', ...(label ? { cloudLabel: label, cloudModel: model, cloudLocal: here } : {}), choices: summary(chosen!) } : result;
