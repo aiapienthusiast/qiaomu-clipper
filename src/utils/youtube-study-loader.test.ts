@@ -17,7 +17,7 @@ import { reloadPage } from './page-reload';
 import { youtubeStudyPath } from './youtube-url';
 const url = 'https://www.youtube.com/watch?v=dbqweBCynuI';
 const result = { content: '<div class="youtube transcript"><p class="transcript-segment">Actual subtitle</p></div>', title: 'Video' };
-const flush = async () => { for (let i = 0; i < 15; i++) await Promise.resolve(); };
+const flush = async () => { for (let i = 0; i < 40; i++) await Promise.resolve(); };
 beforeEach(() => { vi.clearAllMocks(); state.store = {}; document.body.innerHTML = ''; state.fetch.mockImplementation(async (message: { action: string }) => message.action === 'qiaomuStudyTranscript' ? {} : { html: '<html><body>source</body></html>' }); });
 afterEach(() => vi.useRealTimers());
 
@@ -248,4 +248,16 @@ it('keeps regeneration feedback attached after the reader rebuilds its heading',
  vi.mocked(Reader.attachYouTubeTranscript).mockImplementationOnce(async(_doc,transcript)=>{document.querySelector('.youtube-study-feedback')?.remove();document.querySelector('article')!.append(transcript);});
  await startYouTubeStudy(url,42,'Video',state.ready);await flush();
  expect(document.querySelector('.transcript-heading-tools .qiaomu-yt-gen')).not.toBeNull();
+});
+
+
+it('keeps fetched captions usable when saving the draft exceeds storage quota', async () => {
+ state.parse.mockResolvedValue(result);
+ const ready=vi.fn().mockRejectedValue(new Error('Resource::kQuotaBytes quota exceeded'));
+ await startYouTubeStudy(url,42,'Video',ready);
+ await vi.waitFor(()=>expect(Reader.attachYouTubeTranscript).toHaveBeenCalled());
+ expect(document.querySelector('.transcript')?.textContent).toContain('Actual subtitle');
+ expect(document.querySelector('.qiaomu-study-save-warning')?.textContent).toContain('尚未保存');
+ expect(document.querySelector<HTMLButtonElement>('[aria-label="重新加载字幕"]')?.hidden).toBe(true);
+ expect(ready).toHaveBeenCalledTimes(1);
 });

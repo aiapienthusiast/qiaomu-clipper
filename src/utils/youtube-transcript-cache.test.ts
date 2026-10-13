@@ -62,3 +62,36 @@ it('refreshes old official cues but preserves generated results to avoid repeati
  expect(await cache.read('abcdefghijk')).toBeUndefined();
  expect(await cache.read('generated:youtube:abcdefghijk')).toEqual([{time:'0:01',text:'paid result'}]);
 });
+
+
+it('measures UTF-8 bytes rather than characters', async () => {
+ const cache=createTranscriptCache(storage);
+ await cache.write('abcdefghijk',[{time:'0:00',text:'中'.repeat(300_000)}]);
+ expect(await cache.read('abcdefghijk')).toBeUndefined();
+});
+
+it('bounds refetchable captions by total bytes and never evicts generated results', async () => {
+ const cache=createTranscriptCache(storage);
+ await cache.write('generated:youtube:abcdefghijk',lines);
+ for(let n=0;n<35;n++) await cache.write(id(n),[{time:'0:00',text:'a'.repeat(500_000)}]);
+ expect(new TextEncoder().encode(JSON.stringify(data)).length).toBeLessThan(4_300_000);
+ expect(await cache.read('generated:youtube:abcdefghijk')).toEqual(lines);
+ expect(await cache.read(id(34))).toBeDefined();
+});
+
+it('evicts before writing so a full cache can accept the next transcript', async () => {
+ const limited={...storage,set:async(items:Record<string,unknown>)=>{
+  if(new TextEncoder().encode(JSON.stringify({...data,...items})).length>4_300_000) throw new Error('Resource::kQuotaBytes quota exceeded');
+  await storage.set(items);
+ }};
+ const cache=createTranscriptCache(limited);
+ for(let n=0;n<12;n++) await cache.write(id(n),[{time:'0:00',text:'a'.repeat(500_000)}]);
+ expect(await cache.read(id(11))).toBeDefined();
+});
+
+it('retains large generated word timings instead of silently treating them as expendable cache', async () => {
+ const cache=createTranscriptCache(storage);
+ const generated=[{time:'0:00',text:'中'.repeat(300_000),words:[{start:0,end:1,text:'中'}]}];
+ await cache.write('generated:youtube:abcdefghijk',generated);
+ expect(await cache.read('generated:youtube:abcdefghijk')).toEqual(generated);
+});

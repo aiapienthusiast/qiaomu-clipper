@@ -224,3 +224,23 @@ it('does not reopen a dismissed model dialog when its selection request finishes
  gen.actions.dismiss!();resolve({ok:true});await settle();
  expect(shown[shown.length - 1]).toBeNull();expect(full.status).toHaveBeenCalledTimes(1);expect(full.start).not.toHaveBeenCalled();
 });
+
+
+it('asks for a model after cancelling an automatic start, preserving the selected model and automatic preference', async()=>{
+ const status=vi.fn(async()=>ready({choices:{mode:'local',engine:'mlx',auto:true,active:'',profiles:[]}}));
+ const {gen,full}=make({status,poll:vi.fn(async()=>job())});
+ gen.actions.request();await settle();expect(full.start).toHaveBeenCalledTimes(1);
+ gen.actions.cancel();await settle();gen.actions.request();await settle();
+ expect(shown[shown.length - 1]).toMatchObject({kind:'confirm',selected:'local:mlx'});
+ expect(full.start).toHaveBeenCalledTimes(1);
+ gen.actions.dismiss!();gen.actions.request();await settle();expect(shown[shown.length - 1]?.kind).toBe('confirm');
+ expect(full.start).toHaveBeenCalledTimes(1);
+ gen.actions.confirm();await settle();expect(full.start).toHaveBeenCalledTimes(2);
+});
+
+it('keeps automatic generation enabled for a different video after cancelling this one',async()=>{
+ const {gen,full}=make({status:vi.fn(async()=>ready({choices:{mode:'local',engine:'mlx',auto:true,active:'',profiles:[]}})),poll:vi.fn(async()=>job())});
+ gen.actions.request();await settle();gen.actions.cancel();await settle();
+ current=OTHER;gen.actions.request();await settle();expect(full.start).toHaveBeenCalledTimes(2);
+ expect(full.start).toHaveBeenLastCalledWith(OTHER,'auto');
+});

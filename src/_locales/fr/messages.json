@@ -1976,7 +1976,7 @@
 		"message": "Lecture de cette adresse…"
 	},
 	"subtitleGenOffline": {
-		"message": "L'assistant local n'est pas connecté. Installez-le ou vérifiez sa connexion sous Découpage et sauvegarde."
+		"message": "L’assistant local n’est pas connecté. Après l’installation ou la réparation, revenez ici et cliquez sur « Vérifier à nouveau »."
 	},
 	"audioTabAbout": {
 		"message": "Description"
@@ -2042,7 +2042,7 @@
 		"message": "Généré par reconnaissance vocale ; peut contenir des erreurs de reconnaissance"
 	},
 	"subtitleGenOutdated": {
-		"message": "L'assistant local est obsolète. Mettez-le à jour sous Découpage et sauvegarde, puis vérifiez à nouveau."
+		"message": "L’assistant local doit être mis à jour. Après l’installation, revenez ici et cliquez sur « Vérifier à nouveau »."
 	},
 	"subtitleGenMissing": {
 		"message": "Des outils nécessaires pour générer des sous-titres sont manquants. Configurez la reconnaissance vocale, installez les outils requis ou un moteur local, puis vérifiez à nouveau."

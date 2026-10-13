@@ -1,3 +1,4 @@
+import { mountTranscriptRegenerate } from './transcript-heading';
 import { startStudyMedia, type StudyPlayback } from './study-playback-handoff';
 import { marked } from 'marked';
 import { patchClipPreview } from './clip-preview';
@@ -8,6 +9,8 @@ import { readTedMedia } from './ted-media';
 import { probeDouyinPage, probeWebStudy, probeXiaoeLive, type XiaoeAnswer } from './web-study-probe';
 import DOMPurify from 'dompurify';
 import browser from './browser-polyfill';
+import { helperDownloadLink } from './helper-install';
+import { reloadPage } from './page-reload';
 import { Reader } from './reader';
 import { setPageTitle, setPageUrl } from './highlighter';
 import { AUDIO_FILE, asrUpload, asrStatus, asrChoose, registerFeedEpisode, registerWebSource, useWebCookies, type AsrReply, type WebInfo, type CookieBrowser } from './asr-client';
@@ -181,7 +184,12 @@ export async function startAudioStudy(options: AudioStudyOptions): Promise<void>
 		status.textContent = reason === 'helper-outdated' ? words.setupOutdated : helper ? words.setupOffline : words.setupMissing;
 		const setup = document.createElement('button'); setup.type = 'button'; setup.className = 'qiaomu-yt-gen-button'; setup.textContent = helper ? words.setupHelper : words.setupRecognition;
 		setup.addEventListener('click', () => { void browser.runtime.sendMessage({ action: 'openSettings', section: helper ? 'clip' : 'asr-models' }); });
-		status.append(document.createTextNode(' '), setup);
+		const actions = document.createElement('span'); actions.className = 'qiaomu-yt-gen-actions';
+		actions.append((helper && helperDownloadLink(document, 'qiaomu-yt-gen-button is-primary')) || setup);
+		const retry = document.createElement('button'); retry.type = 'button'; retry.className = 'qiaomu-yt-gen-button'; retry.textContent = words.recheck;
+		// This failure is before a media job starts; reload repeats only the source read/file chooser.
+		retry.addEventListener('click', reloadPage); actions.append(retry);
+		status.append(actions);
 	};
     // Render the user's text even while original-site verification is pending.
     if (session.restored) {
@@ -209,6 +217,7 @@ export async function startAudioStudy(options: AudioStudyOptions): Promise<void>
 		if (replace) { article.dispatchEvent(new CustomEvent('qiaomu-transcript-replaced')); article.querySelector(TRANSCRIPT_SELECTOR)?.remove(); }
 		attached = true; status.textContent = '';
 		await Reader.attachYouTubeTranscript(document, transcript, title, shell.chat);
+		mountRegenerate(transcript);
 		// The reader puts its switches (follow playback, translate) in a bar of their own under the player; here they belong in the one row of controls.
 		const group = article.querySelector<HTMLElement>('.player-container .player-toggle-group'), tools = article.querySelector<HTMLElement>('.player-container .qa-tools');
 		if (article.dataset.audioStudy === 'true' && group && tools) { tools.insertBefore(group, tools.querySelector('.qa-speed')); article.querySelector('.player-container .player-toggles')?.setAttribute('hidden', ''); }
@@ -220,7 +229,7 @@ export async function startAudioStudy(options: AudioStudyOptions): Promise<void>
 		onJob: (k, id) => { if (options.kind === 'file' && k === key) { recoveryJobId = id; saveFileStudySession(route, key, title, true, id); } },
 		videoKey: () => key || null,
 		bar: () => ({ setGeneration: (ui: GenUi | null) => {
-			panel.show(ui ?? { kind: 'offer' });
+			panel.show(attached && (!ui || ui.kind === 'offer' || ui.kind === 'generated') ? null : ui ?? { kind: 'offer' });
 			if (options.kind === 'file') {
 				if (key && ui?.kind === 'running') saveFileStudySession(route, key, title, true, recoveryJobId);
 				if (key && (!ui || ui.kind === 'failed' || (ui.kind === 'generated' && !ui.via))) saveFileStudySession(route, key, title);
@@ -230,7 +239,7 @@ export async function startAudioStudy(options: AudioStudyOptions): Promise<void>
 			}
 		} }) as never,
 		apply: (k, lines, done) => { if (done && k === key) void attach(lines, attached).catch(() => { status.textContent = t('识别已成功，字幕显示失败。请刷新恢复缓存或重新选择同一文件。'); }); },
-		revert: () => { panel.show({ kind: 'offer' }); },
+		revert: () => { panel.show(attached ? null : { kind: 'offer' }); },
 		// Publish the completed replacement in place, independently of storage availability. Never refresh a page holding a File.
 		save: (k, lines) => { void cache.write(`generated:${k}`, lines).then(async () => {
 			const saved = await cache.read(`generated:${k}`);
@@ -243,12 +252,13 @@ export async function startAudioStudy(options: AudioStudyOptions): Promise<void>
 		openSettings: () => { window.open(browser.runtime.getURL('settings.html?section=asr-models'), '_blank'); },
 	});
 	const panel = buildGenerationPanel(document, generationStrings(text), generation.actions);
+	const mountRegenerate = (transcript: Element) => mountTranscriptRegenerate(transcript, panel.element, t('换模型生成字幕'), () => { if (!generation.active) generation.actions.regenerate?.(); });
 	holder.append(panel.element); if (session.restored) panel.element.hidden = true;
 	window.addEventListener('pagehide', () => { generation.reset(); window.removeEventListener('resize', place); }, { once: true });
 	// With a key, use what was made before, else ask to make it now.
 	const begin = async () => {
 		const made = await cache.read(`generated:${key}`);
-		if (made?.length) { await attach(made); panel.show({ kind: 'generated' }); return; }
+		if (made?.length) { await attach(made); panel.show(null); return; }
 		status.textContent = text('audioStudyNone', '这段内容还没有字幕。生成后，字幕会跟着播放滚动。', 'There are no subtitles for this media yet. Once made, the lines follow playback.');
 		generation.actions.request();
 	};
@@ -345,7 +355,7 @@ export async function startAudioStudy(options: AudioStudyOptions): Promise<void>
         if (session.restored) {
             const content = article.querySelector<HTMLElement>('.qiaomu-restored-study')!;
             const transcript = prepareLocalPreviewTranscript(content);
-            if (transcript) await Reader.attachYouTubeTranscript(document, transcript, session.draft.clip.title, shell.chat);
+            if (transcript) { attached = true; await Reader.attachYouTubeTranscript(document, transcript, session.draft.clip.title, shell.chat); mountRegenerate(transcript); }
             panel.element.hidden = true; status.textContent = ''; shell.refresh(); shell.setPending(false);
             await patchClipPreview(session.draft, {studySource:session.draft.studySource});
             try { await preserveRemotePreviewMedia(session.draft); }

@@ -1,5 +1,6 @@
+import { isStorageQuotaError } from './storage-quota';
 import { startStudyPlayback, type StudyPlayback } from './study-playback-handoff';
-import { transcriptHeadingTools } from './transcript-heading';
+import { mountTranscriptRegenerate } from './transcript-heading';
 import { marked } from 'marked';
 import type { ClipPreview } from './clip-preview';
 import { prepareLocalPreviewTranscript } from './local-preview-media';
@@ -64,6 +65,19 @@ export async function startYouTubeStudy(url: string, sourceTabId: number, initia
 	await mountYouTubeStudy(document, article, title, url, shell?.chat);
 	const status = article.querySelector<HTMLElement>('.youtube-study-status')!;
 
+	// Saving and fetching are separate outcomes: never offer paid regeneration for a full disk.
+    const saveWarning = document.createElement('p');
+    saveWarning.className = 'qiaomu-study-save-warning'; saveWarning.setAttribute('role', 'status');
+    saveWarning.hidden = true; article.prepend(saveWarning);
+    const populate = async (result: any) => {
+        try { await onReady(result); saveWarning.hidden = true; }
+        catch (error) {
+            if (!isStorageQuotaError(error)) throw error;
+            saveWarning.textContent = t('本地存储空间不足，本页内容尚未保存。字幕仍可阅读，请在关闭前复制或导出文字。');
+            saveWarning.hidden = false;
+        }
+    };
+
 	const clip = document.getElementById('qiaomu-reader-clip') as HTMLButtonElement | null;
 	if (clip) clip.disabled = true;
 	const retry = document.createElement('button');
@@ -94,12 +108,7 @@ export async function startYouTubeStudy(url: string, sourceTabId: number, initia
 	retry.after(panel.element);
  const mountRegenerate = () => {
   const transcript = article.querySelector(TRANSCRIPT_SELECTOR); if (!transcript) return;
-  const tools = transcriptHeadingTools(transcript); if (tools.querySelector('.q-transcript-regenerate')) return;
-  const button = document.createElement('button'); button.type = 'button'; button.className = 'q-transcript-regenerate';
-  button.title = t('换模型生成字幕'); button.setAttribute('aria-label', button.title); button.setAttribute('aria-haspopup', 'dialog');
-  button.textContent = t('换模型生成字幕');
-  button.onclick = () => { if (!generation.active) generation.actions.regenerate?.(); };
-  tools.append(button, panel.element);
+  mountTranscriptRegenerate(transcript, panel.element, t('换模型生成字幕'), () => { if (!generation.active) generation.actions.regenerate?.(); });
  };
 
 
@@ -174,7 +183,7 @@ export async function startYouTubeStudy(url: string, sourceTabId: number, initia
 			document.title = nextTitle; setPageTitle(nextTitle);
 			const heading = document.querySelector('main h1'); if (heading) heading.textContent = nextTitle;
 			studyResult = result;
-			await onReady(result);
+			await populate(result);
             const saved = await genCache?.read(`generated:${key}`);
             if (saved?.length) { await attachGenerated(saved); panel.show({ kind: 'generated' }); return; }
 			if (!transcript || !transcriptText(content)) {
@@ -196,7 +205,7 @@ export async function startYouTubeStudy(url: string, sourceTabId: number, initia
 				const source = document.createElement('div'); source.innerHTML = DOMPurify.sanitize(currentContent);
 				const previous = source.querySelector(TRANSCRIPT_SELECTOR); if (!previous) throw new Error(t('字幕不可用'));
 				previous.replaceWith(next.cloneNode(true));
-				await onReady({ ...result, content: source.innerHTML }); currentContent = source.innerHTML;
+				await populate({ ...result, content: source.innerHTML }); currentContent = source.innerHTML;
 				article.dispatchEvent(new CustomEvent('qiaomu-transcript-replaced')); article.querySelector(TRANSCRIPT_SELECTOR)?.remove();
 				await Reader.attachYouTubeTranscript(document, next, nextTitle, shell?.chat); mountRegenerate();
 			});
@@ -222,7 +231,7 @@ export async function startYouTubeStudy(url: string, sourceTabId: number, initia
 		const transcript = holder.querySelector<HTMLElement>(TRANSCRIPT_SELECTOR); if (!transcript) return;
 		const content = document.createElement('div'); content.innerHTML = DOMPurify.sanitize(studyResult.content || '');
         const previous = content.querySelector(TRANSCRIPT_SELECTOR); if (previous) previous.replaceWith(transcript.cloneNode(true)); else content.append(transcript.cloneNode(true));
-        await onReady({ ...studyResult, content: content.innerHTML });
+        await populate({ ...studyResult, content: content.innerHTML });
 		if (loaded) { article.dispatchEvent(new CustomEvent('qiaomu-transcript-replaced')); article.querySelector(TRANSCRIPT_SELECTOR)?.remove(); }
 		await Reader.attachYouTubeTranscript(document, transcript, document.title, shell?.chat);
 		loaded = true; mountRegenerate(); status.textContent = ''; retry.hidden = true; shell?.ready(); if (clip) clip.disabled = false;

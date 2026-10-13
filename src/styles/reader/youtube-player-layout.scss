@@ -33,7 +33,7 @@ html.youtube-study.obsidian-reader-active:has(.youtube-sized-player) body {
 			// Left: where the video sits. Right: the switches (pin, follow, translate), translate last.
 			> .youtube-mode-bar { grid-column: 1; grid-row: 3; }
 			> .player-toggles { grid-column: 2; grid-row: 3; min-width: 0; justify-content: flex-end; }
-			.player-toggle-group { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px 16px; }
+			.player-toggle-group { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px 8px; }
 			// The stacked fallback pins the video under the bar; solid background, no glow over the text.
 			&.pin-player { top: var(--youtube-bar-height, var(--clip-bar-offset, 0px)); }
 			.reader-video-wrapper, iframe { box-shadow: none; }

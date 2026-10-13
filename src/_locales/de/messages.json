@@ -1976,7 +1976,7 @@
 		"message": "Diese Adresse wird gelesen…"
 	},
 	"subtitleGenOffline": {
-		"message": "Das lokale Hilfsprogramm ist nicht verbunden. Installieren Sie es oder prüfen Sie die Verbindung unter Ausschneiden und Speichern."
+		"message": "Der lokale Helfer ist nicht verbunden. Kehre nach der Installation oder Reparatur hierher zurück und klicke auf „Erneut prüfen“."
 	},
 	"audioTabAbout": {
 		"message": "Beschreibung"
@@ -2042,7 +2042,7 @@
 		"message": "Von Spracherkennung erzeugt; kann Erkennungsfehler enthalten"
 	},
 	"subtitleGenOutdated": {
-		"message": "Das lokale Hilfsprogramm ist veraltet. Aktualisieren Sie es unter Ausschneiden und Speichern und prüfen Sie dann erneut."
+		"message": "Der lokale Helfer muss aktualisiert werden. Kehre nach der Installation hierher zurück und klicke auf „Erneut prüfen“."
 	},
 	"subtitleGenMissing": {
 		"message": "Werkzeuge zum Erzeugen von Untertiteln fehlen. Richten Sie Spracherkennung ein, installieren Sie die erforderlichen Werkzeuge oder ein lokales Hilfsprogramm und prüfen Sie dann erneut."

@@ -28,3 +28,12 @@ export function transcriptHeadingTools(transcript: Element): HTMLElement {
  syncTranscriptHeadingCover(transcript as HTMLElement);
  return tools;
 }
+
+
+export function mountTranscriptRegenerate(transcript: Element, panel: HTMLElement, label: string, regenerate: () => void): void {
+ const tools = transcriptHeadingTools(transcript);
+ let button = tools.querySelector<HTMLButtonElement>('.q-transcript-regenerate');
+ if (!button) { button = transcript.ownerDocument.createElement('button'); button.type = 'button'; button.className = 'q-transcript-regenerate'; tools.append(button); }
+ button.textContent = label; button.title = label; button.setAttribute('aria-label', label); button.setAttribute('aria-haspopup', 'dialog');
+ button.onclick = regenerate; tools.append(panel);
+}
