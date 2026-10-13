@@ -231,6 +231,27 @@
         "src/utils/player-caption-interaction.test.ts",
         "src/utils/embedded-player-interaction.test.ts"
       ]
+    },
+    {
+      "id": "study-action-visibility",
+      "title": "字幕生成按钮完整显示、吸顶遮挡边界和窄栏长文案换行",
+      "origin": "本次学习页按钮裁切修复",
+      "files": [
+        "src/utils/transcript-heading.ts",
+        "src/utils/reader-transcript.ts",
+        "src/utils/subtitle-generation-panel.ts",
+        "src/styles/clip-bar.scss",
+        "src/utils/transcript-export.ts",
+        "src/utils/clip-bar.ts"
+      ],
+      "tests": [
+        "src/utils/transcript-heading.test.ts",
+        "src/utils/subtitle-generation-panel.test.ts",
+        "src/utils/reader-transcript-timing.test.ts",
+        "src/utils/ui-rules.test.ts",
+        "src/utils/transcript-export.test.ts",
+        "src/utils/clip-bar.test.ts"
+      ]
     }
   ]
 }

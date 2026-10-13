@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { expect, it, vi } from 'vitest';
-import { buildGenerationPanel, type GenUi } from './subtitle-generation-panel';
+import { buildGenerationPanel, GENERATION_STYLE, type GenUi } from './subtitle-generation-panel';
 import { generationStrings } from './subtitle-generation-strings';
 
 it.each(['helper-offline', 'helper-outdated', 'cloud-not-configured', 'missing'] as const)('offers an actionable setup button for %s without restarting a job', reason => {
@@ -64,4 +64,17 @@ it('changing a model stays in one dialog and one confirmation starts exactly one
  expect(start).toHaveBeenCalledExactlyOnceWith('youtube:abcdefghijk','en',true);
  expect(document.querySelector('[role="dialog"]')).toBeNull();
  gen.reset();
+});
+
+// Real panel markup with reader-style defaults, including long translated labels.
+it.each(['offer', 'generated', 'running', 'failed', 'setup'] as const)('keeps %s actions within a narrow column and allows their labels to wrap', kind => {
+ const style = document.createElement('style'); style.textContent = 'button { width:100%; white-space:nowrap; height:28px; }' + GENERATION_STYLE; document.head.append(style);
+ const panel = buildGenerationPanel(document, generationStrings((_, zh) => zh + ' very long translated action label'), {request:vi.fn(), confirm:vi.fn(), cancel:vi.fn(), regenerate:vi.fn(), setup:vi.fn()});
+ const host = document.createElement('div'); host.style.width = '180px'; document.body.append(host); host.append(panel.element);
+ const states: Record<string, GenUi> = {offer:{kind:'offer'}, generated:{kind:'generated'}, running:{kind:'running',stage:'',progress:20,modelDownload:false}, failed:{kind:'failed',error:'long error'}, setup:{kind:'setup',reason:'missing',hints:[]}};
+ panel.show(states[kind]);
+ const button = panel.element.querySelector('button')!, css = getComputedStyle(button);
+ expect(css.whiteSpace).toBe('normal'); expect(css.maxWidth).toBe('100%'); expect(css.height).toBe('auto'); expect(css.minHeight).toBe('32px');
+ expect(css.overflowWrap).toBe('anywhere'); expect(css.width).toBe('auto');
+ host.remove(); style.remove();
 });
