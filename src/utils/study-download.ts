@@ -23,9 +23,16 @@ export async function mountStudyDownload(article: HTMLElement, player: HTMLVideo
 		const row = card?.querySelector<HTMLElement>(':scope > .player-toggles');
 		const target = row || card || article;
 		if (host.parentElement !== target) {
-			host.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:6px;line-height:normal;' + (target === card ? 'grid-column:2;justify-self:end;padding:8px 0' : target === row ? 'margin-inline-start:auto' : 'margin:8px 0 16px');
-			if (target === article) { const anchor = article.querySelector('.reader-video-wrapper, .qiaomu-audio-hero'); if (anchor?.parentElement === article) anchor.after(host); else article.prepend(host); }
-			else target.append(host);
+			host.style.cssText = 'display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px;line-height:normal;vertical-align:middle;' + (target === card ? 'grid-column:2;grid-row:3;justify-self:end;padding:8px 0' : target === row ? 'margin-inline-start:auto' : 'margin:8px 0 16px');
+			target.append(host);
+		}
+		if (target === article) {
+			const anchor = article.querySelector(':scope > .youtube-mode-bar, :scope > .reader-video-wrapper, :scope > .qiaomu-audio-hero, :scope > .youtube-player-resize, :scope > .youtube-sized-player');
+			// The video and its controls exist before the transcript container does.
+			// Keep downloads beside those controls, then follow the completed layout.
+			const modeBar = article.querySelector(':scope > .youtube-mode-bar');
+			const after = modeBar || anchor;
+			if (after && host.previousElementSibling !== after) after.after(host);
 		}
 	};
 	place();
@@ -50,6 +57,6 @@ export async function mountStudyDownload(article: HTMLElement, player: HTMLVideo
 			return downloadWithHelper(options, signal, progress);
 		},
 	});
-	const note = document.createElement('span'); note.className = 'qiaomu-dl-note'; note.textContent = t('仅下载你有权保存的内容'); note.style.cssText = 'font-size:12px;color:var(--text-muted)'; host.append(note);
+	host.title = t('仅下载你有权保存的内容');
 	window.addEventListener('pagehide', () => { observer.disconnect(); button.destroy(); mounted.delete(article); }, { once: true });
 }

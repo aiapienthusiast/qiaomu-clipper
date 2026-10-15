@@ -36,6 +36,12 @@ it('places podcast downloads outside the crowded playback speed row, with no tra
  expect(article.querySelector('.qiaomu-dl-main')).not.toBeNull();expect(article.querySelector('.qa-tools .qiaomu-dl')).toBeNull();
  expect(article.querySelector('.reader-video-wrapper')!.nextElementSibling?.className).toBe('qiaomu-dl-host');
 });
+it('keeps downloads beside the video controls while the transcript is still loading',async()=>{
+ document.body.innerHTML='<article><iframe class="youtube-sized-player"></iframe><div class="youtube-player-resize"></div><div class="youtube-mode-bar"></div><div class="youtube-float-chrome"></div></article>';const article=document.querySelector('article')!;
+ await mountStudyDownload(article,undefined,{title:'Bili',sourceUrl:'https://www.bilibili.com/video/BV1GJ411x7h7/',mediaUrl:'',video:true});
+ const host=article.querySelector<HTMLElement>('.qiaomu-dl-host')!;
+ expect(host.previousElementSibling?.className).toBe('youtube-mode-bar');expect(host.style.display).toBe('inline-flex');expect(article.querySelector('.qiaomu-dl-note')).toBeNull();
+});
 it('falls back to native on CDN fetch failure and keeps an actionable error when the helper is absent',async()=>{
  vi.mocked(fetch).mockRejectedValue(new TypeError('CORS'));api.helper.mockRejectedValue(new DownloadError('helper','没连上本地助手'));
  const article=await mount();article.querySelector<HTMLButtonElement>('.qiaomu-dl-main')!.click();await flush();expect(api.helper).toHaveBeenCalledOnce();expect(article.textContent).toContain('没连上本地助手');expect(article.textContent).toContain('设置');expect(api.download).not.toHaveBeenCalled();
