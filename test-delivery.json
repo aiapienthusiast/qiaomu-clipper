@@ -362,12 +362,14 @@
         "src/utils/study-download.ts",
         "src/utils/study-download-native.ts",
         "src/utils/youtube-study.ts",
-        "src/utils/audio-study.ts"
+        "src/utils/audio-study.ts",
+        "src/utils/study-media-footer.ts"
       ],
       "tests": [
         "src/utils/study-download.test.ts",
         "src/utils/study-download-native.test.ts",
-        "src/utils/local-save-learning.test.ts"
+        "src/utils/local-save-learning.test.ts",
+        "src/utils/study-media-footer.test.ts"
       ]
     }
   ]

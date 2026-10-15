@@ -81,9 +81,11 @@ export async function startYouTubeStudy(url: string, sourceTabId: number, initia
 	const clip = document.getElementById('qiaomu-reader-clip') as HTMLButtonElement | null;
 	if (clip) clip.disabled = true;
 	const retry = document.createElement('button');
+	retry.className = 'youtube-study-retry';
 	retry.type = 'button'; retry.textContent = t('重试'); retry.hidden = true;
 	retry.setAttribute('aria-label', t('重新加载字幕'));
-	status.after(retry);
+	const recovery = document.createElement('div'); recovery.className = 'youtube-study-recovery';
+	status.after(recovery); recovery.append(retry);
 	let loading = false;
 	let captionLanguages: Array<{id:string;label:string}> = [], captionSelected = '';
 	let studyResult: any = { content: '', title };
@@ -105,7 +107,7 @@ export async function startYouTubeStudy(url: string, sourceTabId: number, initia
 		openSettings: () => { window.open(browser.runtime.getURL('settings.html?section=asr-models'), '_blank'); },
 	});
 	const panel = buildGenerationPanel(document, generationStrings(text), generation.actions);
-	retry.after(panel.element);
+	recovery.prepend(panel.element);
  const mountRegenerate = () => {
   const transcript = article.querySelector(TRANSCRIPT_SELECTOR); if (!transcript) return;
   mountTranscriptRegenerate(transcript, panel.element, t('换模型生成字幕'), () => { if (!generation.active) generation.actions.regenerate?.(); });

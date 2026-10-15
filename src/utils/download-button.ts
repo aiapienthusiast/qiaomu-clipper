@@ -7,6 +7,7 @@ import { t } from './ui-text';
 
 export interface DownloadButtonOptions {
 	title: string;
+	label?: string;
 	sourceUrl: string;
 	// Called synchronously from the click, before network work, to request optional permission.
 	beforeDownload?(): Promise<void>;
@@ -64,7 +65,7 @@ export function mountDownloadButton(host: HTMLElement, options: DownloadButtonOp
 
 	const showIdle = () => {
 		root.dataset.state = 'idle'; controller = undefined;
-		main.replaceChildren(icon(Download), node('span', '', t('下载')));
+		main.replaceChildren(icon(Download), node('span', '', options.label || t('下载')));
 		main.title = current ? `${current.label}${current.bytes ? ' · ' + humanSize(current.bytes) : ''}` : '';
 		split.hidden = !current; more.hidden = options.choices.length < 2;
 		root.replaceChildren(split, menu);

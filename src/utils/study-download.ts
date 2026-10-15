@@ -20,7 +20,7 @@ export async function mountStudyDownload(article: HTMLElement, player: HTMLVideo
 	const host = document.createElement('div'); host.className = 'qiaomu-dl-host';
 	const place = () => {
 		const card = article.querySelector<HTMLElement>('.player-container');
-		const row = card?.querySelector<HTMLElement>(':scope > .player-toggles');
+		const row = card?.querySelector<HTMLElement>(':scope > .player-toggles') || article.querySelector<HTMLElement>('.study-media-actions');
 		const target = row || card || article;
 		if (host.parentElement !== target) {
 			host.style.cssText = 'display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px;line-height:normal;vertical-align:middle;' + (target === card ? 'grid-column:2;grid-row:3;justify-self:end;padding:8px 0' : target === row ? 'margin-inline-start:auto' : 'margin:8px 0 16px');
@@ -37,6 +37,7 @@ export async function mountStudyDownload(article: HTMLElement, player: HTMLVideo
 	place();
 	const observer = new MutationObserver(place); observer.observe(article, { childList: true, subtree: true });
 	const button = mountDownloadButton(host, {
+		label: options.video ? t('下载视频') : t('下载音频'),
 		title: options.title, remembered, sourceUrl: options.sourceUrl,
 		beforeDownload: async () => {
 			if (player?.mediaKeys || isYouTubeDownloadUrl(options.sourceUrl) || isYouTubeDownloadUrl(options.mediaUrl)) throw new DownloadError('policy', t('此来源不支持媒体下载'));
