@@ -873,5 +873,6 @@
  "支持的媒体可下载完整音视频；Chrome 商店版不提供 YouTube 音视频文件下载。": "Téléchargez les fichiers complets lorsque possible. L’édition Chrome Store ne télécharge pas les médias YouTube.",
  "设置中可自定义三连击按键、关闭某个快捷键或按网站禁用，也可导出和导入设置。": "Personnalisez les touches de triple frappe, désactivez-les par site et importez ou exportez les réglages.",
  "重新检查": "Vérifier à nouveau",
- "允许使用浏览器登录状态": "Autoriser l’accès à la session du navigateur"
+ "允许使用浏览器登录状态": "Autoriser l’accès à la session du navigateur",
+ "B 站外嵌画质受限，前往原网页选择高清": "Bilibili limite la qualité intégrée. Ouvrez la page d’origine pour choisir la HD."
 }
