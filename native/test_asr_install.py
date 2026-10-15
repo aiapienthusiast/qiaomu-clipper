@@ -170,10 +170,31 @@ class InstallTests(unittest.TestCase):
         # drive the worker directly: starting a detached process is covered by the real-install check
         directory = asr.installs_dir(self.base) / ('a' * 32); directory.mkdir(parents=True)
         asr.atomic_json(directory / 'spec.json', {'engine': 'mlx'}); asr.write_state(directory, engine='mlx', state='queued')
-        with patch.object(eng, 'plan', fake_plan), patch.object(eng, 'base_installed', lambda: False), patch.object(asr, 'link_ffmpeg', lambda: None):
+        with patch.object(eng, 'plan', fake_plan), patch.object(eng, 'base_installed', lambda: False), patch.object(asr, 'link_ffmpeg', lambda: None), patch.object(asr, 'verify_runtime'):
             asr.run_install(str(directory))
         state = asr.read_state(directory)
         self.assertEqual(state['state'], 'completed'); self.assertEqual(marker.read_text().split(), ['base', 'mlx'])
+
+    def test_install_checks_native_libraries_before_downloading_weights_or_claiming_success(self):
+        directory = asr.installs_dir(self.base) / ('f' * 32); directory.mkdir(parents=True)
+        asr.atomic_json(directory / 'spec.json', {'engine': 'mlx-qwen3'})
+        failure = 'ImportError: dlopen(core.so): tried: core.so (mapping process and mapped file have different Team IDs)'
+        with patch.object(eng, 'base_installed', return_value=True), patch.object(eng, 'plan', return_value=([('pip',55,['pip'])], 'Qwen/Qwen3-ASR-0.6B')), patch.object(asr,'stream',return_value=(0,[])), patch.object(asr.subprocess,'run',return_value=subprocess.CompletedProcess([],1,stderr=failure)) as probe, patch.object(asr,'fetch_model') as fetch:
+            asr.run_install(str(directory))
+        state=asr.read_state(directory)
+        self.assertEqual(state['state'],'failed'); self.assertEqual(state['errorCode'],'runtime-unavailable')
+        self.assertIn('different Team IDs',state['error']); fetch.assert_not_called()
+        self.assertIn('from mlx_qwen3_asr import Session',probe.call_args.args[0][-1])
+
+    def test_recognition_error_preserves_dlopen_reason_after_long_user_path(self):
+        directory=Path(self.temp.name)/'job';directory.mkdir()
+        found={'id':'mlx-qwen3','path':'python','model':'Qwen/Qwen3-ASR-0.6B','modelReady':True,'runner':True}
+        error='ImportError: dlopen('+('/a-long-user-path'*40)+'): tried: core.so (different Team IDs)'
+        with patch.object(asr,'stream',return_value=(1,[error])):
+            with self.assertRaises(asr.Failed) as raised:
+                asr.recognise(directory,{},directory/'a.wav',5,{},found,{'ffmpeg':'ffmpeg'})
+        self.assertIn('different Team IDs',str(raised.exception))
+        self.assertEqual(raised.exception.code,'runtime-unavailable')
 
     def test_failed_install_leaves_no_half_made_environment(self):
         fake_plan = lambda target, python=None: ([('x', 60, [sys.executable, '-c', 'import sys;print("ERROR: no network",file=sys.stderr);sys.exit(1)'])], None)

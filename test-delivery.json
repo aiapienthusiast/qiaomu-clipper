@@ -307,6 +307,38 @@
         "src/utils/reader-transcript-timing.test.ts",
         "src/utils/media-study-player.test.ts"
       ]
+    },
+    {
+      "id": "helper-runtime-model-recovery",
+      "title": "模型失败后可换云端、助手连接与笔记库选择恢复",
+      "origin": "本次用户故障反馈修复",
+      "files": [
+        "src/utils/bar-generation.ts",
+        "src/utils/subtitle-generation-panel.ts",
+        "src/utils/subtitle-generation.ts",
+        "src/managers/general-settings.ts"
+      ],
+      "tests": [
+        "src/utils/bar-generation.test.ts",
+        "src/utils/subtitle-generation-panel.test.ts",
+        "src/utils/subtitle-generation.test.ts",
+        "src/managers/local-helper-settings.test.ts"
+      ]
+    },
+    {
+      "id": "svg-chat-chart-images",
+      "title": "SVG 图表转图片后随问题发送模型",
+      "origin": "用户 Star History 图片读取反馈",
+      "files": [
+        "src/utils/chat-svg.ts",
+        "src/utils/chat-images.ts"
+      ],
+      "tests": [
+        "src/utils/chat-svg.test.ts",
+        "src/utils/chat-images.test.ts",
+        "src/utils/clip-chat-images.test.ts",
+        "src/utils/chat-content.test.ts"
+      ]
     }
   ]
 }

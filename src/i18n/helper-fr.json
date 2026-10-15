@@ -112,7 +112,7 @@
  "识别进程意外退出，请重试": "Le processus de reconnaissance s'est arrêté de manière inattendue. Réessayez",
  "该文件夹不是已有的 Obsidian 笔记库，请选择包含 .obsidian 的库目录": "Ce dossier n'est pas un coffre Obsidian existant. Choisissez un dossier de coffre contenant .obsidian",
  "语音识别失败：": "Échec de la reconnaissance vocale : ",
- "请先在「剪藏与保存」里将静默保存的笔记库切换到 {0}": "Changez d'abord le coffre d'enregistrement silencieux vers {0} dans \"Clipping et enregistrement\"",
+ "请先在「剪藏与保存」里将静默保存的笔记库切换到 {0}": "Dans Découpage et sauvegarde, sélectionnez d’abord {0} comme coffre pour la sauvegarde silencieuse",
  "请输入笔记库的完整文件夹路径": "Entrez le chemin complet du dossier du coffre",
  "请选择 Obsidian 笔记库文件夹（包含 .obsidian 的目录）": "Choisissez le dossier de votre coffre Obsidian (celui qui contient .obsidian)",
  "请选择 {0} 库内的笔记文件夹": "Choisissez un dossier de notes dans le coffre {0}",
@@ -158,5 +158,5 @@
  "回放清单过大": "La liste de la rediffusion est trop volumineuse",
  "回放片段不完整": "Le segment de la rediffusion est incomplet",
  "回放片段读取超时": "Délai de lecture du segment de rediffusion dépassé",
- "请先在「剪藏与保存」里将静默保存的笔记库切换到 {0}": "Dans Découpage et sauvegarde, sélectionnez d’abord {0} comme coffre pour la sauvegarde silencieuse"
+ "本机识别环境无法加载，请更新本地助手或换模型生成字幕。": "Impossible de charger le moteur de reconnaissance local. Mettez à jour l’assistant local ou choisissez un autre modèle pour générer les sous-titres.\n"
 }

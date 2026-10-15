@@ -109,7 +109,11 @@ export function createBarGeneration(options: BarGenerationOptions): BarGeneratio
 		},
 		reset() { ++revision; generation.dispose(); jobKey = ''; uiByKey.clear(); },
 		actions: {
-			request: () => { force = false; request(); },
+			request: () => {
+				const key = options.videoKey(), failed = Boolean(key && uiByKey.get(key)?.kind === 'failed');
+				if (!failed) force = false;
+				request(failed);
+			},
 			confirm(chosenLanguage, remembered) {
 				const key = options.videoKey(); if (!key || uiByKey.get(key)?.kind === 'checking') return; jobKey = key; lastLanguage = chosenLanguage || 'auto'; rememberLanguage(lastLanguage);
 				if (remembered !== undefined) remember(remembered);

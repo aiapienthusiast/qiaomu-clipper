@@ -40,11 +40,22 @@ if [ -n "${APP_SIGN_ID:-}" ]; then
 	# Notarization wants every Mach-O file signed with the hardened runtime and a secure timestamp, deepest files first.
 	find "$PAYLOAD" -type f -print0 | while IFS= read -r -d '' f; do
 		if file -b "$f" | grep -q "Mach-O"; then
-			codesign --force --options runtime --timestamp --sign "$APP_SIGN_ID" "$f"
+			ENTITLEMENTS=()
+			# Python loads wheels installed later (MLX, NumPy, CTranslate2), whose
+			# signatures cannot share our Team ID. Only executable hosts need this;
+			# keep the hardened runtime and verification on every binary.
+			if file -b "$f" | grep -q "executable"; then
+				ENTITLEMENTS=(--entitlements "$ROOT/scripts/pkg/python-entitlements.plist")
+			fi
+			codesign --force --options runtime --timestamp --sign "$APP_SIGN_ID" ${ENTITLEMENTS[@]+"${ENTITLEMENTS[@]}"} "$f"
 			codesign --verify --strict "$f"
 		fi
 	done
 	echo "signed bundled binaries"
+	# Test our signed Python, not a Homebrew interpreter already on the developer's Mac.
+	ARCH="$(uname -m)"
+	if [ "$(sysctl -in hw.optional.arm64 2>/dev/null)" = "1" ]; then ARCH=arm64; fi
+	python3 "$ROOT/scripts/pkg/check-runtime.py" --python "$PAYLOAD/runtime-$ARCH/bin/python3"
 fi
 
 pkgbuild --root "$WORK/payload" --scripts "$WORK/scripts" --identifier ai.qiaomu.clipper.helper --version "$VERSION" --install-location / "$WORK/helper.pkg"

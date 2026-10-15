@@ -18,6 +18,15 @@ const settle = async () => { for (let i = 0; i < 20; i++) await vi.advanceTimers
 beforeEach(() => { vi.useFakeTimers(); current = KEY; shown = []; applied = []; saved = []; reverted = []; });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
+it('asks for a model after failure even when automatic generation was remembered', async () => {
+ const { gen, full } = make({ status: vi.fn(async () => ready({ choices: { mode: 'local', engine: 'mlx', active: '', auto: true, profiles: [{ id: 'cloud', label: 'Cloud', local: false, configured: true }] } })), start: vi.fn(async () => job({state:'failed', error:'ImportError: dlopen'})) });
+ gen.actions.request(); await settle();
+ expect(shown[shown.length-1]).toMatchObject({kind:'failed'}); expect(full.start).toHaveBeenCalledTimes(1);
+ gen.actions.request(); await settle();
+ expect(full.start).toHaveBeenCalledTimes(1);
+ expect(shown[shown.length-1]).toMatchObject({kind:'confirm', choices:expect.arrayContaining([expect.objectContaining({value:'cloud:cloud'})])});
+});
+
 it('checks the helper, asks for confirmation (with the model note), then runs and saves the finished transcript', async () => {
 	const { gen, full } = make();
 	gen.actions.request(); expect(shown[shown.length - 1]).toEqual({ kind: 'checking' }); await settle();

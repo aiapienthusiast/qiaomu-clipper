@@ -12,7 +12,7 @@ import { callHelper } from './native-helper-call';
 import { cookiesTxtFor, videoAddress, type BrowserCookie } from './browser-cookies';
 import { localizeHelperReply, t } from './ui-text';
 export interface LocalSavePayload { requestId: string; content: string; name: string; folder: string; vault: string; behavior: Template['behavior'] }
-export interface LocalSaveResult { ok: boolean; reason?: string; error?: string; cancelled?: boolean; vault?: string; vaultPath?: string; path?: string; relativePath?: string; folder?: string }
+export interface LocalSaveResult { ok: boolean; reason?: string; error?: string; cancelled?: boolean; vault?: string; vaultPath?: string; vaultError?: string; path?: string; relativePath?: string; folder?: string }
 export async function saveLocalClip(payload: LocalSavePayload): Promise<LocalSaveResult> {
 	try { return await browser.runtime.sendMessage({ action: 'qiaomuLocalSave', payload }); }
 	catch { return { ok: false, error: t('本地保存中断，请重试') }; }
