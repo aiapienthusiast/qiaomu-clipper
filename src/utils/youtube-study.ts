@@ -8,6 +8,7 @@ import { bilibiliEmbedUrl, bilibiliVideo, TRANSCRIPT_SELECTOR, PLAYER_SELECTOR }
 import { mountPlayerSize } from './youtube-player-size';
 import { mountPlayerMode } from './youtube-player-mode';
 import { mountTranslation } from './youtube-translation';
+import { mountBilibiliQualityLink } from './bilibili-embed';
 
 import { t } from './ui-text';
 // Read only transcript segments, excluding chapter headings and reader controls.
@@ -25,7 +26,8 @@ export function transcriptText(article: HTMLElement): string {
 export async function mountYouTubeStudy(doc: Document, article: HTMLElement, title: string, url: string, existingChat?: { toggle: () => boolean }): Promise<void> {
 	article.dataset.videoPlatform = article.querySelector('video.reader-video-player') ? 'web' : bilibiliVideo(url) || article.querySelector('iframe[src*="player.bilibili.com"]') ? 'bilibili' : 'youtube';
 	// A podcast or a recording has no picture to size or to move around: it keeps its one layout.
-	if (article.dataset.audioStudy !== 'true') { mountPlayerSize(article); mountPlayerMode(article, url); }
+	if (article.dataset.audioStudy !== 'true') { mountPlayerSize(article); mountPlayerMode(article); }
+	if (article.dataset.videoPlatform === 'bilibili') mountBilibiliQualityLink(article, url);
 	if (article.querySelector('.youtube-study-feedback')) return;
 	doc.documentElement.classList.add('youtube-study');
 	// No duplicate transcript action row: copy/download/AI live in the shared bar.

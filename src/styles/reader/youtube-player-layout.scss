@@ -112,7 +112,6 @@ html.youtube-study.clip-bar-hidden .player-container.pin-player { top: 0; }
 // Mode switcher under the video and the floating window's overlay. Buttons are scoped because
 // buttons.scss styles every `button:not(.clickable-icon)`; svg must not be multiplied by the reader theme.
 html.youtube-study {
-	.youtube-quality-link { grid-column: 1 / -1; display: block; margin: 4px 0; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
 	.youtube-mode-bar { display: inline-flex; align-items: center; gap: 2px; padding: 8px 8px 4px 0; line-height: 0; }
 	// Pinning only means something when the video sits above the text (stacked or theater).
 	article:not([data-yt-layout="stack"]):not([data-yt-layout="theater"]) .player-toggle[data-toggle="pin"] { display: none; }

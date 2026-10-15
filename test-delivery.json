@@ -5,8 +5,8 @@
       "id": "bilibili-picture-playback",
       "title": "B 站内嵌画面点击播放暂停与画质限制说明",
       "origin": "fix/bilibili-embed-playback-quality",
-      "files": ["src/utils/embedded-player-interaction.ts", "src/utils/youtube-player-mode.ts", "src/utils/youtube-study.ts"],
-      "tests": ["src/utils/embedded-player-interaction.test.ts", "src/utils/youtube-player-mode.test.ts", "src/utils/reader-transcript-bilibili.test.ts"]
+      "files": ["src/bilibili-embed-content.ts", "src/utils/bilibili-embed.ts", "src/utils/youtube-study.ts"],
+      "tests": ["src/utils/bilibili-player.test.ts", "src/utils/reader-transcript-bilibili.test.ts"]
     },
     {
       "id": "x-media-controls",

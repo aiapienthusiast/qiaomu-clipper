@@ -13,18 +13,6 @@ const setup = (width = 1200) => {
 	mountPlayerSize(article); mountPlayerMode(article);
 	return { article, frame: article.querySelector('iframe')!, click: (name: string) => article.querySelector<HTMLElement>(`.youtube-mode-${name}`)!.click() };
 };
-it('explains Bilibili embedded quality limits and links to the same video part without changing its iframe',()=>{
- document.body.innerHTML='<article><div class="player-container"><iframe src="https://player.bilibili.com/player.html?bvid=BV1hM4m1U7rA&p=20"></iframe></div></article>';
- const article=document.querySelector('article')!,frame=article.querySelector('iframe')!,src=frame.src;
- mountPlayerMode(article,'https://www.bilibili.com/video/BV1hM4m1U7rA/?p=20');
- const link=article.querySelector<HTMLAnchorElement>('.youtube-quality-link')!;
- expect(link.textContent).toContain('外嵌画质受限');expect(link.href).toBe('https://www.bilibili.com/video/BV1hM4m1U7rA/?p=20');expect(link.rel).toContain('noopener');expect(link.target).toBe('_blank');expect(frame.src).toBe(src);
- mountPlayerMode(article,'https://www.bilibili.com/video/BV1hM4m1U7rA/?p=20');expect(article.querySelectorAll('.youtube-quality-link')).toHaveLength(1);
-});
-it('does not show a Bilibili quality link for YouTube or a look-alike source',()=>{
- const article=document.querySelector('article')!;mountPlayerMode(article,'https://www.youtube.com/watch?v=dbqweBCynuI');expect(article.querySelector('.youtube-quality-link')).toBeNull();
- document.body.innerHTML=html;const other=document.querySelector('article')!;mountPlayerMode(other,'https://www.bilibili.com.evil.test/video/BV1hM4m1U7rA');expect(other.querySelector('.youtube-quality-link')).toBeNull();
-});
 function pointer(node: EventTarget, type: string, x: number, y = 0) { const event = new Event(type, { bubbles: true }); Object.assign(event, { pointerId: 1, button: 0, clientX: x, clientY: y }); node.dispatchEvent(event); }
 
 it('picks layouts with hysteresis so a new scrollbar cannot flip them back and forth', () => {
