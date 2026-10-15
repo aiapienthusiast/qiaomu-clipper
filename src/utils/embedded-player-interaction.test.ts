@@ -19,3 +19,44 @@ it.each(['youtube','bilibili'] as const)('starts %s on handoff even when it was 
 
 it.each(['youtube','bilibili'] as const)('toggles %s playback only for the trusted parent',kind=>{const {video,send,parent}=setup();const play=vi.spyOn(video,'play').mockResolvedValue(),pause=vi.spyOn(video,'pause').mockImplementation(()=>{});stop=mountEmbeddedPlayerInteraction(kind);send({qiaomuPlayer:'toggle'},parent,'https://evil.example');expect(play).not.toHaveBeenCalled();send({qiaomuPlayer:'toggle'});expect(play).toHaveBeenCalledOnce();Object.defineProperty(video,'paused',{configurable:true,value:false});send({qiaomuPlayer:'toggle'});expect(pause).toHaveBeenCalledOnce();});
 it.each(['youtube','bilibili'] as const)('seeks the trusted %s embed by ten seconds',kind=>{const {video,send,parent}=setup();stop=mountEmbeddedPlayerInteraction(kind);send({qiaomuPlayer:'skip',delta:10},parent,'https://evil.example');expect(video.currentTime).toBe(12);send({qiaomuPlayer:'skip',delta:100});expect(video.currentTime).toBe(12);send({qiaomuPlayer:'skip',delta:-10});expect(video.currentTime).toBe(2);send({qiaomuPlayer:'skip',delta:-10});expect(video.currentTime).toBe(0);send({qiaomuPlayer:'skip',delta:10});expect(video.currentTime).toBe(10);});
+
+function bilibiliSurface(){
+ const fixture=setup();
+ document.body.innerHTML='<div class="bpx-player-video-area"><div class="bpx-player-video-perch"><div class="bpx-player-video-wrap"><video></video></div></div><div class="bpx-player-row-dm-wrap"><span>字幕</span></div><div class="bpx-player-control-wrap"><button>播放</button><div class="bpx-player-ctrl-quality" role="button">自动</div><input type="range"></div><div class="bpx-player-enter-button">进入哔哩哔哩，观看更高清</div><a href="https://www.bilibili.com/">作者</a></div>';
+ const video=document.querySelector('video')!,redirect=vi.fn();
+ document.querySelector('.bpx-player-video-area')!.addEventListener('click',redirect);
+ return {...fixture,video,redirect};
+}
+it('toggles the Bilibili picture instead of following the embedded player redirect',()=>{
+ const {video,redirect}=bilibiliSurface();const play=vi.spyOn(video,'play').mockResolvedValue(),pause=vi.spyOn(video,'pause').mockImplementation(()=>{});
+ stop=mountEmbeddedPlayerInteraction('bilibili');
+ const click=new MouseEvent('click',{bubbles:true,cancelable:true});video.dispatchEvent(click);
+ expect(play).toHaveBeenCalledOnce();expect(click.defaultPrevented).toBe(true);expect(redirect).not.toHaveBeenCalled();
+ Object.defineProperty(video,'paused',{configurable:true,value:false});document.querySelector<HTMLElement>('.bpx-player-row-dm-wrap span')!.click();
+ expect(pause).toHaveBeenCalledOnce();expect(redirect).not.toHaveBeenCalled();
+});
+it('keeps Bilibili controls, source links and the explicit HD link clickable',()=>{
+ const {video,redirect}=bilibiliSurface();const play=vi.spyOn(video,'play').mockResolvedValue();stop=mountEmbeddedPlayerInteraction('bilibili');
+ for(const selector of ['button','.bpx-player-ctrl-quality','input','.bpx-player-enter-button','a']){
+  const click=new MouseEvent('click',{bubbles:true,cancelable:true});document.querySelector(selector)!.dispatchEvent(click);expect(click.defaultPrevented).toBe(false);
+ }
+ expect(redirect).toHaveBeenCalledTimes(5);expect(play).not.toHaveBeenCalled();
+});
+it.each(['youtube','foreign'] as const)('does not replace %s player picture clicks',kind=>{
+ const {video,redirect}=bilibiliSurface();const play=vi.spyOn(video,'play').mockResolvedValue();
+ if(kind==='foreign')vi.stubGlobal('location',{ancestorOrigins:['https://example.com']});
+ stop=mountEmbeddedPlayerInteraction(kind==='youtube'?'youtube':'bilibili');video.click();expect(redirect).toHaveBeenCalledOnce();expect(play).not.toHaveBeenCalled();
+});
+it('removes Bilibili picture interception on cleanup',()=>{
+ const {video,redirect}=bilibiliSurface();const play=vi.spyOn(video,'play').mockResolvedValue();stop=mountEmbeddedPlayerInteraction('bilibili');stop();video.click();expect(redirect).toHaveBeenCalledOnce();expect(play).not.toHaveBeenCalled();
+});
+it('requires a trusted parent before intercepting clicks where ancestorOrigins is unavailable',()=>{
+ const {video,redirect,send}=bilibiliSurface();vi.stubGlobal('location',{});const play=vi.spyOn(video,'play').mockResolvedValue();stop=mountEmbeddedPlayerInteraction('bilibili');
+ video.click();expect(redirect).toHaveBeenCalledOnce();expect(play).not.toHaveBeenCalled();
+ send({qiaomuPlayer:'time'});video.click();expect(redirect).toHaveBeenCalledOnce();expect(play).toHaveBeenCalledOnce();
+});
+it('ignores modified clicks and avoids toggling twice on a double click',()=>{
+ const {video,redirect}=bilibiliSurface();const play=vi.spyOn(video,'play').mockResolvedValue();stop=mountEmbeddedPlayerInteraction('bilibili');
+ video.dispatchEvent(new MouseEvent('click',{bubbles:true,ctrlKey:true}));expect(redirect).toHaveBeenCalledOnce();expect(play).not.toHaveBeenCalled();
+ video.dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}));video.dispatchEvent(new MouseEvent('click',{bubbles:true,detail:2}));expect(play).toHaveBeenCalledOnce();expect(redirect).toHaveBeenCalledOnce();
+});

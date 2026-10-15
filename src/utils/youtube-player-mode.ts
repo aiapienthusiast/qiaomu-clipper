@@ -1,4 +1,5 @@
-import { PLAYER_SELECTOR } from './video-source';
+import { PLAYER_SELECTOR, bilibiliVideo } from './video-source';
+import { bilibiliWatchUrl } from './bilibili-embed';
 import { createElement, Columns2, PanelLeft, RectangleHorizontal, PictureInPicture2, ExternalLink } from 'lucide';
 import { getLocalStorage, setLocalStorage } from './storage-utils';
 import { documentPipSupported, openDocumentPip, trackPlayback } from './youtube-pip';
@@ -49,7 +50,7 @@ export const nearestCorner = (centerX: number, centerY: number, viewportWidth: n
 const CORNERS: FloatCorner[] = ['br', 'bl', 'tl', 'tr'];
 
 // Changes presentation only: the iframe keeps its DOM node and URL when the mode changes.
-export function mountPlayerMode(article: HTMLElement): void {
+export function mountPlayerMode(article: HTMLElement, sourceUrl = ''): void {
 	if (article.dataset.ytModeMounted) { article.dispatchEvent(new CustomEvent(LAYOUT_EVENT)); return; }
 	const doc = article.ownerDocument, win = doc.defaultView;
 	if (!win) return;
@@ -69,6 +70,12 @@ export function mountPlayerMode(article: HTMLElement): void {
 		float: button('float', PictureInPicture2, t('小窗：视频悬浮在页面角落，文稿占满宽度')),
 	};
 	bar.append(buttons.dock, buttons.theater, buttons.float);
+	const bilibili = bilibiliVideo(sourceUrl);
+	const qualityLink = bilibili ? doc.createElement('a') : undefined;
+	if (qualityLink && bilibili) {
+		qualityLink.className = 'youtube-quality-link'; qualityLink.textContent = t('B 站外嵌画质受限，前往原网页选择高清');
+		qualityLink.href = bilibiliWatchUrl(bilibili.bvid, bilibili.page); qualityLink.target = '_blank'; qualityLink.rel = 'noopener noreferrer';
+	}
 	let pipButton: HTMLButtonElement | undefined;
 	const nativePlayer = article.querySelector<HTMLVideoElement>('video.reader-video-player');
 	if (nativePlayer ? typeof nativePlayer.requestPictureInPicture === 'function' : documentPipSupported(win)) {
@@ -96,6 +103,7 @@ export function mountPlayerMode(article: HTMLElement): void {
 		buttons.dock.disabled = buttons.float.disabled = !container();
 		if (bar.parentElement !== host) host.append(bar);
 		if (chrome.parentElement !== host) host.append(chrome);
+		if (qualityLink && qualityLink.parentElement !== host) host.append(qualityLink);
 	};
 	const paintFloat = () => {
 		article.dataset.ytCorner = corner; const shown = visibleFloatWidth(floatWidth, win.innerWidth); article.style.setProperty('--yt-float-width', `${shown}px`);
