@@ -92,7 +92,7 @@ export function mountPlayerMode(article: HTMLElement): void {
 		// Dock and float need the transcript layout's container; do not offer
 		// inactive actions or move/reload a playing iframe to create it early.
 		const player = playerEl() || article.querySelector<HTMLElement>(PLAYER_SELECTOR) || article.querySelector<HTMLElement>('.reader-video-wrapper');
-		const host = container() || player?.parentElement; if (!host) return;
+		const host = container() || article.querySelector('.study-media-toolbar') || player?.parentElement; if (!host) return;
 		buttons.dock.disabled = buttons.float.disabled = !container();
 		if (bar.parentElement !== host) host.append(bar);
 		if (chrome.parentElement !== host) host.append(chrome);

@@ -28,7 +28,9 @@ export interface ClipPreview {
 }
 const prefix = 'qiaomuPreview:';
 const snapshots = new WeakMap<ClipPreview, string>();
-const textSnapshot = (draft: ClipPreview) => JSON.stringify([draft.clip, draft.local, draft.properties, draft.readerAppendix, draft.transcriptExport, draft.studyEditedAt]);
+// Chromium storage may reorder dictionary keys. Compare content, not insertion order.
+const textSnapshot = (draft: ClipPreview) => JSON.stringify([draft.clip, draft.local, draft.properties, draft.readerAppendix, draft.transcriptExport, draft.studyEditedAt], (_key, value) =>
+    value && typeof value === 'object' && !Array.isArray(value) ? Object.fromEntries(Object.keys(value).sort().map(key => [key, value[key]])) : value);
 const remember = (draft: ClipPreview) => { snapshots.set(draft, textSnapshot(draft)); return draft; };
 // Extension pages share an origin: Web Locks serialize the read/check/write across tabs.
 // The in-process queue is also used by non-DOM test/CLI consumers.

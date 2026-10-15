@@ -874,5 +874,10 @@
  "设置中可自定义三连击按键、关闭某个快捷键或按网站禁用，也可导出和导入设置。": "Personaliza las teclas de triple pulsación, desactívalas por sitio e importa o exporta ajustes.",
  "重新检查": "Comprobar de nuevo",
  "允许使用浏览器登录状态": "Permitir el uso de la sesión del navegador",
- "B 站外嵌画质受限，前往原网页选择高清": "Bilibili limita la calidad del vídeo incrustado. Abre la página original para elegir HD."
+ "选择笔记库…": "Elegir una bóveda…",
+ "B 站外嵌画质受限，前往原网页选择高清": "Bilibili limita la calidad del vídeo incrustado. Abre la página original para elegir HD.",
+ "设置": "Configuración",
+ "下载视频": "Descargar vídeo",
+ "下载音频": "Descargar audio",
+ "原站高清": "Original en HD"
 }

@@ -25,7 +25,7 @@ const [root, output] = process.argv.slice(2);
 fs.writeFileSync(output, JSON.stringify(require(root + '/scripts/build-info.cjs').sourceState()));
 JS
 ditto "$PY_ARM" "$PAYLOAD/runtime-arm64"; ditto "$PY_X64" "$PAYLOAD/runtime-x86_64"
-for f in install.py host.py asr.py asr_cloud.py asr_engines.py asr_runner.py asr_context.py VERSION; do cp "$ROOT/native/$f" "$PAYLOAD/native/$f"; done
+for f in install.py host.py asr.py asr_cloud.py asr_engines.py asr_runner.py asr_context.py media_download.py VERSION; do cp "$ROOT/native/$f" "$PAYLOAD/native/$f"; done
 cp "$ROOT/scripts/pkg/qiaomu-helper" "$PAYLOAD/bin/qiaomu-helper"; chmod +x "$PAYLOAD/bin/qiaomu-helper"
 cp "$ROOT/scripts/pkg/postinstall" "$WORK/scripts/postinstall"; chmod +x "$WORK/scripts/postinstall"
 # Installer.app ignores <meta charset> and shows UTF-8 as mojibake, so the pages must be pure ASCII (&#x...; entities).
@@ -40,11 +40,22 @@ if [ -n "${APP_SIGN_ID:-}" ]; then
 	# Notarization wants every Mach-O file signed with the hardened runtime and a secure timestamp, deepest files first.
 	find "$PAYLOAD" -type f -print0 | while IFS= read -r -d '' f; do
 		if file -b "$f" | grep -q "Mach-O"; then
-			codesign --force --options runtime --timestamp --sign "$APP_SIGN_ID" "$f"
+			ENTITLEMENTS=()
+			# Python loads wheels installed later (MLX, NumPy, CTranslate2), whose
+			# signatures cannot share our Team ID. Only executable hosts need this;
+			# keep the hardened runtime and verification on every binary.
+			if file -b "$f" | grep -q "executable"; then
+				ENTITLEMENTS=(--entitlements "$ROOT/scripts/pkg/python-entitlements.plist")
+			fi
+			codesign --force --options runtime --timestamp --sign "$APP_SIGN_ID" ${ENTITLEMENTS[@]+"${ENTITLEMENTS[@]}"} "$f"
 			codesign --verify --strict "$f"
 		fi
 	done
 	echo "signed bundled binaries"
+	# Test our signed Python, not a Homebrew interpreter already on the developer's Mac.
+	ARCH="$(uname -m)"
+	if [ "$(sysctl -in hw.optional.arm64 2>/dev/null)" = "1" ]; then ARCH=arm64; fi
+	python3 "$ROOT/scripts/pkg/check-runtime.py" --python "$PAYLOAD/runtime-$ARCH/bin/python3"
 fi
 
 pkgbuild --root "$WORK/payload" --scripts "$WORK/scripts" --identifier ai.qiaomu.clipper.helper --version "$VERSION" --install-location / "$WORK/helper.pkg"

@@ -3,6 +3,7 @@ import DOMPurify from 'dompurify';
 import browser from './browser-polyfill';
 import { type ChatImage, MAX_CHAT_IMAGE_DATA, MAX_CHAT_IMAGE_PARTS } from './chat-content';
 import { t } from './ui-text';
+import { decodeChatSvg } from './chat-svg';
 
 export interface ArticleImage { url: string; index: number; alt: string }
 export const MAX_SELECTED_IMAGES = 16;
@@ -66,7 +67,7 @@ async function fetchImage(url: string, signal: AbortSignal): Promise<Blob> {
 		const response = await fetch(url, { credentials: 'include', cache: 'force-cache', redirect: 'error', signal: controller.signal });
 		if (!response.ok || !response.body) throw new Error('image-unavailable');
 		const type = (response.headers.get('content-type') || '').split(';')[0].toLowerCase();
-		if (!/^image\/(png|jpeg|webp|gif|avif)$/.test(type)) throw new Error('not-image');
+		if (!/^image\/(png|jpeg|webp|gif|avif|svg\+xml)$/.test(type)) throw new Error('not-image');
 		if (Number(response.headers.get('content-length')) > MAX_DOWNLOAD_BYTES) throw new Error('image-too-large');
 		const reader = response.body.getReader(), chunks: Uint8Array[] = []; let size = 0;
 		for (;;) {
@@ -81,7 +82,7 @@ async function fetchImage(url: string, signal: AbortSignal): Promise<Blob> {
 
 async function prepareImage(blob: Blob, signal: AbortSignal): Promise<string[]> {
 	aborted(signal);
-	const bitmap = await createImageBitmap(blob);
+	const bitmap = blob.type === 'image/svg+xml' ? await decodeChatSvg(blob, signal) : await createImageBitmap(blob).then(source => ({ source, width: source.width, height: source.height, close: () => source.close() }));
 	try {
 		const tiles = imageTiles(bitmap.width, bitmap.height), data: string[] = [];
 		for (const tile of tiles) {
@@ -90,7 +91,7 @@ async function prepareImage(blob: Blob, signal: AbortSignal): Promise<string[]> 
 			canvas.width = Math.round(tile.width * tile.scale); canvas.height = Math.round(tile.height * tile.scale);
 			const ctx = canvas.getContext('2d'); if (!ctx) throw new Error('canvas-unavailable');
 			ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-			ctx.drawImage(bitmap, tile.x, tile.y, tile.width, tile.height, 0, 0, canvas.width, canvas.height);
+			ctx.drawImage(bitmap.source, tile.x, tile.y, tile.width, tile.height, 0, 0, canvas.width, canvas.height);
 			data.push(canvas.toDataURL('image/jpeg', 0.9));
 			canvas.width = 0; canvas.height = 0;
 		}

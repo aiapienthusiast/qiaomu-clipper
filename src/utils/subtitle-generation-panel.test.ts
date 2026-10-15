@@ -3,6 +3,14 @@ import { expect, it, vi } from 'vitest';
 import { buildGenerationPanel, GENERATION_STYLE, type GenUi } from './subtitle-generation-panel';
 import { generationStrings } from './subtitle-generation-strings';
 
+it('offers model selection after a native runtime failure', () => {
+ const regenerate=vi.fn();
+ const panel=buildGenerationPanel(document,generationStrings((_,zh)=>zh),{request:vi.fn(),confirm:vi.fn(),cancel:vi.fn(),regenerate});
+ panel.show({kind:'failed',code:'runtime-unavailable',error:'different Team IDs'});
+ const change=Array.from(panel.element.querySelectorAll('button')).find(button=>button.textContent?.includes('换模型'))!;
+ expect(change).toBeTruthy();change.click();expect(regenerate).toHaveBeenCalledOnce();
+});
+
 it.each(['helper-offline', 'helper-outdated', 'cloud-not-configured', 'missing'] as const)('offers an actionable setup button for %s without restarting a job', reason => {
  const setup = vi.fn(), request = vi.fn();
  const panel = buildGenerationPanel(document, generationStrings((_, zh) => zh), { request, setup, confirm: vi.fn(), cancel: vi.fn() });

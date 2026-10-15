@@ -60,7 +60,7 @@ it('keeps one quality link, preserves the part, and moves it beside a subsequent
 	const iframe = article.querySelector('iframe'); mountBilibiliQualityLink(article, 'https://www.bilibili.com/video/BV1Wqp46GEbP/?p=20');
 	const link = article.querySelector<HTMLAnchorElement>('.bilibili-quality-link')!;
 	expect(link.href).toBe('https://www.bilibili.com/video/BV1Wqp46GEbP/?p=20'); expect(link.target).toBe('_blank'); expect(link.rel).toBe('noopener noreferrer');
-	expect(link.textContent).toContain('外嵌画质受限'); expect(link.style.gridColumn).toBe('1/-1');
+	expect(link.textContent).toBe('原站高清'); expect(link.title).toContain('外嵌画质受限'); expect(link.style.gridColumn).toBe('1/-1');
 	const host = document.createElement('div'); host.className = 'player-container'; article.append(host); host.append(iframe!);
 	mountBilibiliQualityLink(article, link.href); expect(host.querySelector('.bilibili-quality-link')).toBe(link);
 	expect(article.querySelectorAll('.bilibili-quality-link')).toHaveLength(1); expect(article.querySelector('iframe')).toBe(iframe);

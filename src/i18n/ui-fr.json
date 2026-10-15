@@ -874,5 +874,10 @@
  "设置中可自定义三连击按键、关闭某个快捷键或按网站禁用，也可导出和导入设置。": "Personnalisez les touches de triple frappe, désactivez-les par site et importez ou exportez les réglages.",
  "重新检查": "Vérifier à nouveau",
  "允许使用浏览器登录状态": "Autoriser l’accès à la session du navigateur",
- "B 站外嵌画质受限，前往原网页选择高清": "Bilibili limite la qualité intégrée. Ouvrez la page d’origine pour choisir la HD."
+ "选择笔记库…": "Choisir un coffre…",
+ "B 站外嵌画质受限，前往原网页选择高清": "Bilibili limite la qualité intégrée. Ouvrez la page d’origine pour choisir la HD.",
+ "设置": "Paramètres",
+ "下载视频": "Télécharger la vidéo",
+ "下载音频": "Télécharger l’audio",
+ "原站高清": "Original en HD"
 }

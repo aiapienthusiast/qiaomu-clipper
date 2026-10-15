@@ -112,7 +112,7 @@
  "识别进程意外退出，请重试": "Der Erkennungsprozess wurde unerwartet beendet. Versuchen Sie es erneut",
  "该文件夹不是已有的 Obsidian 笔记库，请选择包含 .obsidian 的库目录": "Dieser Ordner ist kein vorhandener Obsidian-Vault. Wählen Sie einen Vault-Ordner, der .obsidian enthält",
  "语音识别失败：": "Spracherkennung fehlgeschlagen: ",
- "请先在「剪藏与保存」里将静默保存的笔记库切换到 {0}": "Wechseln Sie zuerst den Vault für stilles Speichern zu {0} unter „Clippen und Speichern\"",
+ "请先在「剪藏与保存」里将静默保存的笔记库切换到 {0}": "Wechseln Sie unter Ausschneiden und Speichern zuerst den Vault für stilles Speichern zu {0}",
  "请输入笔记库的完整文件夹路径": "Geben Sie den vollständigen Ordnerpfad des Vaults ein",
  "请选择 Obsidian 笔记库文件夹（包含 .obsidian 的目录）": "Wählen Sie Ihren Obsidian-Vault-Ordner (der .obsidian enthält)",
  "请选择 {0} 库内的笔记文件夹": "Wählen Sie einen Notizordner im Vault {0}",
@@ -158,5 +158,5 @@
  "回放清单过大": "Die Wiedergabeliste der Aufzeichnung ist zu groß",
  "回放片段不完整": "Das Segment der Aufzeichnung ist unvollständig",
  "回放片段读取超时": "Zeitüberschreitung beim Lesen des Segments der Aufzeichnung",
- "请先在「剪藏与保存」里将静默保存的笔记库切换到 {0}": "Wechseln Sie unter Ausschneiden und Speichern zuerst den Vault für stilles Speichern zu {0}"
+ "本机识别环境无法加载，请更新本地助手或换模型生成字幕。": "Die lokale Spracherkennungsumgebung konnte nicht geladen werden. Aktualisiere den lokalen Helfer oder wähle ein anderes Modell für die Untertitel.\n"
 }

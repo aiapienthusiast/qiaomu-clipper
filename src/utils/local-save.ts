@@ -1,3 +1,4 @@
+import { isYouTubeDownloadUrl } from './media-download-policy';
 import { classifyHelperError, helperIsOutdated, helperProblemText } from './helper-install';
 import { channelsShareAddress, isChannelsMedia } from './channels-study';
 import { isDouyinMedia } from './web-page-media';
@@ -12,7 +13,7 @@ import { callHelper } from './native-helper-call';
 import { cookiesTxtFor, videoAddress, type BrowserCookie } from './browser-cookies';
 import { localizeHelperReply, t } from './ui-text';
 export interface LocalSavePayload { requestId: string; content: string; name: string; folder: string; vault: string; behavior: Template['behavior'] }
-export interface LocalSaveResult { ok: boolean; reason?: string; error?: string; cancelled?: boolean; vault?: string; vaultPath?: string; path?: string; relativePath?: string; folder?: string }
+export interface LocalSaveResult { ok: boolean; reason?: string; error?: string; cancelled?: boolean; vault?: string; vaultPath?: string; vaultError?: string; path?: string; relativePath?: string; folder?: string }
 export async function saveLocalClip(payload: LocalSavePayload): Promise<LocalSaveResult> {
 	try { return await browser.runtime.sendMessage({ action: 'qiaomuLocalSave', payload }); }
 	catch { return { ok: false, error: t('本地保存中断，请重试') }; }
@@ -66,12 +67,12 @@ export function handleLearningNativeMessage(request: unknown, sender: { id?: str
 
 // Subtitle generation talks to the same local helper, with a fixed set of requests and checked arguments. When the viewer chose a
 // cloud recognition service, the background adds its settings here: a page script only ever asks, and never holds the key.
-const ASR_ACTIONS: Record<string, string> = { status: 'asrStatus', choose: 'asrStatus', start: 'asrStart', poll: 'asrPoll', cancel: 'asrCancel', test: 'asrCloudTest', probe: 'asrProbe', uploadStart: 'asrUploadStart', uploadChunk: 'asrUploadChunk', uploadFinish: 'asrUploadFinish', install: 'asrInstall', installPoll: 'asrInstallPoll', installCancel: 'asrInstallCancel', uninstall: 'asrUninstall' };
+const ASR_ACTIONS: Record<string, string> = { downloadStart: 'mediaDownloadStart', downloadPoll: 'mediaDownloadPoll', downloadCancel: 'mediaDownloadCancel', downloadReveal: 'mediaDownloadReveal', status: 'asrStatus', choose: 'asrStatus', start: 'asrStart', poll: 'asrPoll', cancel: 'asrCancel', test: 'asrCloudTest', probe: 'asrProbe', uploadStart: 'asrUploadStart', uploadChunk: 'asrUploadChunk', uploadFinish: 'asrUploadFinish', install: 'asrInstall', installPoll: 'asrInstallPoll', installCancel: 'asrInstallCancel', uninstall: 'asrUninstall' };
 const ASR_ENGINE = /^(mlx|mlx-qwen3|faster-whisper)$/;
 const ASR_KEY = /^(youtube:[A-Za-z0-9_-]{11}|bilibili:BV[0-9A-Za-z]{10}:\d{1,4}|xiaoyuzhou:[0-9a-f]{24}|file:[0-9a-f]{32}|rss:[0-9a-f]{12}:[0-9a-f]{16}|web:[0-9a-f]{12})$/;
 const ASR_LANGUAGE = /^(auto|zh|en|ja|ko|de|fr|es|ru|pt|it)$/;
 const ASR_COOKIES = /^(chrome|edge|brave|chromium|firefox|safari)$/;
-type AsrPayload = { mode?: string; videoKey?: string; language?: string; force?: boolean; cookies?: string; jobId?: string; since?: number; cloud?: Record<string, unknown>; apiKey?: string; engine?: string; profile?: string; model?: boolean; auto?: boolean; name?: string; rss?: { feed?: unknown; guid?: unknown }; web?: { url?: unknown; mediaUrl?: unknown }; url?: string; size?: number; uploadId?: string; index?: number; data?: string };
+type AsrPayload = { mode?: string; videoKey?: string; language?: string; force?: boolean; cookies?: string; jobId?: string; since?: number; cloud?: Record<string, unknown>; apiKey?: string; engine?: string; profile?: string; model?: boolean; auto?: boolean; name?: string; rss?: { feed?: unknown; guid?: unknown }; web?: { url?: unknown; mediaUrl?: unknown }; url?: string; mediaUrl?: string; audioUrl?: string; video?: boolean; size?: number; uploadId?: string; index?: number; data?: string };
 const validCloud = (cloud: Record<string, unknown> | undefined): cloud is Record<string, unknown> => Boolean(cloud && ['openai-transcriptions', 'chat-audio', 'doubao-flash'].includes(String(cloud.protocol)) && typeof cloud.baseUrl === 'string' && isHttpsOrLocal(cloud.baseUrl) && /^[A-Za-z0-9_./:\-]{1,100}$/.test(String(cloud.model || '')) && ['none', 'segments'].includes(String(cloud.timestamps || 'none')) && (cloud.contextMode === undefined || ['doubao', 'prompt'].includes(String(cloud.contextMode))) && ['chunkSeconds', 'maxChunkSeconds'].every(name => cloud[name] === undefined || (typeof cloud[name] === 'number' && cloud[name] >= 5 && cloud[name] <= 900)));
 export function handleAsrMessage(request: unknown, sender: { id?: string; url?: string }): Promise<unknown> | undefined {
     const message = request as { action?: string; payload?: AsrPayload };
@@ -80,7 +81,18 @@ export function handleAsrMessage(request: unknown, sender: { id?: string; url?: 
     const payload = message.payload || {}, action = ASR_ACTIONS[payload.mode || ''];
     if (!action) return Promise.resolve({ ok: false, error: 'bad-request' });
     const body: Record<string, unknown> = { action };
-    if (payload.mode === 'start') {
+    if (payload.mode?.startsWith('download')) {
+        if (!sender.url?.startsWith(browser.runtime.getURL(''))) return Promise.resolve({ ok: false, error: 'refused' });
+        if (payload.mode === 'downloadStart') {
+            if (typeof payload.url !== 'string' || payload.url.length > 1500 || !/^https:\/\//.test(payload.url) || isYouTubeDownloadUrl(payload.url) || typeof payload.name !== 'string' || payload.name.length > 300 || typeof payload.video !== 'boolean') return Promise.resolve({ ok: false, error: 'bad-request' });
+            const validMedia = (media: unknown) => isDouyinMedia(payload.url!, media) || isChannelsMedia(payload.url!, media) || isXiaoeMedia(payload.url!, media) || isXhsMedia(payload.url!, media);
+            if ((payload.mediaUrl !== undefined && !validMedia(payload.mediaUrl)) || (payload.audioUrl !== undefined && (!payload.mediaUrl || !validMedia(payload.audioUrl)))) return Promise.resolve({ ok: false, error: 'bad-request' });
+            Object.assign(body, { url: payload.url, name: payload.name, video: payload.video, ...(payload.mediaUrl ? { mediaUrl: payload.mediaUrl } : {}), ...(payload.audioUrl ? { audioUrl: payload.audioUrl } : {}) });
+        } else {
+            if (!/^[0-9a-f]{32}$/.test(payload.jobId || '')) return Promise.resolve({ ok: false, error: 'bad-request' });
+            body.jobId = payload.jobId;
+        }
+    } else if (payload.mode === 'start') {
         if (!ASR_KEY.test(payload.videoKey || '') || !ASR_LANGUAGE.test(payload.language || 'auto') || (payload.cookies !== undefined && !ASR_COOKIES.test(payload.cookies))) return Promise.resolve({ ok: false, error: 'bad-request' });
         // A podcast from a feed carries the feed's address: only the extension's own pages may name one, and it must be an https address.
         if (payload.videoKey!.startsWith('rss:')) {
@@ -137,6 +149,7 @@ export function handleAsrMessage(request: unknown, sender: { id?: string; url?: 
     if (needsSettings && payload.videoKey !== undefined && !ASR_KEY.test(payload.videoKey)) return Promise.resolve({ ok: false, error: 'bad-request' });
     const platform = platformOf(payload.videoKey);
     return (needsSettings ? loadAsrSettings() : Promise.resolve(undefined)).then(async stored => {
+        if (payload.mode === 'downloadStart' && await cookiesGranted() && (await loadAsrSettings()).autoLogin) body.cookies = 'chrome';
         let chosen = stored ? effectiveFor(stored, platform) : undefined;
         // What the page says about a video is used as background for recognition unless the viewer turned that off.
         if (payload.mode === 'start' && stored?.useContext === false) body.context = false;
@@ -160,15 +173,15 @@ export function handleAsrMessage(request: unknown, sender: { id?: string; url?: 
         // until they turn it off in the settings. Only the one site's cookies are handed over, and only to the local helper.
         // Signed Channels, Xiaoetong and Xiaohongshu media never need a browser login snapshot.
         const signedMedia = payload.mode === 'start' && typeof payload.web?.url === 'string' && (!!channelsShareAddress(payload.web.url) || isXiaoeMedia(payload.web.url, payload.web.mediaUrl) || isXhsMedia(payload.web.url, payload.web.mediaUrl));
-        if (signedMedia) delete body.cookies;
+        if (signedMedia || (payload.mode === 'downloadStart' && payload.mediaUrl)) delete body.cookies;
         const lendLogin = !signedMedia && await cookiesGranted();
         if (lendLogin && payload.mode === 'start') {
             if (payload.cookies && stored && !stored.autoLogin) void saveAsrSettings({ autoLogin: true });
             else if (!payload.cookies && stored?.autoLogin && /^(youtube|bilibili|web):/.test(payload.videoKey || '')) body.cookies = 'chrome';
         }
         // The helper started by the browser may not be allowed to read the browser's cookie file: the extension passes the site's cookies itself (local edition).
-        if (lendLogin && (payload.mode === 'start' || payload.mode === 'probe') && ['chrome', 'edge', 'brave', 'chromium'].includes(String(body.cookies))) {
-            const address = payload.mode === 'probe' ? String(body.url) : videoAddress(payload.videoKey, (body.web as { url?: string } | undefined)?.url);
+        if (lendLogin && (payload.mode === 'start' || payload.mode === 'probe' || payload.mode === 'downloadStart') && ['chrome', 'edge', 'brave', 'chromium'].includes(String(body.cookies))) {
+            const address = (payload.mode === 'probe' || payload.mode === 'downloadStart') ? String(body.url) : videoAddress(payload.videoKey, (body.web as { url?: string } | undefined)?.url);
             const cookiesApi = (browser as unknown as { cookies?: { getAll(details: { domain: string }): Promise<BrowserCookie[]> } }).cookies;
             const text = cookiesApi ? await cookiesTxtFor(address, details => cookiesApi.getAll(details)) : '';
             if (text) body.cookiesTxt = text;

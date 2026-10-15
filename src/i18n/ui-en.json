@@ -874,5 +874,10 @@
  "设置中可自定义三连击按键、关闭某个快捷键或按网站禁用，也可导出和导入设置。": "Customize triple-press keys, disable shortcuts per site, and export or import settings.",
  "重新检查": "Check again",
  "允许使用浏览器登录状态": "Allow browser login access",
- "B 站外嵌画质受限，前往原网页选择高清": "Bilibili limits embedded quality. Open the original page to choose HD."
+ "选择笔记库…": "Choose a vault…",
+ "B 站外嵌画质受限，前往原网页选择高清": "Bilibili limits embedded quality. Open the original page to choose HD.",
+ "设置": "Settings",
+ "下载视频": "Download video",
+ "下载音频": "Download audio",
+ "原站高清": "Original HD"
 }

@@ -810,6 +810,9 @@ def cloud_test(message):
     except asr_cloud.CloudError as error: return {'ok': False, 'error': str(error), 'code': error.code}
 def handle(message, base):
     action = message.get('action')
+    if action in ('mediaDownloadStart', 'mediaDownloadPoll', 'mediaDownloadCancel', 'mediaDownloadReveal'):
+        import media_download
+        return media_download.handle(base, message)
     if action == 'asrStatus': return status(cloud=bool(message.get('cloud')), engine=message.get('engine') or None)
     if action == 'asrCloudTest': return cloud_test(message)
     if action == 'asrStart': return start(base, message)
@@ -905,6 +908,7 @@ def run_install(base_dir):
                 unquarantine(eng.venv_dir(target))
                 done += weight
             if target == 'base': link_ffmpeg()
+            else: verify_runtime(target, env)
             if model: fetch_model(directory, target, model, low + (high - low) * done / weights, high, env)
         write_state(directory, state='completed', stage='安装完成', progress=100, error=None)
     except Failed as error:
@@ -942,6 +946,15 @@ def fetch_model(directory, engine, model, low, high, env):
 # ---- the worker ---------------------------------------------------------------------------------------------------
 class Failed(Exception):
     def __init__(self, message, code=None): super().__init__(message); self.code = code
+def runtime_failure(details):
+    return Failed('本机识别环境无法加载，请更新本地助手或换模型生成字幕。\n' + details[-6000:], code='runtime-unavailable')
+def verify_runtime(engine, env):
+    """Run with the engine's actual interpreter; file presence cannot prove dlopen works."""
+    try:
+        reply = subprocess.run([str(eng.venv_python(engine)), '-c', eng.runtime_probe_code(engine)],
+                               env=env, capture_output=True, text=True, encoding='utf8', errors='replace', timeout=60)
+    except (OSError, subprocess.SubprocessError) as error: raise runtime_failure(str(error)) from error
+    if reply.returncode: raise runtime_failure((reply.stderr or reply.stdout or '识别环境检查失败').strip())
 def stream(command, env, on_line, tail=20):
     """Run a command, hand every output line to on_line, and return its last lines for an error message."""
     lines = []
@@ -1104,7 +1117,10 @@ def recognise(directory, spec, wav, total, env, found, tools):
             with (directory / 'segments.jsonl').open('a', encoding='utf8') as f: f.write(json.dumps({'start': kept[-1]['start'], 'end': kept[-1]['end'], 'text': kept[-1]['text']}, ensure_ascii=False) + '\n')
             write_state(directory, state='transcribing', stage='正在识别语音', progress=round(18 + 80 * min(1, item['end'] / max(total, 1)), 1), processedSec=round(item['end'], 1), segmentCount=len(segments))
     code, tail = stream(command, env, on_line)
-    if code != 0: raise Failed('语音识别失败：' + (tail[-1] if tail else '未知错误')[:200])
+    if code != 0:
+        details = '\n'.join(tail)
+        if re.search(r'dlopen|ImportError|DLL load failed|Library not loaded', details, re.I): raise runtime_failure(details)
+        raise Failed('语音识别失败：' + (tail[-1] if tail else '未知错误')[-1000:])
     detected = None
     final = read_json(directory / 'whisper.json') if found['id'] == 'mlx' else None
     if final and isinstance(final.get('segments'), list):
@@ -1134,6 +1150,10 @@ def recognise_cloud(directory, spec, wav, total, env, tools):
     return segments, detected or (language if language != 'auto' else None)
 def run_worker(base_dir):
     directory = Path(base_dir); spec = read_json(directory / 'spec.json') or {}; env = tool_env()
+    if spec.get('purpose') == 'download':
+        import media_download
+        media_download.run_worker(directory, spec)
+        return
     unquarantine(eng.tools_home())  # environments installed before the flag was cleared at install time
     base = directory.parent.parent.parent
     try:
@@ -1141,6 +1161,11 @@ def run_worker(base_dir):
         if not info['ready']: raise Failed('缺少工具：' + '、'.join(info['missing']))
         tools = {'yt-dlp': find_tool('yt-dlp'), 'ffmpeg': find_tool('ffmpeg'), 'ffprobe': find_tool('ffprobe')}
         found = None if spec.get('cloud') else pick_engine(engines(), spec.get('engine'))
+        if found and found['id'] in eng.ENGINES:
+            managed = eng.ENGINES[found['id']]
+            paths = [str(eng.venv_python(found['id']))]
+            if managed.get('binary'): paths.append(str(eng.venv_executable(found['id'], managed['binary'])))
+            if found['path'] in paths: verify_runtime(found['id'], env)
         update_ytdlp(env, on_stage=lambda stage: write_state(directory, state='downloading', stage=stage, progress=0))
         tools['yt-dlp'] = find_tool('yt-dlp')
         audio = download(directory, spec, env, tools)

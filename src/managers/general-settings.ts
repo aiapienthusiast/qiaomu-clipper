@@ -285,6 +285,11 @@ export async function initializeLocalVaultSettings(): Promise<void> {
 
 	const fill = (vaults: { name: string; path: string }[], active: string) => {
 		select.textContent = '';
+		if (!active) {
+			const placeholder = document.createElement('option');
+			placeholder.value = ''; placeholder.disabled = true;
+			placeholder.textContent = t('选择笔记库…'); select.appendChild(placeholder);
+		}
 		const known = vaults.some(v => v.path === active);
 		const options = known || !active ? vaults : [{ name: active.split(/[\\/]/).pop() || active, path: active }, ...vaults];
 		for (const v of options) {
@@ -298,8 +303,7 @@ export async function initializeLocalVaultSettings(): Promise<void> {
 		other.value = OTHER;
 		other.textContent = t('选择其他文件夹…');
 		select.appendChild(other);
-		if (active) select.value = active;
-		if (!select.value && options.length) select.value = options[0].path;
+		select.value = active;
 	};
 	const remember = async (result: LocalSaveResult) => {
 		if (!result.vault || !result.vaultPath) return;
@@ -315,6 +319,7 @@ export async function initializeLocalVaultSettings(): Promise<void> {
 	let vaultList: { name: string; path: string }[] = [];
 	select.addEventListener('change', async () => {
 		const wanted = select.value;
+		if (!wanted) return;
 		select.disabled = true;
 		try {
 			const result = (wanted === OTHER
@@ -342,14 +347,14 @@ export async function initializeLocalVaultSettings(): Promise<void> {
 	const refresh = async () => { try {
 		note.textContent = t('正在检查…');
 		const state = await browser.runtime.sendMessage({ action: 'qiaomuLocalStatus' }) as LocalSaveResult;
-		if (!state?.ok) { showOffline(`${describeHelperFailure(state?.reason)}`, state?.reason); return; }
+		if (!state?.ok) { showOffline(state?.error || describeHelperFailure(state?.reason), state?.reason); return; }
 		const listed = await browser.runtime.sendMessage({ action: 'qiaomuLocalListVaults' }) as { ok?: boolean; vaults?: { name: string; path: string }[] };
 		vaultList = listed?.ok && Array.isArray(listed.vaults) ? listed.vaults : [];
 		current = state.vaultPath || '';
 		showOnline();
+		await remember(state);
 		fill(vaultList, current);
-		status.textContent = current ? current : t('选一个库，之后一键保存，不用打开 Obsidian。');
-		if (!current && vaultList.length) status.textContent = t('选一个库，之后一键保存，不用打开 Obsidian。');
+		status.textContent = state.vaultError || current || t('选一个库，之后一键保存，不用打开 Obsidian。');
 		// Saving support does not prove that this helper understands subtitle requests.
 		const speech = await browser.runtime.sendMessage({ action: 'qiaomuAsr', payload: { mode: 'status' } }) as { ok?: boolean; error?: string };
 		if (speech?.error === 'helper-outdated') note.textContent = t('本地助手需要更新。安装完成后，回到这里点击「重新检查」。');

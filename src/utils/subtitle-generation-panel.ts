@@ -79,7 +79,10 @@ export function buildGenerationPanel(doc: Document, strings: GenerationStrings, 
 			}
 			case 'failed':
 				if (ui.code === 'needs-cookies' && actions.confirmWithLogin) { text.textContent = strings.needsLogin; row.append(button(strings.loginRetry, () => actions.confirmWithLogin?.(), true), button(strings.cancel, () => show({ kind: 'offer' }))); break; }
-				text.textContent = `${ui.code === 'install' ? strings.installFailed : strings.failed}${ui.error ? '：' + ui.error : ''}`; row.append(button(strings.retry, () => actions.request(), true)); break;
+				text.textContent = `${ui.code === 'install' ? strings.installFailed : strings.failed}${ui.error ? '：' + ui.error : ''}`;
+				row.append(button(strings.retry, () => actions.request(), true));
+				if (actions.regenerate) row.append(button(strings.regenerate, () => actions.regenerate?.()));
+				break;
 			case 'generated': text.textContent = ui.via ? strings.generatedVia.replace('{via}', ui.via) : strings.generated; if (actions.regenerate) row.append(button(strings.regenerate, () => actions.regenerate?.())); break;
 		}
 	};

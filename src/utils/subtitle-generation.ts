@@ -52,7 +52,7 @@ export function createGeneration(onEvent: (event: GenerationEvent) => void, give
 			const status = await deps.status(videoKey);
 			if (!status.ok) { setup(status); return undefined; }
 			// Not ready is the caller's call when something can be installed: it offers that. Otherwise it is a plain setup problem.
-			if (!status.ready && !status.installable?.base && !status.installable?.engines.length) { onEvent({ phase: 'needs-setup', reason: 'missing', missing: status.missing, hints: status.hints }); return undefined; }
+			if (!status.ready && !status.installable?.base && !status.installable?.engines.length && !status.choices?.profiles.some(profile => profile.configured)) { onEvent({ phase: 'needs-setup', reason: 'missing', missing: status.missing, hints: status.hints }); return undefined; }
 			return status;
 		},
 		run(videoKey, { language = 'auto', cookies, force = false, jobId: resumeId }: { language?: string; cookies?: CookieBrowser; force?: boolean; jobId?: string } = {}) {
