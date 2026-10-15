@@ -27,11 +27,10 @@ export async function mountStudyDownload(article: HTMLElement, player: HTMLVideo
 			target.append(host);
 		}
 		if (target === article) {
-			const anchor = article.querySelector(':scope > .youtube-mode-bar, :scope > .reader-video-wrapper, :scope > .qiaomu-audio-hero, :scope > .youtube-player-resize, :scope > .youtube-sized-player');
 			// The video and its controls exist before the transcript container does.
 			// Keep downloads beside those controls, then follow the completed layout.
-			const modeBar = article.querySelector(':scope > .youtube-mode-bar');
-			const after = modeBar || anchor;
+			const after = ['.youtube-mode-bar', '.reader-video-wrapper', '.youtube-player-resize', '.youtube-sized-player', '.qiaomu-audio-hero']
+				.map(selector => article.querySelector(`:scope > ${selector}`)).find(Boolean);
 			if (after && host.previousElementSibling !== after) after.after(host);
 		}
 	};

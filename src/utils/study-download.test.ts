@@ -31,7 +31,7 @@ it('offers Bilibili downloads before an iframe or transcript has loaded, follows
  article.querySelector('.player-toggles')!.remove();await flush();expect(article.querySelector('.player-container .qiaomu-dl-main')).not.toBeNull();
 });
 it('places podcast downloads outside the crowded playback speed row, with no transcript needed',async()=>{
- document.body.innerHTML='<article><div class="reader-video-wrapper is-audio"><video></video><div class="qa-tools"></div></div></article>';const article=document.querySelector('article')!;
+ document.body.innerHTML='<article><div class="qiaomu-audio-hero">Podcast cover</div><div class="reader-video-wrapper is-audio"><video></video><div class="qa-tools"></div></div></article>';const article=document.querySelector('article')!;
  await mountStudyDownload(article,article.querySelector('video')!,{title:'Podcast',sourceUrl:'https://www.xiaoyuzhoufm.com/episode/65abcdef0123456789abcdef',mediaUrl:'https://media.xyzcdn.net/podcast.m4a',video:false});
  expect(article.querySelector('.qiaomu-dl-main')).not.toBeNull();expect(article.querySelector('.qa-tools .qiaomu-dl')).toBeNull();
  expect(article.querySelector('.reader-video-wrapper')!.nextElementSibling?.className).toBe('qiaomu-dl-host');
