@@ -5,8 +5,15 @@
       "id": "bilibili-picture-playback",
       "title": "B 站内嵌画面点击播放暂停与画质限制说明",
       "origin": "fix/bilibili-embed-playback-quality",
-      "files": ["src/bilibili-embed-content.ts", "src/utils/bilibili-embed.ts", "src/utils/youtube-study.ts"],
-      "tests": ["src/utils/bilibili-player.test.ts", "src/utils/reader-transcript-bilibili.test.ts"]
+      "files": [
+        "src/bilibili-embed-content.ts",
+        "src/utils/bilibili-embed.ts",
+        "src/utils/youtube-study.ts"
+      ],
+      "tests": [
+        "src/utils/bilibili-player.test.ts",
+        "src/utils/reader-transcript-bilibili.test.ts"
+      ]
     },
     {
       "id": "x-media-controls",
@@ -345,6 +352,22 @@
         "src/utils/chat-images.test.ts",
         "src/utils/clip-chat-images.test.ts",
         "src/utils/chat-content.test.ts"
+      ]
+    },
+    {
+      "id": "all-site-study-download",
+      "title": "B站、抖音、小宇宙等统一下载入口与分离音视频合并",
+      "origin": "本次用户下载入口反馈",
+      "files": [
+        "src/utils/study-download.ts",
+        "src/utils/study-download-native.ts",
+        "src/utils/youtube-study.ts",
+        "src/utils/audio-study.ts"
+      ],
+      "tests": [
+        "src/utils/study-download.test.ts",
+        "src/utils/study-download-native.test.ts",
+        "src/utils/local-save-learning.test.ts"
       ]
     }
   ]

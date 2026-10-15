@@ -370,7 +370,7 @@ def handle(message, config, base):
         config.update(updated)
         return {'ok':True,'vault':selected.name,'vaultPath':str(selected)}
     if message.get('action') in {'attachPick','attachLocal','attachBytes','attachDiscard'}: return attach(message,base)
-    if message.get('action') in {'asrStatus','asrStart','asrPoll','asrCancel','asrCloudTest','asrInstall','asrInstallPoll','asrInstallCancel','asrUninstall','asrUploadStart','asrUploadChunk','asrUploadFinish','asrProbe'}:
+    if message.get('action') in {'mediaDownloadStart','mediaDownloadPoll','mediaDownloadCancel','mediaDownloadReveal','asrStatus','asrStart','asrPoll','asrCancel','asrCloudTest','asrInstall','asrInstallPoll','asrInstallCancel','asrUninstall','asrUploadStart','asrUploadChunk','asrUploadFinish','asrProbe'}:
         # Subtitle generation lives in asr.py next to this file; it needs no vault.
         sys.path.insert(0,str(Path(__file__).resolve().parent))
         import asr

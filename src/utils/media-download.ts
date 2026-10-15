@@ -33,7 +33,7 @@ export function humanSize(bytes: number | undefined): string {
 	return mb >= 1 ? `${mb >= 10 ? Math.round(mb) : Math.round(mb * 10) / 10} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
-export class DownloadError extends Error { constructor(public code: 'http' | 'network' | 'not-media' | 'cancelled' | 'policy' | 'permission', message: string) { super(message); } }
+export class DownloadError extends Error { constructor(public code: 'http' | 'network' | 'not-media' | 'cancelled' | 'policy' | 'permission' | 'helper', message: string) { super(message); } }
 
 // Reads the file with progress. `fetcher` is injectable for tests.
 export async function fetchMediaBlob(url: string, options: { sourceUrl?: string; signal?: AbortSignal; onProgress?: (done: number, total: number | undefined) => void; fetcher?: typeof fetch } = {}): Promise<Blob> {
@@ -64,7 +64,7 @@ export async function fetchMediaBlob(url: string, options: { sourceUrl?: string;
 // The sentence under a failed download: what happened, then what to do.
 export function downloadProblem(error: unknown): string {
 	if (error instanceof DownloadError) {
-		if (error.code === 'policy' || error.code === 'permission') return error.message;
+		if (error.code === 'policy' || error.code === 'permission' || error.code === 'helper') return error.message;
 		if (error.code === 'cancelled') return t('已取消');
 		if (error.code === 'http') return error.message === 'HTTP 403' || error.message === 'HTTP 410' ? t('没能下载：链接已失效，请回原页面再试') : t('没能下载：服务器拒绝了请求（{0}）', [error.message]);
 		if (error.code === 'not-media') return t('没能下载：服务器没有返回视频文件');

@@ -314,3 +314,14 @@ it('rejects forged Xiaohongshu source/media/sender before contacting native',asy
  ] as const) expect(await handleAsrMessage({action:'qiaomuAsr',payload:{mode:'start',videoKey:'web:123456abcdef',web:{url:source,mediaUrl:media}}},from)).toMatchObject({ok:false});
  expect(native).not.toHaveBeenCalled();
 });
+
+it('allows model-independent exports only from this extension and rejects YouTube and forged media',async()=>{
+ asrStore.cookiePermission=false;
+ const payload={mode:'downloadStart',url:'https://www.bilibili.com/video/BV1xx411c7mD/',name:'Test',video:true};
+ native.mockResolvedValue({ok:true,id:'a'.repeat(32),state:'queued'});
+ expect(await handleAsrMessage({action:'qiaomuAsr',payload},sender)).toMatchObject({ok:true});
+ expect(native.mock.calls[0][1]).toEqual({action:'mediaDownloadStart',url:payload.url,name:'Test',video:true});native.mockClear();
+ for(const bad of [{...payload,url:'https://youtube.com/watch?v=12345678901'},{...payload,mediaUrl:'https://evil.org/test.mp4'},{...payload,name:'a'.repeat(301)}]) expect(await handleAsrMessage({action:'qiaomuAsr',payload:bad},sender)).toMatchObject({ok:false});
+ expect(await handleAsrMessage({action:'qiaomuAsr',payload},{id:'test-id',url:payload.url})).toMatchObject({ok:false});
+ expect(native).not.toHaveBeenCalled();
+});

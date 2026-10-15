@@ -13,6 +13,8 @@ export interface DownloadButtonOptions {
 	choices: DownloadChoice[];
 	// Puts the finished file where the person keeps downloads; returns something to reveal it with.
 	save(blob: Blob, filename: string, signal?: AbortSignal): Promise<{ reveal?: () => void } | void>;
+	download?(choice: DownloadChoice, signal: AbortSignal, progress: (done: number, total?: number) => void): Promise<{ reveal?: () => void } | void>;
+	errorAction?: { label: string; run(): void };
 	remembered?: string;
 	onRemember?(id: string): void;
 	fetchBlob?: typeof fetchMediaBlob;
@@ -21,7 +23,7 @@ export interface DownloadButton { element: HTMLElement; destroy(): void }
 
 const STYLE_ID = 'qiaomu-dl-style';
 const STYLE = `.qiaomu-dl{position:relative;display:inline-flex;align-items:center;font:13px/1.2 var(--font-ui,system-ui,sans-serif);color:var(--text-normal,#222)}
-.qiaomu-dl *{box-sizing:border-box}.qiaomu-dl [hidden]{display:none!important}.qiaomu-dl svg{width:15px;height:15px;flex:none;mix-blend-mode:normal!important}
+.qiaomu-dl{max-width:100%}.qiaomu-dl *{box-sizing:border-box}.qiaomu-dl [hidden]{display:none!important}.qiaomu-dl svg{width:15px;height:15px;flex:none;mix-blend-mode:normal!important}
 .qiaomu-dl button{width:auto;margin:0;border:0;background:transparent;box-shadow:none;font:inherit;color:inherit;cursor:pointer}
 .qiaomu-dl-split{display:inline-flex;height:32px;border-radius:8px;overflow:hidden;background:var(--background-secondary,rgb(128 128 128/12%))}
 .qiaomu-dl-split:hover,.qiaomu-dl-split:has([aria-expanded=true]){background:var(--background-modifier-hover,rgb(128 128 128/20%))}
@@ -32,7 +34,7 @@ const STYLE = `.qiaomu-dl{position:relative;display:inline-flex;align-items:cent
 .qiaomu-dl-bar{width:96px;height:4px;border-radius:2px;background:var(--background-modifier-border-hover,rgb(128 128 128/35%));overflow:hidden}
 .qiaomu-dl-bar>i{display:block;height:100%;width:0;background:var(--text-normal,#222);transition:width .15s}
 .qiaomu-dl-link{height:24px;padding:0 8px;border-radius:6px;color:var(--text-muted,#6e6e73)!important}.qiaomu-dl-link:hover{background:var(--background-modifier-hover,rgb(128 128 128/20%));color:var(--text-normal,#222)!important}
-.qiaomu-dl-state.is-error{background:var(--background-modifier-error,rgb(220 60 60/12%));color:var(--text-error,#c0392b)}.qiaomu-dl-state.is-error .qiaomu-dl-link{color:inherit!important}
+.qiaomu-dl-state.is-error{height:auto;min-height:32px;max-width:100%;flex-wrap:wrap;padding:6px 10px;background:var(--background-modifier-error,rgb(220 60 60/12%));color:var(--text-error,#c0392b)}.qiaomu-dl-state.is-error>span{flex:1 1 220px;min-width:0;overflow-wrap:anywhere}.qiaomu-dl-state.is-error .qiaomu-dl-link{color:inherit!important}
 .qiaomu-dl-menu{position:absolute;z-index:30;inset-block-start:calc(100% + 6px);inset-inline-end:0;min-width:220px;padding:6px 0;background:var(--background-primary,#fff);border:1px solid var(--divider-color,var(--background-modifier-border,rgb(128 128 128/35%)));border-radius:12px;box-shadow:0 12px 32px rgb(0 0 0/14%),0 2px 6px rgb(0 0 0/8%)}
 .qiaomu-dl-menu[hidden]{display:none}.qiaomu-dl-group{padding:8px 14px 4px;font-size:12px;color:var(--text-muted,#6e6e73)}
 .qiaomu-dl-item{display:flex!important;align-items:center;gap:8px;width:100%!important;padding:7px 14px!important;text-align:start}
@@ -79,9 +81,12 @@ export function mountDownloadButton(host: HTMLElement, options: DownloadButtonOp
 		try {
 			await options.beforeDownload?.();
 			if (controller.signal.aborted) throw new DownloadError('cancelled', t('已取消'));
-			const blob = await fetchBlob(choice.url, { sourceUrl: options.sourceUrl, signal: controller.signal, onProgress: (done, total) => { if (total) { const percent = Math.min(99, Math.floor(done / total * 100)); text.textContent = t('正在下载 {0}%', [percent]); fill.style.width = `${percent}%`; } else text.textContent = t('正在下载 {0}', [humanSize(done)]); } });
-			text.textContent = t('正在保存…'); fill.style.width = '100%';
-			const saved = await options.save(blob, downloadFileName(options.title, choice.ext), controller.signal);
+			const progress = (done: number, total?: number) => { if (total) { const percent = Math.min(99, Math.floor(done / total * 100)); text.textContent = t('正在下载 {0}%', [percent]); fill.style.width = `${percent}%`; } else text.textContent = t('正在下载 {0}', [humanSize(done)]); };
+			const saved = options.download ? await options.download(choice, controller.signal, progress) : await (async () => {
+				const blob = await fetchBlob(choice.url, { sourceUrl: options.sourceUrl, signal: controller!.signal, onProgress: progress });
+				text.textContent = t('正在保存…'); fill.style.width = '100%';
+				return options.save(blob, downloadFileName(options.title, choice.ext), controller!.signal);
+			})();
 			const link = node('button', 'qiaomu-dl-link', t('在访达中显示')); link.type = 'button';
 			link.addEventListener('click', () => saved && saved.reveal?.());
 			const again = node('button', 'qiaomu-dl-link', t('再存一份')); again.type = 'button'; again.addEventListener('click', showIdle);
@@ -91,7 +96,8 @@ export function mountDownloadButton(host: HTMLElement, options: DownloadButtonOp
 			if (message === t('已取消')) { showIdle(); return; }
 			const retry = node('button', 'qiaomu-dl-link', t('重试')); retry.type = 'button'; retry.addEventListener('click', () => { void run(choice); });
 			const close = node('button', 'qiaomu-dl-link', t('关闭')); close.type = 'button'; close.addEventListener('click', showIdle);
-			showState('error', node('span', '', message), retry, close);
+			const action = node('button', 'qiaomu-dl-link', options.errorAction?.label || ''); action.type = 'button'; action.addEventListener('click', () => options.errorAction?.run());
+			showState('error', node('span', '', message), ...(options.errorAction ? [action] : []), retry, close);
 		}
 	};
 

@@ -810,6 +810,9 @@ def cloud_test(message):
     except asr_cloud.CloudError as error: return {'ok': False, 'error': str(error), 'code': error.code}
 def handle(message, base):
     action = message.get('action')
+    if action in ('mediaDownloadStart', 'mediaDownloadPoll', 'mediaDownloadCancel', 'mediaDownloadReveal'):
+        import media_download
+        return media_download.handle(base, message)
     if action == 'asrStatus': return status(cloud=bool(message.get('cloud')), engine=message.get('engine') or None)
     if action == 'asrCloudTest': return cloud_test(message)
     if action == 'asrStart': return start(base, message)
@@ -1147,6 +1150,10 @@ def recognise_cloud(directory, spec, wav, total, env, tools):
     return segments, detected or (language if language != 'auto' else None)
 def run_worker(base_dir):
     directory = Path(base_dir); spec = read_json(directory / 'spec.json') or {}; env = tool_env()
+    if spec.get('purpose') == 'download':
+        import media_download
+        media_download.run_worker(directory, spec)
+        return
     unquarantine(eng.tools_home())  # environments installed before the flag was cleared at install time
     base = directory.parent.parent.parent
     try:

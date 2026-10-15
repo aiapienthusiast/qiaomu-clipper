@@ -265,7 +265,7 @@ export async function startAudioStudy(options: AudioStudyOptions): Promise<void>
 
 	// An episode with a cover, a show, a date and show notes: from a Xiaoyuzhou page or from an RSS feed.
 	// `post`: a short text that belongs with the media (a post's words), shown under the heading rather than behind a tab.
-	const present = async (episode: { title: string; show: string; cover?: string; date?: string; seconds?: number; sourceUrl?: string; audio: string; audioUrl?: string; picture?: boolean; notesHtml: string; notesLabel?: string; post?: string }) => {
+	const present = async (episode: { title: string; show: string; cover?: string; date?: string; seconds?: number; sourceUrl?: string; audio: string; audioUrl?: string; downloadMedia?: string; downloadVideo?: boolean; picture?: boolean; notesHtml: string; notesLabel?: string; post?: string }) => {
 		title = session.restored ? session.draft.clip.title : episode.title || initialTitle; document.title = title; setPageTitle(title);
 		const heading = document.querySelector('main h1'); if (heading) heading.textContent = title;
 		// The show, the date and the length, with the cover: what the listener knows the episode by.
@@ -277,7 +277,7 @@ export async function startAudioStudy(options: AudioStudyOptions): Promise<void>
 		hero.append(about); holder.before(hero);
 		if (episode.post) { const post = document.createElement('div'); post.className = 'qiaomu-post-text'; post.innerHTML = DOMPurify.sanitize(episode.post); sourceHtml = post.outerHTML; holder.before(post); }
 		const player = episode.audio ? showPlayer(episode.audio, episode.picture ? { poster: episode.cover, audioUrl: episode.audioUrl } : undefined) : undefined;
-		if (player) void mountStudyDownload(article, player, { title, sourceUrl: episode.sourceUrl || options.feed || url, mediaUrl: episode.audio, video: Boolean(episode.picture), split: Boolean(episode.picture && episode.audioUrl) }).catch(error => { console.warn('[qiaomu] download control not shown:', error); });
+		void mountStudyDownload(article, player, { title, sourceUrl: episode.sourceUrl || options.feed || url, mediaUrl: episode.downloadMedia ?? episode.audio, audioUrl: episode.audioUrl, video: episode.downloadVideo ?? Boolean(episode.picture), split: Boolean(episode.picture && episode.audioUrl) }).catch(error => { console.warn('[qiaomu] download control not shown:', error); });
 		// The show notes next to the transcript: tabs, so neither pushes the other off the screen.
 		if (episode.notesHtml) {
 			const tabs = document.createElement('div'); tabs.className = 'qiaomu-audio-tabs'; tabs.setAttribute('role', 'tablist');
@@ -350,7 +350,7 @@ export async function startAudioStudy(options: AudioStudyOptions): Promise<void>
 		void recordStudy({ url: address, title: info.title, path: `reader.html?study=web&url=${encodeURIComponent(address)}`, kind: 'web' });
 		// A post on X says something of its own: its words stay with the media. A long description of another site waits behind a tab.
 		const words = (info.description ?? '').trim(), isPost = Boolean(xStatus(address)), short = isPost || words.length <= 400;
-		await present({ sourceUrl: sourceUrl || address, title: info.title, show: info.author || info.site, cover: info.thumbnail ?? undefined, date: info.date ?? undefined, seconds: info.seconds ?? undefined, audio: info.mediaUrl ?? '', audioUrl: info.audioUrl, picture: info.video && Boolean(info.mediaUrl), ...(words && short ? { post: plainToHtml(words) } : {}), ...(words && !short ? { notesHtml: plainToHtml(words), notesLabel: text('audioTabAbout', '简介', 'Description') } : { notesHtml: '' }) });
+		await present({ sourceUrl: sourceUrl || address, title: info.title, show: info.author || info.site, cover: info.thumbnail ?? undefined, date: info.date ?? undefined, seconds: info.seconds ?? undefined, audio: info.mediaUrl ?? '', downloadMedia: xiaoeMedia || info.mediaUrl || '', downloadVideo: info.video, audioUrl: info.audioUrl, picture: info.video && Boolean(info.mediaUrl), ...(words && short ? { post: plainToHtml(words) } : {}), ...(words && !short ? { notesHtml: plainToHtml(words), notesLabel: text('audioTabAbout', '简介', 'Description') } : { notesHtml: '' }) });
 		if (!info.mediaUrl) { const note = document.createElement('p'); note.className = 'qiaomu-shows-note'; note.append(document.createTextNode(siteOf(address)?.id === 'tiktok' ? t('没能取到这条视频的播放地址（它在原页面里正常播放，需要原来的 TikTok 页面保持打开）。字幕照常生成，对照时请在原页面播放：') : isXiaoe ? t('这个浏览器不能直接播放小鹅通的回放，所以这里不提供播放器；字幕照常生成，对照时请在小鹅通里播放：') : t('这个网站没有给出可以直接播放的声音，所以这里不提供播放器；字幕照常生成，对照时请在原页面播放：'))); const link = document.createElement('a'); link.href = address; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = t('打开原页面'); note.append(link); holder.before(note); }
         if (session.restored) {
             const content = article.querySelector<HTMLElement>('.qiaomu-restored-study')!;
