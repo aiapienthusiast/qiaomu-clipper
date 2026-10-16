@@ -1,6 +1,6 @@
 import { isYouTubeDownloadUrl } from './media-download-policy';
 import { classifyHelperError, helperIsOutdated, helperProblemText } from './helper-install';
-import { channelsShareAddress, isChannelsMedia } from './channels-study';
+import { channelsShareAddress, channelsStudyAddress, isChannelsMedia } from './channels-study';
 import { isDouyinMedia } from './web-page-media';
 import { isXiaoeMedia } from './xiaoe';
 import { isXhsMedia } from './xiaohongshu';
@@ -104,7 +104,8 @@ export function handleAsrMessage(request: unknown, sender: { id?: string; url?: 
         if (payload.videoKey!.startsWith('web:')) {
             const ref = payload.web;
             // A supported media detail page may transcribe only its own item from its subtitle bar.
-            const pageAddress = webMediaAddress(sender.url || '');
+            // A Channels share page only offers to open the study page; it never transcribes on its own.
+            const pageAddress = channelsShareAddress(sender.url || '') ? null : webMediaAddress(sender.url || '');
             const own = Boolean(ref && typeof ref.url === 'string' && webMediaAddress(ref.url) && (pageAddress ? webMediaAddress(ref.url) === pageAddress : ['tiktok', 'douyin'].includes(siteOf(sender.url || '')?.id || '') && siteOf(ref.url)?.id === siteOf(sender.url || '')?.id));
             if (!(sender.url?.startsWith(browser.runtime.getURL('')) || own) || !ref || typeof ref.url !== 'string' || ref.url.length > 1500 || !/^https:\/\//.test(ref.url)) return Promise.resolve({ ok: false, error: 'bad-request' });
             if (ref.mediaUrl !== undefined && !(isDouyinMedia(ref.url, ref.mediaUrl) || isChannelsMedia(ref.url, ref.mediaUrl) || isXiaoeMedia(ref.url, ref.mediaUrl) || isXhsMedia(ref.url, ref.mediaUrl))) return Promise.resolve({ ok: false, error: 'bad-request' });
@@ -172,7 +173,7 @@ export function handleAsrMessage(request: unknown, sender: { id?: string; url?: 
         // The viewer agreed once to lend this browser's login (the first "retry with my browser login"): from then on a download that needs it just has it,
         // until they turn it off in the settings. Only the one site's cookies are handed over, and only to the local helper.
         // Signed Channels, Xiaoetong and Xiaohongshu media never need a browser login snapshot.
-        const signedMedia = payload.mode === 'start' && typeof payload.web?.url === 'string' && (!!channelsShareAddress(payload.web.url) || isXiaoeMedia(payload.web.url, payload.web.mediaUrl) || isXhsMedia(payload.web.url, payload.web.mediaUrl));
+        const signedMedia = payload.mode === 'start' && typeof payload.web?.url === 'string' && (!!channelsStudyAddress(payload.web.url) || isXiaoeMedia(payload.web.url, payload.web.mediaUrl) || isXhsMedia(payload.web.url, payload.web.mediaUrl));
         if (signedMedia || (payload.mode === 'downloadStart' && payload.mediaUrl)) delete body.cookies;
         const lendLogin = !signedMedia && await cookiesGranted();
         if (lendLogin && payload.mode === 'start') {

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 vi.mock('./browser-polyfill', () => ({ default: { runtime: { sendMessage: vi.fn() } } }));
-import { channelsShareAddress, isChannelsMedia, parseChannelsShare, readChannelsPlayback, channelsStudyBridge, probeChannelsStudy } from './channels-study';
+import { getChannelsPlaybackMedia, channelsPlaybackPage, channelsStudyAddress, channelsShareAddress, isChannelsMedia, parseChannelsShare, readChannelsPlayback, channelsStudyBridge, probeChannelsStudy } from './channels-study';
 const share='https://weixin.qq.com/sph/Fixture123';
 const playback='https://channels.weixin.qq.com/finder-preview/pages/feed?token=fixture-token&eid=fixture-id';
 const media='https://finder.video.qq.com/251/20302/stodownload?encfilekey=fixture';
@@ -28,7 +28,7 @@ it('requires explicit opening, reader ownership, exact share, and unchanged play
  expect(await bridge(1,{mode:'read',url:share})).toEqual({state:'unavailable'});expect(parse).not.toHaveBeenCalled();
  expect(await bridge(1,{mode:'open',url:share})).toEqual({state:'opened'});
  expect(await bridge(2,{mode:'read',url:share})).toEqual({state:'unavailable'});expect(await bridge(1,{mode:'read',url:share+'Other'})).toEqual({state:'unavailable'});
- expect(await bridge(1,{mode:'read',url:share})).toEqual({state:'loading'});expect(create).toHaveBeenLastCalledWith({url:playback});
+ expect(await bridge(1,{mode:'read',url:share})).toEqual({state:'loading'});expect(create).toHaveBeenLastCalledWith({url:playback,active:false});
  expect(await bridge(1,{mode:'read',url:share})).toEqual({state:'ready',info,sourceUrl:share});expect(JSON.stringify(await bridge(1,{mode:'read',url:share}))).not.toContain('fixture-token');
 });
 it('keeps login and rejected media failures recoverable, and rejects navigation races',async()=>{
@@ -61,4 +61,40 @@ it('bounds automatic login checks and cancels further reads when the reader clos
 });
 it('waits for freshly opened tabs instead of treating navigation as a failed video',async()=>{
  const create=vi.fn().mockResolvedValue({id:7}),get=vi.fn().mockResolvedValue({url:'about:blank',status:'loading'}),parse=vi.fn(),inspect=vi.fn(),bridge=channelsStudyBridge({create,get,parse,inspect});await bridge(1,{mode:'open',url:share});expect(await bridge(1,{mode:'read',url:share})).toEqual({state:'loading'});expect(parse).not.toHaveBeenCalled();
+});
+it('keys the official playback page by export id only and drops the token',()=>{
+ const key='https://channels.weixin.qq.com/finder-preview/pages/feed?eid=fixture-id';
+ expect(channelsPlaybackPage(playback)).toBe(key);expect(channelsPlaybackPage(key)).toBe(key);expect(channelsStudyAddress(playback)).toBe(key);expect(channelsStudyAddress(share)).toBe(share);
+ expect(channelsPlaybackPage('https://channels.weixin.qq.com/finder-preview/pages/feed?eid=a%2Fb')).toBe('https://channels.weixin.qq.com/finder-preview/pages/feed?eid=a%2Fb');
+ for(const u of ['https://channels.weixin.qq.com/finder-preview/pages/feed?token=only','https://channels.weixin.qq.com/finder-preview/pages/feed?eid=','http://channels.weixin.qq.com/finder-preview/pages/feed?eid=x','https://channels.weixin.qq.com.evil.org/finder-preview/pages/feed?eid=x','https://evil.org/finder-preview/pages/feed?eid=x','https://channels.weixin.qq.com/other?eid=x','https://u:p@channels.weixin.qq.com/finder-preview/pages/feed?eid=x','https://channels.weixin.qq.com/finder-preview/pages/feed?eid='+'a'.repeat(201)])expect(channelsPlaybackPage(u)).toBeUndefined();
+ expect(isChannelsMedia(key,media)).toBe(true);expect(isChannelsMedia(playback,media)).toBe(true);expect(isChannelsMedia(playback,media.replace('finder.video.qq.com','evil.org'))).toBe(false);
+});
+it('lends the open playback tab media only for that exact video and a verified address',async()=>{
+ const key='https://channels.weixin.qq.com/finder-preview/pages/feed?eid=fixture-id';
+ const api=(answer:unknown,tabUrl=playback)=>({get:vi.fn().mockResolvedValue({url:tabUrl}),query:vi.fn().mockResolvedValue([{id:9,url:playback}]),sendMessage:vi.fn().mockResolvedValue(answer)});
+ const good={url:key,info:{...info,title:'T',description:'D'}};
+ expect(await getChannelsPlaybackMedia(key,5,api(good))).toMatchObject({ok:true,mediaUrl:media,title:'T',video:true});
+ const other=api(good,'https://channels.weixin.qq.com/finder-preview/pages/feed?eid=another');
+ expect(await getChannelsPlaybackMedia(key,5,other)).toBeDefined();expect(other.query).toHaveBeenCalled();
+ expect(await getChannelsPlaybackMedia(key,5,api({url:'https://channels.weixin.qq.com/finder-preview/pages/feed?eid=other',info}))).toBeUndefined();
+ expect(await getChannelsPlaybackMedia(key,5,api({url:key,info:{...info,mediaUrl:media.replace('finder.video.qq.com','evil.org')}}))).toBeUndefined();
+ expect(await getChannelsPlaybackMedia(share,5,api(good))).toBeUndefined();
+ const none=api(good);none.get.mockRejectedValue(new Error('closed'));none.query.mockResolvedValue([]);expect(await getChannelsPlaybackMedia(key,5,none)).toBeUndefined();
+});
+it('opens the Yuanbao check by itself only when the share page button asked for it',async()=>{
+ vi.useFakeTimers();
+ const make=(auto:boolean)=>{const holder=document.createElement('div'),status=document.createElement('p');document.body.append(holder,status);
+  const request=vi.fn().mockResolvedValueOnce({state:'opened'}).mockResolvedValue({state:'ready',info,sourceUrl:share});
+  const done=probeChannelsStudy(share,status,holder,request,auto);return{request,done};};
+ const manual=make(false);await Promise.resolve();expect(manual.request).not.toHaveBeenCalled();
+ const auto=make(true);await Promise.resolve();expect(auto.request).toHaveBeenCalledTimes(1);expect(auto.request).toHaveBeenCalledWith({action:'qiaomuChannelsStudy',mode:'open',url:share});
+ await vi.advanceTimersByTimeAsync(4000);expect(await auto.done).toEqual({info,sourceUrl:share});
+});
+it('opens the official playback page behind the study page and closes it once the video is read',async()=>{
+ const create=vi.fn().mockResolvedValueOnce({id:7}).mockResolvedValue({id:8}),remove=vi.fn().mockResolvedValue(undefined);
+ const get=vi.fn().mockImplementation(id=>Promise.resolve({url:id===7?'https://yuanbao.tencent.com/':playback}));
+ const bridge=channelsStudyBridge({create,remove,get,parse:vi.fn().mockResolvedValue({state:'ready',playbackUrl:playback}),inspect:vi.fn().mockResolvedValue({state:'ready',info})});
+ await bridge(1,{mode:'open',url:share});await bridge(1,{mode:'read',url:share});
+ expect(create).toHaveBeenLastCalledWith({url:playback,active:false});expect(remove).not.toHaveBeenCalled();
+ expect(await bridge(1,{mode:'read',url:share})).toMatchObject({state:'ready'});expect(remove).toHaveBeenCalledWith(8);
 });

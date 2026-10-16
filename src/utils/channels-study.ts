@@ -10,8 +10,19 @@ export function channelsShareAddress(address: string): string | undefined {
   if (id && /^[A-Za-z0-9]{3,64}$/.test(id)) return `https://weixin.qq.com/sph/${id}`;
  } catch { /* not a share address */ }
 }
+// The official playback page the user's own session opened (channels.weixin.qq.com/finder-preview/pages/feed?eid=…). The short-lived token is dropped:
+// only the export id names the video, so the address is a stable key and never carries a credential.
+export function channelsPlaybackPage(address: string): string | undefined {
+ try {
+  const u = new URL(address), eid = u.searchParams.get('eid');
+  if (u.protocol !== 'https:' || u.hostname !== 'channels.weixin.qq.com' || u.pathname !== '/finder-preview/pages/feed' || u.username || u.password || (u.port && u.port !== '443') || !eid || eid.length > 200 || /[\u0000-\u001f\s]/.test(eid)) return;
+  return `https://channels.weixin.qq.com/finder-preview/pages/feed?eid=${encodeURIComponent(eid)}`;
+ } catch { /* not a playback page */ }
+}
+// A page the study pipeline may attach a Channels video to: a share address or its official playback page.
+export const channelsStudyAddress = (address: string): string | undefined => channelsShareAddress(address) || channelsPlaybackPage(address);
 export function isChannelsMedia(page: string, media: unknown): media is string {
- if (!channelsShareAddress(page) || typeof media !== 'string' || media.length > 8000) return false;
+ if (!channelsStudyAddress(page) || typeof media !== 'string' || media.length > 8000) return false;
  try { const u = new URL(media); return u.protocol === 'https:' && !u.username && !u.password && (!u.port || u.port === '443') && !u.hash && u.hostname === 'finder.video.qq.com' && /^\/(?:\d+\/){2}stodownload$/.test(u.pathname); } catch { return false; }
 }
 export type ChannelsResult = { state: 'ready'; info: WebInfo; sourceUrl: string } | { state: 'login' | 'loading' | 'unavailable' };
@@ -55,7 +66,8 @@ export function readChannelsPlayback(): Promise<{ state: 'ready'; info: WebInfo 
 }
 
 export function channelsStudyBridge(api: {
- create(options: { url: string }): Promise<{ id?: number }>;
+ create(options: { url: string; active?: boolean }): Promise<{ id?: number }>;
+ remove?(id: number): Promise<unknown>;
  get(id: number): Promise<{ url?: string; status?: string }>;
  parse(id: number, share: string): Promise<ParsedShare>;
  inspect(id: number): ReturnType<typeof readChannelsPlayback>;
@@ -78,7 +90,7 @@ export function channelsStudyBridge(api: {
     if (tab.url !== session.playbackUrl || !playbackAddress(tab.url)) { session.playback = undefined; session.playbackUrl = undefined; return { state: 'unavailable' }; }
     const result = await api.inspect(session.playback);
     if ((await api.get(session.playback)).url !== session.playbackUrl) return { state: 'unavailable' };
-    if (result.state === 'ready' && isChannelsMedia(source, result.info.mediaUrl)) { sessions.delete(owner); return { state: 'ready', info: result.info, sourceUrl: source }; }
+    if (result.state === 'ready' && isChannelsMedia(source, result.info.mediaUrl)) { sessions.delete(owner); void api.remove?.(session.playback)?.catch?.(() => {}); return { state: 'ready', info: result.info, sourceUrl: source }; }
     if (result.state === 'unavailable' || result.state === 'ready') { session.playback = undefined; session.playbackUrl = undefined; }
     return { state: result.state === 'ready' ? 'unavailable' : result.state };
    }
@@ -89,14 +101,15 @@ export function channelsStudyBridge(api: {
    if ((await api.get(session.resolver)).url !== tab.url) return { state: 'unavailable' };
    if (parsed.state !== 'ready') return parsed;
    if (!playbackAddress(parsed.playbackUrl)) return { state: 'unavailable' };
-   const player = await api.create({ url: parsed.playbackUrl }); if (player.id === undefined) return { state: 'unavailable' };
+   // The official page only lends its video: it opens behind the study page, which stays the viewer's place.
+   const player = await api.create({ url: parsed.playbackUrl, active: false }); if (player.id === undefined) return { state: 'unavailable' };
    session.playback = player.id; session.playbackUrl = parsed.playbackUrl; return { state: 'loading' };
   } catch { session.playback = undefined; session.playbackUrl = undefined; return { state: 'unavailable' }; }
  };
 }
 
 export function probeChannelsStudy(url: string, status: HTMLElement, holder: HTMLElement,
- request: (message: object) => Promise<{ state?: string; info?: WebInfo; sourceUrl?: string }> = message => browser.runtime.sendMessage(message)): Promise<{ info: WebInfo; sourceUrl: string }> {
+ request: (message: object) => Promise<{ state?: string; info?: WebInfo; sourceUrl?: string }> = message => browser.runtime.sendMessage(message), autoOpen = false): Promise<{ info: WebInfo; sourceUrl: string }> {
  const doc = holder.ownerDocument, row = doc.createElement('div'); row.className = 'qiaomu-web-retry';
  const heading = doc.createElement('b'); heading.textContent = t('视频号');
  const note = doc.createElement('p'); note.textContent = t('此链接需要腾讯元宝解析。点击后将打开元宝；登录后仅将这条链接交给元宝解析，登录信息不会交给字幕识别服务。');
@@ -138,5 +151,23 @@ export function probeChannelsStudy(url: string, status: HTMLElement, holder: HTM
    stop(); failures = 0; deadline = Date.now() + 180000;
    void attempt().then(schedule);
   });
+  if (autoOpen) open.click();
  });
+}
+
+// The study reader asks for the media of a playback page the viewer has open. Only the page's own answer counts, and only for this exact video and a verified Tencent media address.
+export async function getChannelsPlaybackMedia(url: string, sourceTabId: number | undefined,
+ api: { get(id: number): Promise<{ url?: string }>; query(options: object): Promise<Array<{ id?: number; url?: string }>>; sendMessage(id: number, message: object): Promise<unknown> }): Promise<WebInfo | undefined> {
+ const canonical = channelsPlaybackPage(url); if (!canonical) return;
+ try {
+  let tab: { id?: number; url?: string } | undefined;
+  if (Number.isInteger(sourceTabId) && sourceTabId! >= 0) { try { tab = { ...(await api.get(sourceTabId!)), id: sourceTabId }; } catch { /* the original tab was closed */ } }
+  if (!tab?.url || channelsPlaybackPage(tab.url) !== canonical) tab = ((await api.query({ url: 'https://channels.weixin.qq.com/*' })) || []).find(candidate => channelsPlaybackPage(candidate.url || '') === canonical);
+  if (tab?.id === undefined || channelsPlaybackPage(tab.url || '') !== canonical) return;
+  const answer = await api.sendMessage(tab.id, { action: 'qiaomuWebMediaSource' }) as { url?: string; info?: WebInfo } | undefined;
+  const info = answer?.info;
+  if (answer?.url !== canonical || !info || !isChannelsMedia(canonical, info.mediaUrl)) return;
+  return { ok: true, title: String(info.title || '').slice(0, 600), author: String(info.author || '').slice(0, 200), seconds: Number.isFinite(info.seconds) ? info.seconds : null, thumbnail: null,
+   site: 'WeChat Channels', mediaUrl: info.mediaUrl, video: true, description: String(info.description || '').slice(0, 6000) };
+ } catch { /* the page is gone or not ready */ }
 }

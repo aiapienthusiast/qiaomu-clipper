@@ -76,3 +76,10 @@ it('sits right under Douyin’s own 消息 button, edges aligned, instead of cov
 	placeWebBar(host, video, 'douyin');
 	expect(host.style.right).toBe('90px'); expect(host.style.top).toBe('178px');
 });
+
+it('floats the Channels strip as a solid card under the top-right menu, never translucent', () => {
+	const host = document.createElement('div'); document.body.append(host); placeWebBar(host, undefined, 'channels');
+	expect(['is-floating', 'is-compact', 'is-solid'].every(name => host.classList.contains(name))).toBe(true);
+	expect(host.style.top).toBe('88px'); expect(host.style.right).toBe('16px'); expect(Number(host.style.zIndex)).toBeGreaterThan(1e9);
+	expect(WEB_BAR_STYLE).toMatch(/\.is-floating\.is-solid \.qiaomu-yt-bar\{--qm-card:#1f1f23!important;[^}]*backdrop-filter:none/);
+});

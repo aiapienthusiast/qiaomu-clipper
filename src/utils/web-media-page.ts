@@ -1,6 +1,7 @@
 import { siteOf, xStatus } from './study-sites';
 import { xiaoeAddress } from './xiaoe';
 import { xhsAddress, xhsVideo } from './xiaohongshu';
+import { channelsStudyAddress } from './channels-study';
 
 // Only a supported media detail address, never a site's home/search/profile feed.
 export function webMediaAddress(address: string): string | null {
@@ -10,6 +11,7 @@ export function webMediaAddress(address: string): string | null {
 	if (site.id === 'x') return xStatus(address);
 	if (site.id === 'xiaohongshu') return xhsAddress(address);
 	if (site.id === 'xiaoe') return xiaoeAddress(address);
+	if (site.id === 'channels') return channelsStudyAddress(address) ?? null;
 	if (site.id === 'douyin') {
 		const id = url.pathname.match(/^\/(?:video|note)\/(\d+)/)?.[1] || url.searchParams.get('modal_id')?.match(/^\d+$/)?.[0] || url.searchParams.get('vid')?.match(/^\d+$/)?.[0];
 		return id ? `https://www.douyin.com/video/${id}` : null;
@@ -68,7 +70,7 @@ export function currentWebMediaAddress(doc: Document, media: WebMedia, address: 
 
 // Some players live in inaccessible frames or are created only after pressing play.
 // Item-only routes let us offer study without falsely claiming source-page time control.
-const ITEM_ONLY_SITES = ['vimeo', 'tiktok', 'douyin', 'twitch', 'dailymotion', 'soundcloud', 'bandcamp', 'niconico', 'ximalaya', 'netease', 'ted', 'applepodcasts'];
+const ITEM_ONLY_SITES = ['vimeo', 'tiktok', 'douyin', 'twitch', 'dailymotion', 'soundcloud', 'bandcamp', 'niconico', 'ximalaya', 'netease', 'ted', 'applepodcasts', 'channels'];
 export const isMediaItemAddress = (address: string): boolean => Boolean(webMediaAddress(address) && ITEM_ONLY_SITES.includes(siteOf(address)?.id ?? ''));
 export function declaredWebMediaAddress(doc: Document, address: string): string | null {
 	const detail = webMediaAddress(address), site = siteOf(address); if (!detail || !site) return null;

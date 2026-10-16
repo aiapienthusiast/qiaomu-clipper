@@ -46,6 +46,7 @@ module.exports = (env, argv) => {
 			'youtube-embed': './src/youtube-embed-content.ts',
 			'xiaoyuzhou-panel': './src/xiaoyuzhou-content.ts',
 			'web-panel': './src/web-content.ts',
+			'channels-share': './src/channels-share-content.ts',
 			'note-card': ['./src/note-card-content.ts', './src/note-card.scss'],
 			popup: './src/core/popup.ts',
 			settings: './src/core/settings.ts',

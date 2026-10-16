@@ -371,6 +371,25 @@
         "src/utils/local-save-learning.test.ts",
         "src/utils/study-media-footer.test.ts"
       ]
+    },
+    {
+      "id": "channels-playback-bar",
+      "title": "视频号：播放页页内字幕条与分享页「用乔木剪藏打开」入口",
+      "origin": "codex/channels-helper",
+      "files": [
+        "src/utils/channels-study.ts",
+        "src/web-content.ts",
+        "src/utils/web-media-page.ts",
+        "src/utils/web-bar-placement.ts",
+        "src/channels-share-content.ts",
+        "src/utils/audio-study.ts",
+        "src/background.ts"
+      ],
+      "tests": [
+        "src/utils/channels-study.test.ts",
+        "src/channels-share-content.test.ts",
+        "src/utils/web-media-page-channels.test.ts"
+      ]
     }
   ]
 }

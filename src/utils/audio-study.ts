@@ -5,6 +5,7 @@ import { patchClipPreview } from './clip-preview';
 import { bindRemotePreviewMedia, preserveRemotePreviewMedia, restoreRemotePreviewPlayback } from './remote-preview-media';
 import { mountStudyCaptionLanguage } from './study-caption-language';
 import { isProtectedStudy, probeProtectedStudy } from './protected-study';
+import { channelsPlaybackPage } from './channels-study';
 import { readTedMedia } from './ted-media';
 import { probeDouyinPage, probeWebStudy, probeXiaoeLive, type XiaoeAnswer } from './web-study-probe';
 import DOMPurify from 'dompurify';
@@ -56,6 +57,8 @@ export interface AudioStudyOptions {
 	// Any other site yt-dlp can read: its address.
 	webUrl?: string;
 	sourceTabId?: number;
+	// Started from the Channels share page's own button: begin the Yuanbao check without a second click.
+	autoVerify?: boolean;
     resumeId?: string;
 	playback?: StudyPlayback;
 }
@@ -317,7 +320,9 @@ export async function startAudioStudy(options: AudioStudyOptions): Promise<void>
 				if ('info' in found) { address = found.address; return { info: found.info, cookies: undefined }; }
 				return { info: { ok: false as const, error: 'xiaoe-' + found.error, message: found.message }, cookies: undefined };
 			})()
-			: isProtectedStudy(address) ? await probeProtectedStudy(address, status, holder)
+			// The official playback page the viewer has open already holds its own media: no Yuanbao step.
+			: channelsPlaybackPage(address) ? { ...await probeDouyinPage(address, status, holder, source, 2, '视频号'), cookies: undefined }
+			: isProtectedStudy(address) ? await probeProtectedStudy(address, status, holder, undefined, undefined, options.autoVerify)
 			: await probeWebStudy(address, status, holder);
 		if (!info.ok && info.error.startsWith('xiaoe-')) {
 			const why: Record<string, string> = {
