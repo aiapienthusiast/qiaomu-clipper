@@ -1,4 +1,4 @@
-import { isYouTubeDownloadUrl } from './media-download-policy';
+import { canDownloadYouTube, isYouTubeDownloadUrl } from './media-download-policy';
 import { classifyHelperError, helperIsOutdated, helperProblemText } from './helper-install';
 import { channelsShareAddress, channelsStudyAddress, isChannelsMedia } from './channels-study';
 import { isDouyinMedia } from './web-page-media';
@@ -72,7 +72,7 @@ const ASR_ENGINE = /^(mlx|mlx-qwen3|faster-whisper)$/;
 const ASR_KEY = /^(youtube:[A-Za-z0-9_-]{11}|bilibili:BV[0-9A-Za-z]{10}:\d{1,4}|xiaoyuzhou:[0-9a-f]{24}|file:[0-9a-f]{32}|rss:[0-9a-f]{12}:[0-9a-f]{16}|web:[0-9a-f]{12})$/;
 const ASR_LANGUAGE = /^(auto|zh|en|ja|ko|de|fr|es|ru|pt|it)$/;
 const ASR_COOKIES = /^(chrome|edge|brave|chromium|firefox|safari)$/;
-type AsrPayload = { mode?: string; videoKey?: string; language?: string; force?: boolean; cookies?: string; jobId?: string; since?: number; cloud?: Record<string, unknown>; apiKey?: string; engine?: string; profile?: string; model?: boolean; auto?: boolean; name?: string; rss?: { feed?: unknown; guid?: unknown }; web?: { url?: unknown; mediaUrl?: unknown }; url?: string; mediaUrl?: string; audioUrl?: string; video?: boolean; size?: number; uploadId?: string; index?: number; data?: string };
+type AsrPayload = { mode?: string; videoKey?: string; language?: string; force?: boolean; cookies?: string; jobId?: string; since?: number; cloud?: Record<string, unknown>; apiKey?: string; engine?: string; profile?: string; model?: boolean; auto?: boolean; name?: string; rss?: { feed?: unknown; guid?: unknown }; web?: { url?: unknown; mediaUrl?: unknown }; url?: string; mediaUrl?: string; audioUrl?: string; video?: boolean; allowYoutube?: boolean; size?: number; uploadId?: string; index?: number; data?: string };
 const validCloud = (cloud: Record<string, unknown> | undefined): cloud is Record<string, unknown> => Boolean(cloud && ['openai-transcriptions', 'chat-audio', 'doubao-flash'].includes(String(cloud.protocol)) && typeof cloud.baseUrl === 'string' && isHttpsOrLocal(cloud.baseUrl) && /^[A-Za-z0-9_./:\-]{1,100}$/.test(String(cloud.model || '')) && ['none', 'segments'].includes(String(cloud.timestamps || 'none')) && (cloud.contextMode === undefined || ['doubao', 'prompt'].includes(String(cloud.contextMode))) && ['chunkSeconds', 'maxChunkSeconds'].every(name => cloud[name] === undefined || (typeof cloud[name] === 'number' && cloud[name] >= 5 && cloud[name] <= 900)));
 export function handleAsrMessage(request: unknown, sender: { id?: string; url?: string }): Promise<unknown> | undefined {
     const message = request as { action?: string; payload?: AsrPayload };
@@ -84,10 +84,12 @@ export function handleAsrMessage(request: unknown, sender: { id?: string; url?: 
     if (payload.mode?.startsWith('download')) {
         if (!sender.url?.startsWith(browser.runtime.getURL(''))) return Promise.resolve({ ok: false, error: 'refused' });
         if (payload.mode === 'downloadStart') {
-            if (typeof payload.url !== 'string' || payload.url.length > 1500 || !/^https:\/\//.test(payload.url) || isYouTubeDownloadUrl(payload.url) || typeof payload.name !== 'string' || payload.name.length > 300 || typeof payload.video !== 'boolean') return Promise.resolve({ ok: false, error: 'bad-request' });
+            // Standalone edition only: a YouTube watch page, named by the extension's own pages, no media address.
+            const youtubeAllowed = __LOCAL_EDITION__ && payload.allowYoutube === true && typeof payload.url === 'string' && canDownloadYouTube(payload.url, payload.mediaUrl || payload.audioUrl || '');
+            if (typeof payload.url !== 'string' || payload.url.length > 1500 || !/^https:\/\//.test(payload.url) || (isYouTubeDownloadUrl(payload.url) && !youtubeAllowed) || typeof payload.name !== 'string' || payload.name.length > 300 || typeof payload.video !== 'boolean') return Promise.resolve({ ok: false, error: 'bad-request' });
             const validMedia = (media: unknown) => isDouyinMedia(payload.url!, media) || isChannelsMedia(payload.url!, media) || isXiaoeMedia(payload.url!, media) || isXhsMedia(payload.url!, media);
             if ((payload.mediaUrl !== undefined && !validMedia(payload.mediaUrl)) || (payload.audioUrl !== undefined && (!payload.mediaUrl || !validMedia(payload.audioUrl)))) return Promise.resolve({ ok: false, error: 'bad-request' });
-            Object.assign(body, { url: payload.url, name: payload.name, video: payload.video, ...(payload.mediaUrl ? { mediaUrl: payload.mediaUrl } : {}), ...(payload.audioUrl ? { audioUrl: payload.audioUrl } : {}) });
+            Object.assign(body, { url: payload.url, name: payload.name, video: payload.video, ...(__LOCAL_EDITION__ && youtubeAllowed ? { allowYoutube: true } : {}), ...(payload.mediaUrl ? { mediaUrl: payload.mediaUrl } : {}), ...(payload.audioUrl ? { audioUrl: payload.audioUrl } : {}) });
         } else {
             if (!/^[0-9a-f]{32}$/.test(payload.jobId || '')) return Promise.resolve({ ok: false, error: 'bad-request' });
             body.jobId = payload.jobId;

@@ -36,6 +36,35 @@ class DownloadTests(unittest.TestCase):
                 target.unlink();target.parent.rmdir();target.parent.symlink_to(directory,target_is_directory=True)
                 with self.assertRaises(ValueError):media.export_file(directory,source,'Test')
 
+    def test_youtube_is_accepted_only_as_an_explicit_watch_page(self):
+        page = 'https://www.youtube.com/watch?v=jNQXAC9IJRw'
+        for url in (page, 'https://youtu.be/jNQXAC9IJRw', 'https://m.youtube.com/shorts/abc'):
+            self.assertFalse(media.allowed(url), url); self.assertTrue(media.allowed(url, True), url)
+        for url in ('https://r1.googlevideo.com/videoplayback', 'https://www.youtube-nocookie.com/embed/x', 'https://youtube.googleapis.com/v/x'):
+            self.assertFalse(media.allowed(url, True), url)
+        for url in ('https://youtube.com.evil.org/x', 'https://notyoutube.com/x'):
+            self.assertTrue(media.allowed(url), url)  # ordinary sites that only look like YouTube
+        with tempfile.TemporaryDirectory() as temp, patch.object(asr, 'find_tool', return_value='/tools/bin'), patch.object(asr, 'spawn_worker', return_value=1):
+            with self.assertRaises(ValueError): media.start(Path(temp), {'url': page, 'name': 'T', 'video': True})
+            with self.assertRaises(ValueError): media.start(Path(temp), {'url': page, 'name': 'T', 'video': True, 'allowYoutube': 'true'})
+            with self.assertRaises(ValueError): media.start(Path(temp), {'url': page, 'name': 'T', 'video': True, 'allowYoutube': True, 'mediaUrl': 'https://r1.googlevideo.com/videoplayback'})
+            reply = media.start(Path(temp), {'url': page, 'name': 'T', 'video': True, 'allowYoutube': True})
+            self.assertEqual(reply['state'], 'queued'); self.assertTrue(asr.read_json(asr.job_dir(Path(temp), reply['id']) / 'spec.json')['allowYoutube'])
+
+    def test_youtube_filter_is_dropped_only_for_an_allowed_page_and_keeps_drm_and_live_guards(self):
+        for spec, expect_youtube in (({'video': True, 'url': 'https://www.youtube.com/watch?v=x', 'allowYoutube': True}, False), ({'video': True, 'url': 'https://www.bilibili.com/video/BV1xx411c7mD/'}, True)):
+            with tempfile.TemporaryDirectory() as temp:
+                directory = Path(temp); commands = []
+                def stream(command, env, progress):
+                    commands.append(command); (directory / 'audio.mkv').write_bytes(b'complete'); return 0, []
+                with patch.object(asr, 'stream', side_effect=stream): media.fetch_full(directory, spec, {}, {'yt-dlp': 'ytdlp', 'ffmpeg': 'ffmpeg'})
+                rule = commands[0][commands[0].index('--match-filter') + 1]
+                self.assertEqual('youtube' in rule, expect_youtube); self.assertIn('!has_drm', rule); self.assertIn('!is_live', rule)
+        with tempfile.TemporaryDirectory() as temp, patch.object(asr, 'find_tool', return_value='/tools/bin'):
+            directory = Path(temp); asr.atomic_json(directory / 'spec.json', {})
+            media.run_worker(directory, {'url': 'https://www.youtube.com/watch?v=x', 'name': 'T', 'video': True})
+            self.assertEqual(asr.read_state(directory)['state'], 'failed')
+
     def test_ytdlp_video_has_full_stream_selector_merger_and_filter(self):
         with tempfile.TemporaryDirectory() as temp:
             directory=Path(temp);commands=[]
