@@ -8,11 +8,16 @@ from urllib.parse import urlparse
 import asr
 
 YOUTUBE = ('youtube.com', 'youtu.be', 'youtube-nocookie.com', 'googlevideo.com', 'youtube.googleapis.com')
-def allowed(url):
+def youtube_page(url):
+    """A YouTube watch page, never a media or embed host: the only YouTube address the standalone edition may name."""
+    host = (urlparse(url).hostname or '').lower().rstrip('.')
+    return host == 'youtu.be' or host == 'youtube.com' or host.endswith('.youtube.com')
+def allowed(url, youtube=False):
     if not isinstance(url, str) or len(url) > 1500 or not asr.public_https(url): return False
     host = (urlparse(url).hostname or '').lower().rstrip('.')
     if host == 'localhost' or host.endswith(('.localhost', '.local', '.internal', '.lan', '.home', '.corp', '.intranet')) or '.' not in host: return False
-    return not any(host == h or host.endswith('.' + h) for h in YOUTUBE)
+    if any(host == h or host.endswith('.' + h) for h in YOUTUBE): return youtube is True and youtube_page(url)
+    return True
 
 def destination():
     downloads = (Path.home() / 'Downloads').resolve()
@@ -24,7 +29,9 @@ def destination():
 
 def start(base, message):
     url = message.get('url')
-    if not allowed(url) or not isinstance(message.get('name'), str) or len(message['name']) > 300 or not isinstance(message.get('video'), bool): raise ValueError('bad-request')
+    youtube = message.get('allowYoutube') is True
+    if not allowed(url, youtube) or not isinstance(message.get('name'), str) or len(message['name']) > 300 or not isinstance(message.get('video'), bool): raise ValueError('bad-request')
+    if youtube and (message.get('mediaUrl') is not None or message.get('audioUrl') is not None): raise ValueError('bad-request')
     for field in ('mediaUrl', 'audioUrl'):
         media = message.get(field)
         if media is not None and not (asr.page_media(url, media) or asr.xiaoe_media(url, media)): raise ValueError('bad-request')
@@ -39,6 +46,7 @@ def start(base, message):
     asr.prune(base)
     job_id = uuid.uuid4().hex; directory = asr.job_dir(base, job_id); directory.mkdir(parents=True, mode=0o700)
     spec = {k: message[k] for k in ('url', 'name', 'video', 'mediaUrl', 'audioUrl') if k in message}
+    if youtube and youtube_page(url): spec['allowYoutube'] = True
     spec.update(purpose='download', id=job_id, videoKey='web:' + asr.sha(url, 12), cookies=cookies)
     if cookie_text: asr.write_private(directory / 'cookies.txt', cookie_text); spec['cookiesFile'] = True
     asr.atomic_json(directory / 'spec.json', spec)
@@ -97,9 +105,9 @@ def fetch_full(directory, spec, env, tools):
             return target
         finally: shutil.rmtree(other, ignore_errors=True)
     # Never use an ASR bestaudio selector for video exports. Ignore user configs and reject
-    # YouTube extractors (including embeds/redirects), DRM formats and live streams.
+    # DRM formats and live streams, and YouTube extractors (including embeds/redirects) unless the standalone edition asked for a YouTube page.
     command = [tools['yt-dlp'], '--ignore-config', '--no-playlist', '--no-warnings', '--newline', '--no-continue', '--abort-on-unavailable-fragments', '--socket-timeout', '30', '--retries', '3', '--fragment-retries', '3',
-               '--match-filter', 'extractor_key !~= (?i)youtube & !is_live & !has_drm', '--ffmpeg-location', tools['ffmpeg'],
+               '--match-filter', '!is_live & !has_drm' if spec.get('allowYoutube') else 'extractor_key !~= (?i)youtube & !is_live & !has_drm', '--ffmpeg-location', tools['ffmpeg'],
                '-f', 'bv*+ba/b' if spec['video'] else 'ba/b', '--merge-output-format', 'mkv', '-o', str(directory / 'audio.%(ext)s')]
     if spec.get('cookiesFile'): command += ['--cookies', str(directory / 'cookies.txt')]
     elif spec.get('cookies'): command += ['--cookies-from-browser', spec['cookies']]
@@ -118,7 +126,7 @@ def fetch_full(directory, spec, env, tools):
 
 def run_worker(directory, spec):
     try:
-        if not allowed(spec.get('url')): raise asr.Failed('bad-request')
+        if not allowed(spec.get('url'), spec.get('allowYoutube') is True): raise asr.Failed('bad-request')
         tools = {tool: asr.find_tool(tool) for tool in ('yt-dlp', 'ffmpeg')}
         if not all(tools.values()): raise asr.Failed('缺少工具')
         asr.write_state(directory, state='downloading', progress=0)
