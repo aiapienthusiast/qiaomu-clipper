@@ -19,6 +19,21 @@ def allowed(url, youtube=False):
     if any(host == h or host.endswith('.' + h) for h in YOUTUBE): return youtube is True and youtube_page(url)
     return True
 
+# Prefer H.264 + AAC, which any player opens inside an .mp4; fall back to the best streams (merged into .mkv when mp4 cannot hold them).
+PLAYABLE_VIDEO = 'bv*[vcodec^=avc1]+ba[acodec^=mp4a]/bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b'
+
+def why_not(code, tail, files):
+    """A short reason for a failed export, from the tool's own last lines. Never includes a path or a cookie."""
+    detail = ' '.join(tail)
+    errors = [re.sub(r'^ERROR:\s*(\[[^\]]+\]\s*)?([\w-]{6,}:\s*)?', '', line.strip()) for line in tail if line.strip().startswith('ERROR:')]
+    low = detail.lower()
+    if 'requested format is not available' in low or 'only images are available' in low: return '这条视频暂时没有可下载的格式'
+    if 'private video' in low or 'video unavailable' in low or 'this video is unavailable' in low: return '这条视频不可用，或是私享视频'
+    if 'does not pass filter' in low: return '直播和受版权保护（DRM）的视频不能下载'
+    if errors: return errors[-1][:140]
+    if code == 0 and not files: return '没有得到可保存的文件'
+    return ''
+
 def destination():
     downloads = (Path.home() / 'Downloads').resolve()
     downloads.mkdir(parents=True, exist_ok=True)
@@ -99,16 +114,19 @@ def fetch_full(directory, spec, env, tools):
         other = directory / 'sound'; other.mkdir()
         try:
             audio = asr.download_page_media(other, {**spec, 'mediaUrl': spec['audioUrl']})
-            target = directory / 'audio.mkv'
-            code, tail = asr.stream([tools['ffmpeg'], '-nostdin', '-v', 'error', '-i', str(video), '-i', str(audio), '-map', '0:v:0', '-map', '1:a:0', '-c', 'copy', str(target)], env, lambda _: None)
-            if code or not target.is_file(): raise asr.Failed('下载中断')
-            return target
+            # H.264/AAC stays in an .mp4 that plays everywhere; anything else (e.g. Opus) goes to .mkv.
+            for suffix, extra in (('.mp4', ['-movflags', '+faststart']), ('.mkv', [])):
+                target = directory / ('audio' + suffix)
+                code, tail = asr.stream([tools['ffmpeg'], '-nostdin', '-v', 'error', '-i', str(video), '-i', str(audio), '-map', '0:v:0', '-map', '1:a:0', '-c', 'copy', *extra, str(target)], env, lambda _: None)
+                if not code and target.is_file(): return target
+                target.unlink(missing_ok=True)
+            raise asr.Failed('下载中断')
         finally: shutil.rmtree(other, ignore_errors=True)
     # Never use an ASR bestaudio selector for video exports. Ignore user configs and reject
     # DRM formats and live streams, and YouTube extractors (including embeds/redirects) unless the standalone edition asked for a YouTube page.
     command = [tools['yt-dlp'], '--ignore-config', '--no-playlist', '--no-warnings', '--newline', '--no-continue', '--abort-on-unavailable-fragments', '--socket-timeout', '30', '--retries', '3', '--fragment-retries', '3',
                '--match-filter', '!is_live & !has_drm' if spec.get('allowYoutube') else 'extractor_key !~= (?i)youtube & !is_live & !has_drm', '--ffmpeg-location', tools['ffmpeg'],
-               '-f', 'bv*+ba/b' if spec['video'] else 'ba/b', '--merge-output-format', 'mkv', '-o', str(directory / 'audio.%(ext)s')]
+               '-f', PLAYABLE_VIDEO if spec['video'] else 'ba/b', '--merge-output-format', 'mp4/mkv', '-o', str(directory / 'audio.%(ext)s')]
     if spec.get('cookiesFile'): command += ['--cookies', str(directory / 'cookies.txt')]
     elif spec.get('cookies'): command += ['--cookies-from-browser', spec['cookies']]
     command += ['--', spec['url']]
@@ -121,7 +139,10 @@ def fetch_full(directory, spec, env, tools):
     if code or len(candidates) != 1:
         detail = ' '.join(tail)
         if asr.NEEDS_LOGIN.search(detail): raise asr.Failed('这个平台要求登录状态才能下载这条视频的音频', code='needs-cookies')
-        raise asr.Failed('下载中断')
+        # The job folder is private (0700): keep the tool's last lines there for diagnosis, never in the message.
+        asr.write_state(directory, detail=' | '.join(line.strip()[:200] for line in tail[-8:])[:1500])
+        reason = why_not(code, tail, candidates)
+        raise asr.Failed('下载中断：' + reason if reason else '下载中断')
     return candidates[0]
 
 def run_worker(directory, spec):

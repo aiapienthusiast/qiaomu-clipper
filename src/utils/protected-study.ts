@@ -88,8 +88,8 @@ export function protectedPageBridge(api: {
 
 export async function probeProtectedStudy(url: string, status: HTMLElement, holder: HTMLElement,
 	request: (message: object) => Promise<{ tabId?: number } | ProtectedPage> = message => browser.runtime.sendMessage(message),
-	probe: typeof asrProbe = asrProbe, autoVerify = false): Promise<{ info: AsrReply<WebInfo>; cookies?: CookieBrowser; sourceUrl?: string }> {
-	if (siteOf(url)?.id === 'channels') return probeChannelsStudy(url, status, holder, request as Parameters<typeof probeChannelsStudy>[3], autoVerify);
+	probe: typeof asrProbe = asrProbe): Promise<{ info: AsrReply<WebInfo>; cookies?: CookieBrowser; sourceUrl?: string }> {
+	if (siteOf(url)?.id === 'channels') return probeChannelsStudy(url, status, holder, request as Parameters<typeof probeChannelsStudy>[3]);
 	const doc = holder.ownerDocument, row = doc.createElement('div'); row.className = 'qiaomu-web-retry'; row.setAttribute('role', 'group');
 	const heading = doc.createElement('b'); heading.textContent = siteOf(url)?.name || '';
 	const note = doc.createElement('p'); note.textContent = t('请在原网页完成登录或输入访问密码，确认视频能在电脑浏览器播放，再回来重新读取。密码只在原网站输入。');

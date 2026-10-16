@@ -37,11 +37,18 @@ it('keeps login and rejected media failures recoverable, and rejects navigation 
  get.mockResolvedValue({url:playback});expect(await bridge(1,{mode:'read',url:share})).toEqual({state:'unavailable'});
  inspect.mockResolvedValue({state:'ready',info});get.mockResolvedValueOnce({url:playback}).mockResolvedValueOnce({url:playback+'&eid=other'});expect(await bridge(1,{mode:'read',url:share})).toEqual({state:'unavailable'});
 });
-it('starts no parsing until a disclosed user action and returns only stable source plus media',async()=>{
+it('starts reading by itself, shows two steps, and brings Yuanbao forward only to sign in',async()=>{
+ vi.useFakeTimers();
  const holder=document.createElement('div'),status=document.createElement('p');document.body.append(holder,status);
- const request=vi.fn().mockResolvedValueOnce({state:'opened'}).mockResolvedValueOnce({state:'login'}).mockResolvedValueOnce({state:'loading'}).mockResolvedValueOnce({state:'ready',info,sourceUrl:share});const done=probeChannelsStudy(share,status,holder,request);
- const settle=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};expect(request).not.toHaveBeenCalled();expect(holder.textContent).toContain('腾讯元宝解析');
- const [open,retry]=Array.from(holder.querySelectorAll('button'));expect(retry.disabled).toBe(true);open.click();await settle();retry.click();await settle();expect(holder.textContent).toContain('登录完成');retry.click();await settle();expect(holder.textContent).toContain('官方播放页');retry.click();expect(await done).toEqual({info,sourceUrl:share});
+ const request=vi.fn().mockResolvedValueOnce({state:'opened'}).mockResolvedValueOnce({state:'loading'}).mockResolvedValueOnce({state:'login'}).mockResolvedValue({state:'ready',info,sourceUrl:share});
+ const done=probeChannelsStudy(share,status,holder,request);
+ await vi.advanceTimersByTimeAsync(0);expect(request).toHaveBeenNthCalledWith(1,{action:'qiaomuChannelsStudy',mode:'open',url:share});
+ expect(Array.from(holder.querySelectorAll('li')).map(li=>li.textContent)).toEqual(['通过腾讯元宝读取视频','生成字幕']);expect(holder.textContent).toContain('只把这条链接交给元宝解析');
+ const [open,retry]=Array.from(holder.querySelectorAll('button'));expect(open.hidden).toBe(true);expect(retry.hidden).toBe(true);expect(holder.textContent).toContain('已登录元宝的话会自动完成');
+ await vi.advanceTimersByTimeAsync(3000);await vi.advanceTimersByTimeAsync(3000);
+ expect(holder.textContent).toContain('需要先登录腾讯元宝');expect(open.hidden).toBe(false);
+ open.click();await vi.advanceTimersByTimeAsync(0);expect(request).toHaveBeenCalledWith({action:'qiaomuChannelsStudy',mode:'show',url:share});
+ await vi.advanceTimersByTimeAsync(3000);expect(await done).toEqual({info,sourceUrl:share});expect(holder.querySelector('.qiaomu-web-retry')).toBeNull();
 });
 
 it('rejects navigation during playback inspection even when the media itself is valid', async () => {
@@ -55,9 +62,13 @@ it('automatically reads through login and playback loading after one disclosed o
  const request=vi.fn().mockResolvedValueOnce({state:'opened'}).mockResolvedValueOnce({state:'login'}).mockResolvedValueOnce({state:'loading'}).mockResolvedValue({state:'ready',info,sourceUrl:share});const done=probeChannelsStudy(share,status,holder,request);
  holder.querySelector('button')!.click();await vi.advanceTimersByTimeAsync(10000);expect(await done).toEqual({info,sourceUrl:share});expect(request).toHaveBeenCalledTimes(4);await vi.advanceTimersByTimeAsync(20000);expect(request).toHaveBeenCalledTimes(4);
 });
-it('bounds automatic login checks and cancels further reads when the reader closes',async()=>{
- vi.useFakeTimers();const holder=document.createElement('div'),status=document.createElement('p');document.body.append(holder,status);const request=vi.fn().mockResolvedValueOnce({state:'opened'}).mockResolvedValue({state:'login'});
- void probeChannelsStudy(share,status,holder,request);holder.querySelector('button')!.click();await vi.advanceTimersByTimeAsync(184000);const count=request.mock.calls.length;await vi.advanceTimersByTimeAsync(30000);expect(request).toHaveBeenCalledTimes(count);expect(holder.textContent).toContain('自动读取已暂停');window.dispatchEvent(new Event('pagehide'));expect(vi.getTimerCount()).toBe(0);
+it('stops after three unavailable answers, offers a retry, and cancels when the page closes',async()=>{
+ vi.useFakeTimers();const holder=document.createElement('div'),status=document.createElement('p');document.body.append(holder,status);
+ const request=vi.fn().mockResolvedValueOnce({state:'opened'}).mockResolvedValue({state:'unavailable'});
+ void probeChannelsStudy(share,status,holder,request);await vi.advanceTimersByTimeAsync(20000);
+ const reads=request.mock.calls.filter(call=>call[0].mode==='read').length;expect(reads).toBe(3);
+ const retry=holder.querySelectorAll('button')[1];expect(retry.hidden).toBe(false);expect(holder.textContent).toContain('没能读取这条视频');
+ request.mockClear();window.dispatchEvent(new Event('pagehide'));expect(request).toHaveBeenCalledWith({action:'qiaomuChannelsStudy',mode:'cancel',url:share});expect(vi.getTimerCount()).toBe(0);
 });
 it('waits for freshly opened tabs instead of treating navigation as a failed video',async()=>{
  const create=vi.fn().mockResolvedValue({id:7}),get=vi.fn().mockResolvedValue({url:'about:blank',status:'loading'}),parse=vi.fn(),inspect=vi.fn(),bridge=channelsStudyBridge({create,get,parse,inspect});await bridge(1,{mode:'open',url:share});expect(await bridge(1,{mode:'read',url:share})).toEqual({state:'loading'});expect(parse).not.toHaveBeenCalled();
@@ -81,15 +92,12 @@ it('lends the open playback tab media only for that exact video and a verified a
  expect(await getChannelsPlaybackMedia(share,5,api(good))).toBeUndefined();
  const none=api(good);none.get.mockRejectedValue(new Error('closed'));none.query.mockResolvedValue([]);expect(await getChannelsPlaybackMedia(key,5,none)).toBeUndefined();
 });
-it('opens the Yuanbao check by itself only when the share page button asked for it',async()=>{
- vi.useFakeTimers();
- const make=(auto:boolean)=>{const holder=document.createElement('div'),status=document.createElement('p');document.body.append(holder,status);
-  const request=vi.fn().mockResolvedValueOnce({state:'opened'}).mockResolvedValue({state:'ready',info,sourceUrl:share});
-  const done=probeChannelsStudy(share,status,holder,request,auto);return{request,done};};
- const manual=make(false);await Promise.resolve();expect(manual.request).not.toHaveBeenCalled();
- const auto=make(true);await Promise.resolve();expect(auto.request).toHaveBeenCalledTimes(1);expect(auto.request).toHaveBeenCalledWith({action:'qiaomuChannelsStudy',mode:'open',url:share});
- await vi.advanceTimersByTimeAsync(4000);expect(await auto.done).toEqual({info,sourceUrl:share});
+it('can still wait for a click when asked not to start by itself',async()=>{
+ const holder=document.createElement('div'),status=document.createElement('p');document.body.append(holder,status);
+ const request=vi.fn().mockResolvedValue({state:'opened'});void probeChannelsStudy(share,status,holder,request,false);
+ await Promise.resolve();expect(request).not.toHaveBeenCalled();expect(holder.querySelectorAll('button')[1].hidden).toBe(false);
 });
+
 it('opens the official playback page behind the study page and closes it once the video is read',async()=>{
  const create=vi.fn().mockResolvedValueOnce({id:7}).mockResolvedValue({id:8}),remove=vi.fn().mockResolvedValue(undefined);
  const get=vi.fn().mockImplementation(id=>Promise.resolve({url:id===7?'https://yuanbao.tencent.com/':playback}));
@@ -97,4 +105,24 @@ it('opens the official playback page behind the study page and closes it once th
  await bridge(1,{mode:'open',url:share});await bridge(1,{mode:'read',url:share});
  expect(create).toHaveBeenLastCalledWith({url:playback,active:false});expect(remove).not.toHaveBeenCalled();
  expect(await bridge(1,{mode:'read',url:share})).toMatchObject({state:'ready'});expect(remove).toHaveBeenCalledWith(8);
+});
+it('keeps Yuanbao in the background, surfaces it once for sign-in, then closes both tabs and returns to the study page',async()=>{
+ const create=vi.fn().mockResolvedValueOnce({id:7}).mockResolvedValue({id:8}),remove=vi.fn().mockResolvedValue(undefined),update=vi.fn().mockResolvedValue(undefined);
+ const get=vi.fn().mockImplementation(id=>Promise.resolve({url:id===7?'https://yuanbao.tencent.com/':playback}));
+ const parse=vi.fn().mockResolvedValueOnce({state:'login'}).mockResolvedValueOnce({state:'login'}).mockResolvedValue({state:'ready',playbackUrl:playback});
+ const bridge=channelsStudyBridge({create,remove,update,get,parse,inspect:vi.fn().mockResolvedValue({state:'ready',info})});
+ await bridge(1,{mode:'open',url:share});expect(create).toHaveBeenCalledWith({url:'https://yuanbao.tencent.com/',active:false});
+ expect(await bridge(1,{mode:'read',url:share})).toEqual({state:'login'});await bridge(1,{mode:'read',url:share});
+ expect(update.mock.calls.filter(call=>call[0]===7&&call[1].active===true)).toHaveLength(1);
+ await bridge(1,{mode:'read',url:share});expect(create).toHaveBeenLastCalledWith({url:playback,active:false});
+ expect(await bridge(1,{mode:'read',url:share})).toMatchObject({state:'ready'});
+ expect(remove).toHaveBeenCalledWith(7);expect(remove).toHaveBeenCalledWith(8);expect(update).toHaveBeenLastCalledWith(1,{active:true});
+});
+it('shows Yuanbao on request, and cancel closes whatever the study page opened',async()=>{
+ const create=vi.fn().mockResolvedValueOnce({id:7}).mockResolvedValue({id:8}),remove=vi.fn().mockResolvedValue(undefined),update=vi.fn().mockResolvedValue(undefined);
+ const bridge=channelsStudyBridge({create,remove,update,get:vi.fn(),parse:vi.fn(),inspect:vi.fn()});
+ expect(await bridge(1,{mode:'show',url:share})).toEqual({state:'unavailable'});
+ await bridge(1,{mode:'open',url:share});expect(await bridge(1,{mode:'show',url:share})).toEqual({state:'opened'});expect(update).toHaveBeenCalledWith(7,{active:true});
+ await bridge(1,{mode:'cancel',url:share});expect(remove).toHaveBeenCalledWith(7);expect(await bridge(1,{mode:'read',url:share})).toEqual({state:'unavailable'});
+ await bridge(2,{mode:'open',url:share});await bridge(2,{mode:'open',url:share});expect(remove).toHaveBeenCalledWith(8);
 });

@@ -72,7 +72,41 @@ class DownloadTests(unittest.TestCase):
                 commands.append(command);(directory/'audio.mkv').write_bytes(b'complete');progress('[download] 75.0%');return 0,[]
             with patch.object(asr,'stream',side_effect=stream):
                 self.assertEqual(media.fetch_full(directory,{'video':True,'url':'https://www.bilibili.com/video/BV1xx411c7mD/'},{},{'yt-dlp':'ytdlp','ffmpeg':'ffmpeg'}).suffix,'.mkv')
-            command=commands[0];self.assertEqual(command[command.index('-f')+1],'bv*+ba/b');self.assertIn('--ffmpeg-location',command);self.assertIn('--ignore-config',command);self.assertIn('youtube',command[command.index('--match-filter')+1]);self.assertIn('!has_drm',command[command.index('--match-filter')+1]);self.assertNotIn('--cookies-from-browser',command)
+            command=commands[0];self.assertEqual(command[command.index('-f')+1],media.PLAYABLE_VIDEO);self.assertEqual(command[command.index('--merge-output-format')+1],'mp4/mkv');self.assertIn('--ffmpeg-location',command);self.assertIn('--ignore-config',command);self.assertIn('youtube',command[command.index('--match-filter')+1]);self.assertIn('!has_drm',command[command.index('--match-filter')+1]);self.assertNotIn('--cookies-from-browser',command)
+
+    def test_selector_prefers_h264_aac_so_the_file_opens_in_any_player(self):
+        first = media.PLAYABLE_VIDEO.split('/')[0]
+        self.assertIn('avc1', first); self.assertIn('mp4a', first)
+        self.assertTrue(media.PLAYABLE_VIDEO.endswith('bv*+ba/b'))
+
+    def test_split_streams_merge_into_mp4_first_and_fall_back_to_mkv(self):
+        for fail_mp4, expected in ((False, '.mp4'), (True, '.mkv')):
+            with tempfile.TemporaryDirectory() as temp:
+                directory = Path(temp); (directory / 'v.mp4').write_bytes(b'picture'); (directory / 'a.m4a').write_bytes(b'sound'); targets = []
+                def stream(command, env, progress):
+                    target = Path(command[-1]); targets.append(target.suffix)
+                    if fail_mp4 and target.suffix == '.mp4': return 1, ['cannot mux']
+                    target.write_bytes(b'merged'); return 0, []
+                spec = {'url': 'https://www.douyin.com/video/1234567890', 'video': True, 'mediaUrl': 'https://v.douyinvod.com/a/media-video-avc1', 'audioUrl': 'https://v.douyinvod.com/a/media-audio-und'}
+                with patch.object(asr, 'download_page_media', side_effect=[directory / 'v.mp4', directory / 'a.m4a']), patch.object(asr, 'stream', side_effect=stream):
+                    self.assertEqual(media.fetch_full(directory, spec, {}, {'yt-dlp': 'y', 'ffmpeg': 'f'}).suffix, expected)
+                self.assertEqual(targets[0], '.mp4')
+
+    def test_failures_say_why_and_keep_the_tool_output_in_the_private_job_folder(self):
+        cases = (
+            (['ERROR: [youtube] abc123XYZ99: Requested format is not available. Use --list-formats'], 1, '这条视频暂时没有可下载的格式'),
+            (['ERROR: [youtube] abc123XYZ99: Video unavailable'], 1, '这条视频不可用，或是私享视频'),
+            (['[download] x does not pass filter (!is_live & !has_drm), skipping ..'], 0, '直播和受版权保护（DRM）的视频不能下载'),
+            (['ERROR: [youtube] abc123XYZ99: Something odd happened'], 1, 'Something odd happened'),
+            ([], 0, '没有得到可保存的文件'),
+        )
+        for tail, code, reason in cases:
+            with tempfile.TemporaryDirectory() as temp:
+                directory = Path(temp); asr.write_state(directory, state='downloading')
+                with patch.object(asr, 'stream', return_value=(code, tail)):
+                    with self.assertRaises(asr.Failed) as caught: media.fetch_full(directory, {'video': True, 'url': 'https://www.bilibili.com/video/BV1xx411c7mD/'}, {}, {'yt-dlp': 'y', 'ffmpeg': 'f'})
+                self.assertEqual(str(caught.exception), '下载中断：' + reason)
+                if tail: self.assertIn(tail[0].strip()[:40], asr.read_state(directory)['detail'])
 
     def test_failed_merge_does_not_publish_partial_streams(self):
         with tempfile.TemporaryDirectory() as temp:

@@ -44,10 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 	// Audio: a file chosen on this page, or a podcast episode.
 	if (params.get('study') === 'file') { const token = params.get('token') || ''; const file = await takeHandedFile(token); await startAudioStudy({ kind: 'file', token, title: params.get('title') || '', ...(file ? { file } : {}) }); return; }
-	// The share page's own button asks for the Yuanbao check once; a refresh of this page must not open another one.
-	const autoVerify = params.get('verify') === '1';
-	if (autoVerify) { const here = new URL(location.href); here.searchParams.delete('verify'); history.replaceState(history.state, '', here); }
-	if (params.get('study') === 'web' && url) { await startAudioStudy({ kind: 'web', playback, webUrl: url, resumeId: params.get('resume') || undefined, sourceTabId: params.has('sourceTab') ? Number(params.get('sourceTab')) : undefined, autoVerify, title: params.get('title') || '' }); return; }
+	if (params.get('study') === 'web' && url) { await startAudioStudy({ kind: 'web', playback, webUrl: url, resumeId: params.get('resume') || undefined, sourceTabId: params.has('sourceTab') ? Number(params.get('sourceTab')) : undefined, title: params.get('title') || '' }); return; }
 	if (params.get('study') === 'feed' && params.get('feed') && params.get('guid')) { await startAudioStudy({ kind: 'feed', feed: params.get('feed')!, guid: params.get('guid')!, title: params.get('title') || '' }); return; }
 	if (params.get('study') === 'audio' && url) {
 		const key = audioKey(url);
