@@ -663,6 +663,22 @@ browser.runtime.onMessage.addListener((request: unknown, sender: browser.Runtime
 			return true;
 		}
 
+		// A second writer tab for an article that is already open hands over to the first one.
+		if (typedRequest.action === "qiaomuWriteFocus") {
+			const wanted = String((typedRequest as { id?: string }).id || '');
+			void (async () => {
+				const writerPage = browser.runtime.getURL('write.html');
+				const tabs = await browser.tabs.query({ url: `${writerPage}*` });
+				const other = tabs.find(item => item.id !== sender.tab?.id && new URL(item.url || writerPage).searchParams.get('id') === wanted);
+				if (other?.id) {
+					await browser.tabs.update(other.id, { active: true });
+					if (other.windowId) await browser.windows.update(other.windowId, { focused: true });
+					if (sender.tab?.id) await browser.tabs.remove(sender.tab.id);
+				}
+			})().catch(() => {});
+			return undefined;
+		}
+
 		if (typedRequest.action === "qiaomuTripleKey") {
 			const tab = sender.tab;
 			if (tab?.id && tab.url && isValidUrl(tab.url) && !isBlankPage(tab.url)) {
@@ -1288,6 +1304,8 @@ async function openStudyForTab(tabId: number): Promise<boolean> {
 
 async function runTripleKeyAction(action: string, tabId: number): Promise<void> {
 	if (action === 'note') { await openNoteCard(tabId); return; }
+	// A new long article opens in its own tab; the writer page reuses an untouched blank article instead of piling up new ones.
+	if (action === 'write') { await browser.tabs.create({ url: browser.runtime.getURL('write.html?new=1'), openerTabId: tabId }); return; }
 	if (action !== 'read' && action !== 'edit' && action !== 'clip') return;
 	if (action === 'read' && await openStudyForTab(tabId)) return;
 	// Reading and editing need no window of their own: an invisible copy of the clipper in the page does the work and opens our page.

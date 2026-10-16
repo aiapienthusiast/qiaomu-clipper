@@ -406,6 +406,28 @@
         "src/utils/study-download.test.ts",
         "src/utils/local-save-learning.test.ts"
       ]
+    },
+    {
+      "id": "write-long-articles",
+      "title": "写长文：本地文章库、所见即所得编辑器、三次 U 入口，以及发到 X 文章",
+      "origin": "feat/write-long-form",
+      "files": [
+        "src/write/page.ts",
+        "src/write/articles.ts",
+        "src/write/editor/extensions.ts",
+        "src/write/publish/x.ts",
+        "src/x-publish/main-world.js",
+        "src/x-publish/x-content.ts",
+        "src/managers/write-settings.ts",
+        "src/utils/triple-key.ts",
+        "src/write.html"
+      ],
+      "tests": [
+        "src/write/articles.test.ts",
+        "src/write/editor/roundtrip.test.ts",
+        "src/write/publish/x-prepare.test.ts",
+        "src/triple-key.test.ts"
+      ]
     }
   ]
 }

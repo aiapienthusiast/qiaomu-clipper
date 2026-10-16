@@ -14,6 +14,7 @@ import { initializeGeneralSettings } from '../managers/general-settings';
 import { initializeInterpreterSettings } from '../managers/interpreter-settings';
 import { showSettingsSection, initializeSidebar } from '../managers/settings-section-ui';
 import { initializeCaptionSettings } from '../managers/caption-settings';
+import { initializeWriteSettings } from '../managers/write-settings';
 import { initializeReaderSettings } from '../managers/reader-settings';
 import { initializeAutoSave } from '../utils/auto-save';
 import { handleTemplateDrag, initializeDragAndDrop } from '../utils/drag-and-drop';
@@ -54,6 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			await initializeGeneralSettings();
 			await initializeReaderSettings();
 			await initializeCaptionSettings();
+			await initializeWriteSettings();
 			
 			// Initialize interpreter settings with error handling
 			try {
@@ -208,7 +210,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	async function handleUrlParameters(): Promise<void> {
 		const { section, templateId } = getUrlParameters();
 
-		if (section === 'general' || section === 'study' || section === 'asr' || section === 'clip' || section === 'learning' || section === 'video' || section === 'interpreter' || section === 'asr-models' || section === 'about' || section === 'properties' || section === 'highlighter' || section === 'reader' || section === 'templates-home') {
+		if (section === 'general' || section === 'write' || section === 'study' || section === 'asr' || section === 'clip' || section === 'learning' || section === 'video' || section === 'interpreter' || section === 'asr-models' || section === 'about' || section === 'properties' || section === 'highlighter' || section === 'reader' || section === 'templates-home') {
 			showSettingsSection(section);
 		} else if (templateId) {
 			const template = findTemplateById(templateId);

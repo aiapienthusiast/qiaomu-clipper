@@ -1,0 +1,43 @@
+// The article list inside the settings (page "Write long articles"). Buttons are scoped under `html` so the global button rules lose.
+#write-section {
+	.write-bar { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 14px; }
+	.write-search-wrap { position: relative; flex: 1 1 240px; max-width: 360px; display: flex; align-items: center;
+		svg { position: absolute; inset-inline-start: 10px; color: var(--text-faint); pointer-events: none; mix-blend-mode: normal; }
+		input.write-search { width: 100%; padding-inline-start: 32px; }
+	}
+	.write-tabs { display: flex; gap: 4px; }
+	html & button.write-tab:not(.write-x) { width: auto; height: 30px; padding: 0 12px; border: none; border-radius: 8px; background: transparent; box-shadow: none; color: var(--text-muted); font-size: 13px; cursor: pointer;
+		&:hover { background: var(--background-modifier-hover); box-shadow: none; }
+		&.is-active { background: var(--background-secondary); color: var(--text-normal); font-weight: 600; }
+	}
+	.write-list { display: flex; flex-direction: column; }
+	.write-row { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--background-modifier-border);
+		&:hover { background: var(--background-modifier-hover); }
+	}
+	.write-row-main { flex: 1; min-width: 0; display: flex; gap: 14px; align-items: center; padding: 14px 8px; cursor: pointer; border-radius: 8px;
+		&:focus-visible { outline: 1px solid var(--text-muted); outline-offset: 2px; }
+	}
+	.write-thumb { flex: none; width: 72px; height: 54px; border-radius: 8px; background: var(--background-secondary); overflow: hidden; display: grid; place-items: center; color: var(--text-faint); img { width: 100%; height: 100%; object-fit: cover; } }
+	.write-info { min-width: 0; flex: 1; }
+	.write-title { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.write-excerpt { margin-top: 2px; font-size: 13px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.write-meta { margin-top: 4px; display: flex; gap: 12px; font-size: 12px; color: var(--text-faint); align-items: center; }
+	.write-badge { padding: 1px 7px; border-radius: 99px; background: var(--background-secondary); color: var(--text-muted); font-size: 11px; }
+	.write-row-actions { display: flex; gap: 2px; padding-inline-end: 6px; opacity: 0; transition: opacity .12s; }
+	.write-row:hover .write-row-actions, .write-row:focus-within .write-row-actions { opacity: 1; }
+	html & button.write-icon:not(.write-x) { width: 30px; height: 30px; padding: 0; border: none; border-radius: 8px; background: transparent; box-shadow: none; color: var(--text-muted); cursor: pointer; svg { mix-blend-mode: normal; }
+		&:hover { background: var(--background-modifier-hover); color: var(--text-normal); box-shadow: none; }
+		&.danger:hover { color: var(--text-error, #c0392b); }
+	}
+	.write-empty { padding: 56px 0; text-align: center; color: var(--text-muted); .write-empty-title { font-size: 15px; color: var(--text-normal); margin-bottom: 4px; } }
+	.write-note { margin-top: 20px; font-size: 12px; color: var(--text-faint); }
+}
+#write-actions { display: flex; gap: 8px; align-items: center; }
+html button.write-btn:not(.write-x) { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: auto; height: 32px; padding: 0 14px; border: none; border-radius: 8px; background: var(--background-secondary); color: var(--text-normal); box-shadow: none; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap;
+	svg { mix-blend-mode: normal; flex: none; }
+	&:hover { background: var(--background-modifier-hover); box-shadow: none; }
+	&:focus-visible { outline: 1px solid var(--text-muted); outline-offset: 2px; }
+	&[hidden] { display: none; }
+}
+html button.write-btn.write-btn-primary:not(.write-x) { background: var(--text-normal); color: var(--background-primary); &:hover { background: var(--text-normal); opacity: .86; } }
+html button.write-btn.write-btn-danger:not(.write-x) { background: var(--background-modifier-error); color: var(--text-error, #c0392b); &:hover { background: var(--background-modifier-error-border); } }

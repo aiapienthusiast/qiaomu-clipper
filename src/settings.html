@@ -20,6 +20,8 @@
 					<li class="sidebar-heading">通用</li>
 					<li data-section="general"><div class="nav-item-icon"><i data-lucide="keyboard"></i></div><span>语言和快捷键</span></li>
 					<li data-section="about"><div class="nav-item-icon"><i data-lucide="info"></i></div><span>关于与备份</span></li>
+					<li class="sidebar-heading">创作</li>
+					<li data-section="write"><div class="nav-item-icon"><i data-lucide="pen-line"></i></div><span>写长文</span></li>
 					<li class="sidebar-heading">剪藏</li>
 					<li data-section="clip"><div class="nav-item-icon"><i data-lucide="paperclip"></i></div><span>剪藏与保存</span></li>
 					<li data-section="templates-home"><div class="nav-item-icon"><i data-lucide="layout-template"></i></div><span>剪藏模版</span></li>
@@ -97,13 +99,14 @@
 									<div class="setting-item" id="triple-key-keys">
 										<div class="setting-item-info">
 											<label>用哪个字母</label>
-											<div class="setting-item-description">每个动作一个字母或数字，留空就关闭它。默认连按 3 次 I，弹出记笔记小卡片。</div>
+											<div class="setting-item-description">每个动作一个字母或数字，留空就关闭它。默认连按 3 次 I 记笔记，连按 3 次 U 新建一篇长文。</div>
 										</div>
 										<div class="triple-key-fields">
 											<label class="triple-key-field"><span>阅读</span><input type="text" id="triple-key-read" maxlength="1" autocomplete="off" spellcheck="false" /></label>
 											<label class="triple-key-field"><span>编辑</span><input type="text" id="triple-key-edit" maxlength="1" autocomplete="off" spellcheck="false" /></label>
 											<label class="triple-key-field"><span>剪藏</span><input type="text" id="triple-key-clip" maxlength="1" autocomplete="off" spellcheck="false" /></label>
 											<label class="triple-key-field"><span>记笔记</span><input type="text" id="triple-key-note" maxlength="1" autocomplete="off" spellcheck="false" /></label>
+											<label class="triple-key-field"><span>写长文</span><input type="text" id="triple-key-write" maxlength="1" autocomplete="off" spellcheck="false" /></label>
 											<button type="button" id="triple-key-reset" class="btn">恢复默认</button>
 										</div>
 										<div class="setting-item-description triple-key-error" id="triple-key-error" role="alert" hidden></div>
@@ -423,6 +426,15 @@
 						</form>
 					</div>
 
+
+					<div id="write-section" class="settings-section">
+						<div class="settings-section-header">
+							<h2>写长文</h2>
+							<div class="settings-section-actions" id="write-actions"></div>
+						</div>
+						<div class="setting-item-description">在任意网页连按 3 次 U 就能新建一篇。所见即所得，文章和图片都存在本机。</div>
+						<div id="write-home"></div>
+					</div>
 
 					<div id="study-section" class="settings-section">
 						<div class="settings-section-header">
