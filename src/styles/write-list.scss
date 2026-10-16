@@ -1,5 +1,7 @@
+@import 'write-shared';
+
 // The article list inside the settings (page "Write long articles"). Buttons are scoped under `html` so the global button rules lose.
-#write-section {
+#write-section, #image-models-section {
 	.write-bar { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 14px; }
 	.write-search-wrap { position: relative; flex: 1 1 240px; max-width: 360px; display: flex; align-items: center;
 		svg { position: absolute; inset-inline-start: 10px; color: var(--text-faint); pointer-events: none; mix-blend-mode: normal; }
@@ -41,3 +43,26 @@ html button.write-btn:not(.write-x) { display: inline-flex; align-items: center;
 }
 html button.write-btn.write-btn-primary:not(.write-x) { background: var(--text-normal); color: var(--background-primary); &:hover { background: var(--text-normal); opacity: .86; } }
 html button.write-btn.write-btn-danger:not(.write-x) { background: var(--background-modifier-error); color: var(--text-error, #c0392b); &:hover { background: var(--background-modifier-error-border); } }
+
+// ---- picture models in the settings ---------------------------------------------------------------------------------------
+#image-models-section {
+	.im-bar { display: flex; justify-content: flex-end; margin: 4px 0 10px; }
+	.im-list { display: flex; flex-direction: column; }
+	.im-default { margin-inline-start: 8px; }
+	.im-warn { color: var(--text-error, #c0392b); }
+	.im-row .write-row-main { cursor: default; }
+	.im-row .im-actions { opacity: 1; }
+}
+dialog.im-dialog { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow-y: auto;
+	.im-sources { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 14px; }
+	html & button.im-source:not(.qw-x) { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; width: auto; height: auto; padding: 10px 12px; border: none; border-radius: 10px; background: var(--background-secondary); box-shadow: none; text-align: start; white-space: normal; cursor: pointer; color: var(--text-normal);
+		&:hover { background: var(--background-modifier-hover); box-shadow: none; }
+		&.active { box-shadow: inset 0 0 0 1.5px var(--text-normal); background: var(--background-primary); }
+		&:focus-visible { outline: 1px solid var(--text-muted); outline-offset: 2px; }
+		.im-source-name { font-size: 13px; font-weight: 600; }
+		.im-source-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+	}
+	.im-field { display: grid; gap: 4px; margin-top: 12px; font-size: 12px; color: var(--text-muted); input { font-size: 14px; } .im-key-link { font-size: 12px; justify-self: start; } }
+	.im-advanced { margin-top: 12px; summary { cursor: pointer; font-size: 12px; color: var(--text-muted); } }
+	.im-error { color: var(--text-error, #c0392b); }
+}

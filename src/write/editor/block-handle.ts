@@ -98,6 +98,7 @@ export function createBlockHandle(host: EditorHost, onSetCover: (src: string) =>
 		document.addEventListener('mousedown', away, true);
 	};
 
+	let handleEl: HTMLElement | null = null;
 	return DragHandle.configure({
 		render: () => {
 			const plus = h('button', { type: 'button', class: 'qw-handle-btn', title: t('在下方添加'), 'aria-label': t('在下方添加') }, icon(Plus, 15));
@@ -111,10 +112,22 @@ export function createBlockHandle(host: EditorHost, onSetCover: (src: string) =>
 				editor.chain().focus().insertContentAt(at, { type: 'paragraph', content: [{ type: 'text', text: '/' }] }).setTextSelection(at + 2).run();
 			});
 			grip.addEventListener('click', () => openMenu(grip));
-			return h('div', { class: 'qw-handle' }, plus, grip);
+			handleEl = h('div', { class: 'qw-handle' }, plus, grip);
+			return handleEl;
 		},
 		computePositionConfig: { placement: 'left-start', strategy: 'absolute' },
 		// The pointer leaves the block on its way to the handle; keep the last block so a click on the handle still knows its target.
-		onNodeChange: ({ node, editor }) => { if (node) hovered = node; activeEditor = editor; },
+		onNodeChange: ({ node, editor }) => {
+			if (node) hovered = node;
+			activeEditor = editor;
+			// The buttons sit on the middle of the block's first line, whatever its size (a heading is taller than a paragraph).
+			const pos = node ? positionOf(editor, node) : undefined;
+			const dom = pos === undefined ? null : editor.view.nodeDOM(pos);
+			if (handleEl && dom instanceof HTMLElement) {
+				const style = getComputedStyle(dom);
+				const line = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.6;
+				handleEl.style.height = `${Math.round(line)}px`;
+			}
+		},
 	});
 }

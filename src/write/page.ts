@@ -1,15 +1,21 @@
 import { Editor } from '@tiptap/core';
-import { Archive, ArrowLeft, Code, Download, Ellipsis, FileText, ImagePlus, ListTree, Send, Trash2 } from 'lucide';
+import { Archive, ArrowLeft, Code, Download, Ellipsis, FileText, ImagePlus, ListTree, Send, Sparkles, Trash2 } from 'lucide';
 import browser from '../utils/browser-polyfill';
 import { loadSettings } from '../utils/storage-utils';
 import { t } from '../utils/ui-text';
 import { aiReady, runAi } from './editor/ai';
+import { mountChatPanel } from './ai/chat-panel';
+import { openImageDialog } from './ai/image-dialog';
+import { suggestCoverPrompt, suggestDigest, suggestTitles } from './ai/meta';
+import { enabledChatModels } from '../utils/chat-llm';
+import { imageUrlFor } from './images';
 import { askConfirm, h, icon, toast } from './editor/dom';
 import { buildExtensions } from './editor/extensions';
 import type { EditorHost } from './editor/host';
 import { RevisionConflict, countWords, duplicateArticle, getArticle, newOrBlankArticle, purgeOldTrash, restoreArticle, saveArticle, trashArticle } from './articles';
 import { imageIdFromUrl, saveImage } from './images';
 import { imageUrls, insertImageFiles, localizeRemoteImages, pickImageFiles } from './images-ui';
+import { mountOutline } from './outline';
 import { editorMarkdown, exportArticle, exportArticleZip, parseFrontMatter, safeFileName } from './markdown-io';
 import { publishers } from './publish';
 import type { Article } from './types';
@@ -79,32 +85,37 @@ function mountEditor(root: HTMLElement, initial: Article): void {
 
 	// ---- chrome -----------------------------------------------------------------------------------------------------------
 	const status = h('span', { class: 'qw-status', role: 'status', 'aria-live': 'polite' });
+	const aiButton = h('button', { type: 'button', class: 'qw-btn', title: t('AI 助手'), 'aria-pressed': 'false' }, icon(Sparkles, 15), 'AI');
 	const outlineButton = h('button', { type: 'button', class: 'qw-btn icon is-on', title: t('大纲'), 'aria-label': t('大纲'), 'aria-pressed': 'true' }, icon(ListTree));
 	const sourceButton = h('button', { type: 'button', class: 'qw-btn icon', title: t('Markdown 源码'), 'aria-label': t('Markdown 源码'), 'aria-pressed': 'false' }, icon(Code));
 	const exportButton = h('button', { type: 'button', class: 'qw-btn', 'aria-haspopup': 'menu' }, icon(Download, 15), t('导出'));
 	const moreButton = h('button', { type: 'button', class: 'qw-btn icon', title: t('更多'), 'aria-label': t('更多'), 'aria-haspopup': 'menu' }, icon(Ellipsis));
 	const publishButton = h('button', { type: 'button', class: 'qw-btn qw-btn-primary', 'aria-haspopup': 'menu' }, icon(Send, 15), t('发布'));
 	const back = h('a', { class: 'qw-btn', href: listUrl() }, icon(ArrowLeft, 15), t('文章列表'));
-	const top = h('header', { class: 'qw-top' }, back, status, h('span', { class: 'qw-spacer' }), outlineButton, sourceButton, exportButton, publishButton, moreButton);
+	const top = h('header', { class: 'qw-top' }, back, status, h('span', { class: 'qw-spacer' }), aiButton, outlineButton, sourceButton, exportButton, publishButton, moreButton);
 
 	const banner = h('div', { class: 'qw-banner', role: 'alert', hidden: true });
 	const cover = h('figure', { class: 'qw-cover', hidden: true });
 	const title = h('textarea', { class: 'qw-title', rows: 1, placeholder: t('标题'), 'aria-label': t('标题'), spellcheck: false });
 	title.value = article.title;
+	const titleAi = h('button', { type: 'button', class: 'qw-title-ai', title: t('让 AI 起标题'), 'aria-label': t('让 AI 起标题'), 'aria-haspopup': 'menu' }, icon(Sparkles, 16));
+	const titleWrap = h('div', { class: 'qw-title-wrap' }, title, titleAi);
 
 	const authorInput = h('input', { type: 'text', value: article.author, placeholder: t('署名，可不填') });
 	const digestInput = h('textarea', { rows: 2, placeholder: t('一两句话的摘要，用于发布时的简介') });
 	digestInput.value = article.digest;
+	const digestAi = h('button', { type: 'button', class: 'qw-btn qw-meta-ai' }, icon(Sparkles, 14), t('AI 写摘要'));
 	const sourceInput = h('input', { type: 'text', value: article.sourceUrl, placeholder: 'https://…' });
 	const coverPick = h('button', { type: 'button', class: 'qw-btn' }, icon(ImagePlus, 15), t('选择封面图'));
+	const coverAi = h('button', { type: 'button', class: 'qw-btn' }, icon(Sparkles, 15), t('AI 生成封面'));
 	const meta = h('details', { class: 'qw-meta' }, h('summary', { text: t('文章信息：封面、署名、摘要、原文链接') }),
-		h('div', { class: 'qw-meta-grid' }, h('label', {}, t('封面'), coverPick), h('label', {}, t('署名'), authorInput), h('label', {}, t('摘要'), digestInput), h('label', {}, t('原文链接'), sourceInput)));
+		h('div', { class: 'qw-meta-grid' }, h('div', { class: 'qw-meta-field' }, h('span', { text: t('封面') }), h('div', { class: 'qw-meta-row' }, coverPick, coverAi)), h('label', {}, t('署名'), authorInput), h('label', {}, h('span', { class: 'qw-meta-label' }, t('摘要'), digestAi), digestInput), h('label', {}, t('原文链接'), sourceInput)));
 
 	const mount = h('div', { class: 'qw-editor' });
 	const sourceArea = h('textarea', { class: 'qw-source', hidden: true, spellcheck: false, 'aria-label': t('Markdown 源码') });
 	const outline = h('aside', { class: 'qw-outline', 'aria-label': t('大纲') });
 	const foot = h('footer', { class: 'qw-foot' });
-	const doc = h('article', { class: 'qw-doc' }, cover, title, meta, mount, sourceArea);
+	const doc = h('article', { class: 'qw-doc' }, cover, titleWrap, meta, mount, sourceArea);
 	root.textContent = '';
 	root.append(h('div', { class: 'qw-app' }, top, banner, h('div', { class: 'qw-layout' }, h('main', { class: 'qw-scroll' }, doc), outline), foot));
 
@@ -115,14 +126,16 @@ function mountEditor(root: HTMLElement, initial: Article): void {
 		localizeImages: localizeRemoteImages,
 		aiReady,
 		runAi,
+		aiImage: ed => { void openImageDialog({ applies: [{ label: t('插入文章'), run: (id, prompt) => { ed.chain().focus().insertContent({ type: 'image', attrs: { src: imageUrlFor(id), alt: prompt.slice(0, 80) } }).run(); } }] }); },
 	};
+	const outlineRail = mountOutline(outline, () => editor, () => title.value);
 	const editor: Editor = new Editor({
 		element: mount,
 		extensions: buildExtensions({ resolveImage: id => imageUrls.resolve(id), host, onSetCover: src => { const id = imageIdFromUrl(src); if (id) setCover(id); } }),
 		content: article.markdown,
 		editorProps: { attributes: { class: 'qw-prose', spellcheck: 'false', 'aria-label': t('正文') } },
-		onUpdate: () => { changed(); renderOutline(); },
-		onCreate: () => renderOutline(),
+		onUpdate: () => { changed(); outlineRail.refresh(); },
+		onCreate: () => outlineRail.refresh(),
 	});
 
 	const currentMarkdown = () => (sourceMode ? sourceArea.value : editorMarkdown(editor));
@@ -177,7 +190,7 @@ function mountEditor(root: HTMLElement, initial: Article): void {
 
 	// ---- title ------------------------------------------------------------------------------------------------------------
 	const sizeTitle = () => { title.style.height = 'auto'; title.style.height = `${title.scrollHeight}px`; };
-	title.addEventListener('input', () => { sizeTitle(); refreshTitle(); changed(); });
+	title.addEventListener('input', () => { sizeTitle(); refreshTitle(); changed(); outlineRail.retitle(); });
 	title.addEventListener('keydown', event => {
 		if (event.isComposing) return;
 		if (event.key === 'Enter') { event.preventDefault(); editor.commands.focus('start'); }
@@ -204,29 +217,7 @@ function mountEditor(root: HTMLElement, initial: Article): void {
 	}
 	coverPick.addEventListener('click', pickCover);
 
-	// ---- outline ----------------------------------------------------------------------------------------------------------
-	let outlineTimer: number | undefined;
-	function renderOutline() {
-		window.clearTimeout(outlineTimer);
-		outlineTimer = window.setTimeout(() => {
-			const items: { text: string; level: number; pos: number }[] = [];
-			editor.state.doc.descendants((node, pos) => { if (node.type.name === 'heading') items.push({ text: node.textContent, level: node.attrs.level, pos }); });
-			outline.textContent = '';
-			if (!items.length) return;
-			outline.append(h('h2', { text: t('大纲') }));
-			for (const item of items) {
-				const button = h('button', { type: 'button', class: 'qw-outline-item', text: item.text || t('（空标题）') });
-				button.style.paddingInlineStart = `${8 + (item.level - 1) * 12}px`;
-				button.addEventListener('click', () => { editor.chain().focus().setTextSelection(item.pos + 1).scrollIntoView().run(); });
-				outline.append(button);
-			}
-		}, 200);
-	}
-	outlineButton.addEventListener('click', () => {
-		outline.hidden = !outline.hidden;
-		outlineButton.classList.toggle('is-on', !outline.hidden);
-		outlineButton.setAttribute('aria-pressed', String(!outline.hidden));
-	});
+	outlineButton.addEventListener('click', () => { outlineRail.toggle(); outlineButton.classList.toggle('is-on', outline.dataset.mode === 'open'); });
 
 	// ---- source mode ------------------------------------------------------------------------------------------------------
 	sourceButton.addEventListener('click', () => {
@@ -241,7 +232,7 @@ function mountEditor(root: HTMLElement, initial: Article): void {
 		} else {
 			editor.commands.setContent(sourceArea.value, { emitUpdate: false });
 			sourceArea.hidden = true; mount.hidden = false;
-			renderOutline(); editor.commands.focus();
+			outlineRail.refresh(); editor.commands.focus();
 			void localizeRemoteImages(editor, true);
 		}
 		updateFooter();
@@ -299,6 +290,38 @@ function mountEditor(root: HTMLElement, initial: Article): void {
 		label: publisher.label(), hint: article.publishes[publisher.id] ? t('已于 {0} 发布过', [new Date(article.publishes[publisher.id]!.at).toLocaleDateString()]) : publisher.hint(),
 		run: async () => { const current = await exportCurrent(); await publisher.run({ article: current, markdown: current.markdown, onRecorded: record => { article = { ...article, publishes: { ...article.publishes, [publisher.id]: record } }; } }); },
 	}))));
+
+	// ---- AI: chat drawer, title and summary suggestions, cover ------------------------------------------------------------------
+	const fire = (name: string, node: HTMLElement) => node.dispatchEvent(new Event('input', { bubbles: true }));
+	const chat = mountChatPanel({
+		editor, articleId: article.id, getMarkdown: currentMarkdown,
+		getTitle: () => title.value, setTitle: value => { title.value = value; fire('title', title); },
+		getDigest: () => digestInput.value, setDigest: value => { digestInput.value = value; meta.open = true; fire('digest', digestInput); },
+	});
+	aiButton.addEventListener('click', async () => { await chat.toggle(); aiButton.classList.toggle('is-on', chat.isOpen()); aiButton.setAttribute('aria-pressed', String(chat.isOpen())); });
+	document.addEventListener('keydown', event => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'j') { event.preventDefault(); aiButton.click(); } });
+	const needModel = () => { if (enabledChatModels().length) return false; toast(t('还没有可用的 AI 模型，请先在设置里添加'), 'error'); return true; };
+	const busy = async (button: HTMLButtonElement, work: () => Promise<void>) => { const label = button.innerHTML; button.disabled = true; button.classList.add('is-busy'); try { await work(); } catch (error) { toast(String((error as Error)?.message ?? error).slice(0, 160), 'error'); } finally { button.disabled = false; button.classList.remove('is-busy'); button.innerHTML = label; } };
+	titleAi.addEventListener('click', () => {
+		if (needModel()) return;
+		void busy(titleAi, async () => {
+			const options = await suggestTitles(title.value, currentMarkdown());
+			if (!options.length) { toast(t('AI 没有给出标题，再试一次'), 'error'); return; }
+			showMenu(titleAi, options.map(option => ({ label: option, run: () => { title.value = option; sizeTitle(); fire('title', title); } })));
+		});
+	});
+	digestAi.addEventListener('click', event => {
+		event.preventDefault();
+		if (needModel()) return;
+		void busy(digestAi, async () => { const text = await suggestDigest(title.value, currentMarkdown()); if (text) { digestInput.value = text; fire('digest', digestInput); } });
+	});
+	coverAi.addEventListener('click', () => {
+		void busy(coverAi, async () => {
+			let prompt = t('为文章《{0}》设计封面。{1}', [title.value.trim() || t('未命名文章'), digestInput.value.trim()]);
+			if (enabledChatModels().length && (title.value.trim() || currentMarkdown().trim())) { try { prompt = (await suggestCoverPrompt(title.value, digestInput.value, currentMarkdown())) || prompt; } catch { /* keep the plain prompt */ } }
+			void openImageDialog({ title: t('AI 生成封面'), prompt, aspect: '16:9', applies: [{ label: t('设为封面'), run: id => setCover(id) }] });
+		});
+	});
 
 	// ---- keyboard ---------------------------------------------------------------------------------------------------------
 	document.addEventListener('keydown', event => {

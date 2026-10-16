@@ -8,6 +8,9 @@ import { t } from '../../utils/ui-text';
 interface SlashState { range: { from: number; to: number } | null; query: string; index: number }
 const key = new PluginKey<SlashState>('qw-slash');
 
+// A Chinese IME turns "/" into "、" (or "／"); the writer meant the same thing.
+export const SLASH_TRIGGER = /(?:^|\s)[/、／]([^\s/、／]{0,16})$/;
+
 export function matchCommands(items: BlockCommand[], query: string): BlockCommand[] {
 	const q = query.trim().toLowerCase();
 	if (!q) return items;
@@ -42,7 +45,7 @@ export const SlashMenu = Extension.create<{ host: EditorHost }>({
 					const { selection } = state;
 					if (!selection.empty || !selection.$from.parent.isTextblock || selection.$from.parent.type.name === 'codeBlock') return { range: null, query: '', index: 0 };
 					const before = selection.$from.parent.textBetween(0, selection.$from.parentOffset, undefined, '￼');
-					const match = before.match(/(?:^|\s)\/([^\s/]{0,16})$/);
+					const match = before.match(SLASH_TRIGGER);
 					if (!match) return { range: null, query: '', index: 0 };
 					const slash = selection.from - match[1].length - 1;
 					const same = previous.range && previous.range.from === slash && previous.query === match[1];

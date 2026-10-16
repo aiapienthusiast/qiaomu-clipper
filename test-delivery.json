@@ -409,7 +409,7 @@
     },
     {
       "id": "write-long-articles",
-      "title": "写长文：本地文章库、所见即所得编辑器、三次 U 入口，以及发到 X 文章",
+      "title": "写长文：本地文章库、所见即所得编辑器、飞书式大纲、AI 助手与生图模型、三次 U 入口，以及发到 X 文章",
       "origin": "feat/write-long-form",
       "files": [
         "src/write/page.ts",
@@ -420,13 +420,27 @@
         "src/x-publish/x-content.ts",
         "src/managers/write-settings.ts",
         "src/utils/triple-key.ts",
-        "src/write.html"
+        "src/write.html",
+        "src/write/outline.ts",
+        "src/write/ai/chat-panel.ts",
+        "src/write/ai/protocol.ts",
+        "src/write/ai/image-dialog.ts",
+        "src/write/image-models.ts",
+        "src/managers/image-model-settings.ts",
+        "src/managers/settings-section-ui.ts"
       ],
       "tests": [
         "src/write/articles.test.ts",
         "src/write/editor/roundtrip.test.ts",
         "src/write/publish/x-prepare.test.ts",
-        "src/triple-key.test.ts"
+        "src/triple-key.test.ts",
+        "src/write/outline.test.ts",
+        "src/write/ai/chat-panel.test.ts",
+        "src/write/ai/protocol.test.ts",
+        "src/write/ai/image-dialog.test.ts",
+        "src/write/image-models.test.ts",
+        "src/managers/settings-routing.test.ts",
+        "src/write/editor/slash.test.ts"
       ]
     }
   ]

@@ -1,6 +1,8 @@
 import type { Editor } from '@tiptap/core';
 import { askText, h, toast } from './dom';
 import type { AiAction } from './host';
+import { insertMarkdownAt, replaceWithMarkdown } from './markdown-insert';
+import { BUILTIN_PROMPTS, allActions } from '../ai/actions';
 import { enabledChatModels, streamChat } from '../../utils/chat-llm';
 import { getLocalStorage, setLocalStorage } from '../../utils/storage-utils';
 import { t } from '../../utils/ui-text';
@@ -14,15 +16,8 @@ export function aiReady(): boolean { return enabledChatModels().length > 0; }
 const RULES = '只输出结果本身，使用 Markdown，不要解释，不要加引号或前后说明。保持原文的事实、人名、数字和链接不变。';
 
 export function systemPromptFor(action: AiAction, instruction = ''): string {
-	switch (action) {
-		case 'polish': return `你是资深中文编辑。润色用户给出的文字：更通顺、自然、有节奏，不改变意思和观点，不增删信息。若原文是英文则用英文润色。${RULES}`;
-		case 'shorten': return `你是资深编辑。把用户给出的文字压缩到约一半长度，保留关键信息和语气。${RULES}`;
-		case 'expand': return `你是写作助手。把用户给出的文字扩写得更充实：补充必要的解释、例子或过渡，但不编造事实和数据。${RULES}`;
-		case 'toEnglish': return `You are a translator. Translate the user's text into natural, fluent English. Output only the translation in Markdown.`;
-		case 'toChinese': return `你是翻译。把用户给出的文字翻译成自然流畅的简体中文。只输出译文，使用 Markdown。`;
-		case 'continue': return `你是写作助手。阅读用户给出的文章，接着最后一段自然地往下写一到两段，风格、人称和语言与前文一致，不重复已写内容，不总结。${RULES}`;
-		case 'custom': return `你是写作助手。按用户的要求处理给出的文字。要求：${instruction}。${RULES}`;
-	}
+	if (action === 'custom') return `你是写作助手。按用户的要求处理给出的文字。要求：${instruction}。${RULES}`;
+	return BUILTIN_PROMPTS[action] ?? BUILTIN_PROMPTS.polish;
 }
 
 function markdownOf(editor: Editor, from: number, to: number): string {
@@ -42,6 +37,7 @@ export function runAi(editor: Editor, action: AiAction): void {
 		const { from, to, empty } = editor.state.selection;
 		if (empty && action !== 'continue') { toast(t('先选中要修改的文字'), 'error'); return; }
 		let instruction = '';
+		const customAction = (await allActions()).find(item => item.id === action && !item.builtin);
 		if (action === 'custom') {
 			const answer = await askText({ title: t('想让 AI 怎么改？'), placeholder: t('例如：改得更口语，去掉套话'), confirm: t('开始'), cancel: t('取消') });
 			if (!answer?.trim()) { editor.commands.focus(); return; }
@@ -79,7 +75,7 @@ export function runAi(editor: Editor, action: AiAction): void {
 			const model = models.find(item => item.id === picker.value) ?? models[0];
 			void setLocalStorage(MODEL_KEY, model.id);
 			try {
-				await streamChat({ model, system: systemPromptFor(action, instruction), messages: [{ role: 'user', content: source }], signal: controller.signal, onDelta: delta => { result += delta; output.textContent = result; } });
+				await streamChat({ model, system: customAction ? customAction.prompt : systemPromptFor(action, instruction), messages: [{ role: 'user', content: source }], signal: controller.signal, onDelta: delta => { result += delta; output.textContent = result; } });
 				result = result.trim();
 				output.textContent = result || t('模型没有返回内容');
 				replace.disabled = after ? false : !result; if (after) after.disabled = !result;
@@ -98,9 +94,8 @@ export function runAi(editor: Editor, action: AiAction): void {
 			let target = range;
 			// The selection may have moved while the answer was streaming; only replace text that is still the same.
 			if (!isContinue && editor.state.doc.textBetween(range.from, range.to) !== original) { target = { from: editor.state.selection.to, to: editor.state.selection.to }; mode = 'after'; toast(t('原文已经变化，结果插在了光标后面')); }
-			const content = mode === 'after' && !isContinue ? `\n\n${result}` : result;
-			if (mode === 'replace' && !isContinue) editor.chain().focus().insertContentAt({ from: target.from, to: target.to }, result).run();
-			else editor.chain().focus().insertContentAt(isContinue ? { from: target.to, to: target.to } : { from: target.to, to: target.to }, isContinue ? `\n\n${content}` : content).run();
+			if (mode === 'replace' && !isContinue) replaceWithMarkdown(editor, target.from, target.to, result);
+			else { editor.commands.setTextSelection(Math.min(target.to, editor.state.doc.content.size)); insertMarkdownAt(editor, 'cursor', result); }
 			finish();
 		};
 		replace.addEventListener('click', () => apply('replace'));

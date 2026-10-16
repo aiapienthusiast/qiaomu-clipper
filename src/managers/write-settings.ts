@@ -1,4 +1,4 @@
-import { Download, FolderInput, ImageOff, Plus, RotateCcw, Search, Trash2, CopyPlus } from 'lucide';
+import { Download, FolderInput, ImageOff, Pencil, Plus, RotateCcw, Search, Trash2, CopyPlus } from 'lucide';
 import browser from '../utils/browser-polyfill';
 import { t } from '../utils/ui-text';
 import { askConfirm, h, icon, toast } from '../write/editor/dom';
@@ -6,6 +6,7 @@ import { countArticles, deleteArticle, duplicateArticle, emptyTrash, getArticle,
 import { getImage } from '../write/images';
 import { exportArticle, exportArticleZip, importMarkdownFiles, safeFileName } from '../write/markdown-io';
 import type { ArticleSummary } from '../write/types';
+import { MAX_CUSTOM_ACTIONS, builtinActions, invalidateActions, loadStoredActions, saveStoredActions, type StoredAction } from '../write/ai/actions';
 
 const openWriter = (id?: string) => { void browser.tabs.create({ url: browser.runtime.getURL(id ? `write.html?id=${id}` : 'write.html?new=1') }); };
 
@@ -128,4 +129,50 @@ export async function initializeWriteSettings(): Promise<void> {
 	});
 	document.addEventListener('qiaomu-write-shown', () => { void refresh(); });
 	await refresh();
+	await initializeAiActions();
+}
+
+// "AI shortcuts": the instructions offered when text is selected. The built-in ones are fixed; the writer adds their own.
+async function initializeAiActions(): Promise<void> {
+	const root = document.getElementById('write-ai-actions');
+	if (!root) return;
+	let actions = await loadStoredActions();
+	const list = h('div', { class: 'im-list', role: 'list' });
+	const add = h('button', { type: 'button', class: 'write-btn' }, icon(Plus, 15), t('添加指令'));
+	root.append(h('div', { class: 'settings-section-header' }, h('h3', { text: t('AI 快捷指令') }), h('div', { class: 'settings-section-actions' }, add)),
+		h('div', { class: 'setting-item-description', text: t('在文章里选中文字，点浮动工具栏上的 AI，就能用这些指令改写。内置的不能改，你自己的可以随便加。') }), list);
+
+	const persist = async () => { await saveStoredActions(actions); invalidateActions(); render(); };
+	function render() {
+		list.textContent = '';
+		for (const builtin of builtinActions()) list.append(h('div', { class: 'write-row im-row', role: 'listitem' }, h('div', { class: 'write-row-main' }, h('div', { class: 'write-info' }, h('div', { class: 'write-title' }, builtin.name, h('span', { class: 'write-badge im-default', text: t('内置') }))))));
+		for (const action of actions) {
+			const buttons = h('div', { class: 'write-row-actions im-actions' });
+			const mk = (label: string, ic: Node, run: () => void | Promise<void>, danger = false) => { const b = h('button', { type: 'button', class: `write-icon${danger ? ' danger' : ''}`, title: label, 'aria-label': label }, ic); b.addEventListener('click', () => { void Promise.resolve(run()); }); buttons.append(b); };
+			mk(t('编辑'), icon(Pencil, 15), () => openDialog(action));
+			mk(t('删除'), icon(Trash2, 15), async () => { if (!(await askConfirm({ title: t('删除这条指令？'), confirm: t('删除'), cancel: t('取消'), danger: true }))) return; actions = actions.filter(a => a.id !== action.id); await persist(); }, true);
+			list.append(h('div', { class: 'write-row im-row', role: 'listitem' }, h('div', { class: 'write-row-main' }, h('div', { class: 'write-info' }, h('div', { class: 'write-title', text: action.name }), h('div', { class: 'write-excerpt', text: action.prompt }))), buttons));
+		}
+	}
+	function openDialog(existing?: StoredAction): void {
+		const dialog = h('dialog', { class: 'qw-dialog', 'aria-label': t('AI 快捷指令') });
+		const name = h('input', { class: 'qw-field', type: 'text', maxlength: 24, placeholder: t('名字，例如「口语化」'), spellcheck: false });
+		const prompt = h('textarea', { class: 'qw-field', rows: 5, placeholder: t('告诉 AI 怎么改，例如：改得更口语，像跟朋友聊天，去掉套话'), spellcheck: false });
+		name.value = existing?.name ?? ''; prompt.value = existing?.prompt ?? '';
+		const error = h('p', { class: 'qw-dialog-note im-error', role: 'alert', hidden: true });
+		const close = () => { dialog.close(); dialog.remove(); };
+		const save = h('button', { type: 'button', class: 'qw-btn qw-btn-primary', text: t('保存') });
+		save.addEventListener('click', async () => {
+			const n = name.value.trim(); const p = prompt.value.trim();
+			if (!n || !p) { error.hidden = false; error.textContent = t('名字和指令都要填'); return; }
+			if (!existing && actions.length >= MAX_CUSTOM_ACTIONS) { error.hidden = false; error.textContent = t('最多 {0} 条', [MAX_CUSTOM_ACTIONS]); return; }
+			actions = existing ? actions.map(a => (a.id === existing.id ? { ...a, name: n, prompt: p } : a)) : [...actions, { id: `act_${Date.now().toString(36)}`, name: n, prompt: p }];
+			close(); await persist();
+		});
+		dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
+		dialog.append(h('h2', { class: 'qw-dialog-title', text: existing ? t('编辑指令') : t('添加指令') }), name, h('div', { style: 'height:10px' }), prompt, error, h('div', { class: 'qw-dialog-actions' }, h('button', { type: 'button', class: 'qw-btn', text: t('取消'), onclick: close }), save));
+		document.body.append(dialog); dialog.showModal(); name.focus();
+	}
+	add.addEventListener('click', () => openDialog());
+	render();
 }

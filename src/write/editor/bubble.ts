@@ -2,20 +2,12 @@ import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey, TextSelection } from '@tiptap/pm/state';
 import { ChevronDown, Link as LinkIcon, Sparkles } from 'lucide';
 import { markCommands } from './commands';
+import { allActions } from '../ai/actions';
 import { h, icon } from './dom';
 import type { AiAction, EditorHost } from './host';
 import { t } from '../../utils/ui-text';
 
 const key = new PluginKey('qw-bubble');
-
-export const AI_ACTIONS: { id: AiAction; title: string }[] = [
-	{ id: 'polish', title: t('润色') },
-	{ id: 'shorten', title: t('缩短') },
-	{ id: 'expand', title: t('扩写') },
-	{ id: 'toEnglish', title: t('翻译成英文') },
-	{ id: 'toChinese', title: t('翻译成中文') },
-	{ id: 'custom', title: t('按我的要求改…') },
-];
 
 export function normalizeHref(raw: string): string {
 	const value = raw.trim();
@@ -33,6 +25,8 @@ export const BubbleToolbar = Extension.create<{ host: EditorHost }>({
 		const host = this.options.host;
 		const bar = h('div', { class: 'qw-bubble', role: 'toolbar', 'aria-label': t('文字格式') });
 		let mode: 'marks' | 'link' = 'marks';
+		let cachedActions: { id: string; name: string }[] = [];
+		void allActions().then(list => { cachedActions = list; });
 		let pointerDown = false;
 		let aiMenu: HTMLElement | null = null;
 		bar.addEventListener('mousedown', event => { if (!(event.target instanceof HTMLInputElement)) event.preventDefault(); });
@@ -75,8 +69,9 @@ export const BubbleToolbar = Extension.create<{ host: EditorHost }>({
 				ai.addEventListener('click', () => {
 					if (aiMenu) { closeAiMenu(); return; }
 					aiMenu = h('div', { class: 'qw-menu qw-ai-menu', role: 'menu' });
-					for (const action of AI_ACTIONS) {
-						const row = h('div', { class: 'qw-menu-item', role: 'menuitem', tabindex: -1 }, h('span', { class: 'qw-menu-text' }, h('span', { class: 'qw-menu-title', text: action.title })));
+					const actions = [...cachedActions, { id: 'custom', name: t('按我的要求改…') }];
+					for (const action of actions) {
+						const row = h('div', { class: 'qw-menu-item', role: 'menuitem', tabindex: -1 }, h('span', { class: 'qw-menu-text' }, h('span', { class: 'qw-menu-title', text: action.name })));
 						row.addEventListener('click', () => { closeAiMenu(); host.runAi(editor, action.id); });
 						aiMenu.append(row);
 					}

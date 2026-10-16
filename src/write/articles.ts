@@ -1,5 +1,6 @@
 import { openDb, requestResult, transactionDone } from './db';
 import { allImageIds, deleteImages, imageIdsIn, newId } from './images';
+import { deleteChat } from './ai/chat-store';
 import type { Article, ArticleSummary, PublishRecord, PublishTarget } from './types';
 
 export const TRASH_KEEP_MS = 30 * 24 * 60 * 60 * 1000;
@@ -117,6 +118,7 @@ export async function deleteArticle(id: string): Promise<void> {
 	const tx = db.transaction('articles', 'readwrite');
 	tx.objectStore('articles').delete(id);
 	await transactionDone(tx);
+	await deleteChat(id).catch(() => {});
 	await collectUnusedImages();
 }
 
@@ -128,6 +130,7 @@ export async function emptyTrash(now = Date.now(), olderThan = 0): Promise<numbe
 	const tx = db.transaction('articles', 'readwrite');
 	for (const article of doomed) tx.objectStore('articles').delete(article.id);
 	await transactionDone(tx);
+	await Promise.all(doomed.map(article => deleteChat(article.id).catch(() => {})));
 	await collectUnusedImages();
 	return doomed.length;
 }
