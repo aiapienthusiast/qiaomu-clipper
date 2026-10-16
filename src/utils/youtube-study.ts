@@ -9,6 +9,7 @@ import { mountPlayerSize } from './youtube-player-size';
 import { mountPlayerMode } from './youtube-player-mode';
 import { mountTranslation } from './youtube-translation';
 import { mountStudyDownload } from './study-download';
+import { canDownloadYouTube } from './media-download-policy';
 import { mountBilibiliQualityLink } from './bilibili-embed';
 import { mountStudyMediaFooter } from './study-media-footer';
 
@@ -30,10 +31,9 @@ export async function mountYouTubeStudy(doc: Document, article: HTMLElement, tit
 	// A podcast or a recording has no picture to size or to move around: it keeps its one layout.
 	if (article.dataset.audioStudy !== 'true') { mountPlayerSize(article); mountPlayerMode(article); }
 	const footer = mountStudyMediaFooter(article);
-	if (article.dataset.videoPlatform === 'bilibili') {
-		mountBilibiliQualityLink(article, url);
-		void mountStudyDownload(article, undefined, { title, sourceUrl: url, mediaUrl: '', video: true });
-	}
+	if (article.dataset.videoPlatform === 'bilibili') mountBilibiliQualityLink(article, url);
+	// YouTube files are offered by the standalone edition only (the helper reads the watch page itself); the store edition mounts nothing.
+	if (article.dataset.videoPlatform === 'bilibili' || (article.dataset.videoPlatform === 'youtube' && canDownloadYouTube(url, ''))) void mountStudyDownload(article, undefined, { title, sourceUrl: url, mediaUrl: '', video: true });
 	if (article.querySelector('.youtube-study-feedback')) return;
 	doc.documentElement.classList.add('youtube-study');
 	// No duplicate transcript action row: copy/download/AI live in the shared bar.

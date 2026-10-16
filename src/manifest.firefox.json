@@ -142,10 +142,21 @@
 				"https://ted.com/*",
 				"https://*.ted.com/*",
 				"https://podcasts.apple.com/*",
-				"https://*.podcasts.apple.com/*"
+				"https://*.podcasts.apple.com/*",
+				"https://channels.weixin.qq.com/finder-preview/pages/feed*"
 			],
 			"js": [
 				"web-panel.js"
+			],
+			"run_at": "document_idle"
+		},
+		{
+			"matches": [
+				"https://weixin.qq.com/sph/*",
+				"https://channels.weixin.qq.com/finder-preview/pages/sph*"
+			],
+			"js": [
+				"channels-share.js"
 			],
 			"run_at": "document_idle"
 		},

@@ -11,6 +11,8 @@ import { generationStrings } from './utils/subtitle-generation-strings';
 import { registerWebSource } from './utils/asr-client';
 import { webKey } from './utils/podcast-feed';
 import { siteOf, xStatus } from './utils/study-sites';
+import { isChannelsMedia, readChannelsPlayback } from './utils/channels-study';
+import type { WebInfo } from './utils/asr-client';
 import { activeWebMedia, currentWebMediaAddress, declaredWebMediaAddress } from './utils/web-media-page';
 
 // Shared transcript bar for supported media detail pages. On X, on the page of a post that holds a video or audio, the transcript bar sits right under the media, in the post's own
@@ -55,16 +57,28 @@ try {
 			return Array.from(document.querySelectorAll<HTMLElement>('article[data-testid="tweet"]')).find(tweet =>
 				Array.from(tweet.querySelectorAll<HTMLAnchorElement>('a[href]')).some(link => link.querySelector('time') && link.closest('article') === tweet && xStatus(link.href)?.split('/').pop() === id));
 		};
-		const pageMedia = (url: string) => readPageMedia(document, url, media());
+		// Channels' official playback page: the media address comes from the page's own feed request (the same one its player makes), read once per video.
+		const isChannels = siteOf(location.href)?.id === 'channels';
+		let channelsInfo: WebInfo | undefined, channelsFor = '', channelsTried = 0;
+		const readChannels = async (url: string) => {
+			if (!isChannels || channelsFor === url || Date.now() - channelsTried < 10000) return;
+			channelsTried = Date.now();
+			const result = await readChannelsPlayback();
+			if (post() !== url) return;
+			if (result.state === 'ready' && isChannelsMedia(url, result.info.mediaUrl)) { channelsInfo = result.info; channelsFor = url; }
+		};
+		const pageMedia = (url: string) => isChannels ? (channelsFor === url ? channelsInfo : undefined) : readPageMedia(document, url, media());
 		// Explicit study requests can still read the visible player on a feed; only automatic mounting requires a detail route.
 		const media = () => siteOf(location.href)?.id === 'xiaohongshu' ? xhsVideo(document, location.href) : isX && xStatus(location.href) ? mainTweet()?.querySelector<HTMLMediaElement>('video, audio') ?? undefined : activeWebMedia(document);
 		api.runtime.onMessage.addListener((message, _sender, reply) => { if (message.action === 'qiaomuWebMediaSource') reply({ url: post(), info: pageMedia(post() || '') }); });
-		const tweetText = () => (mainTweet()?.querySelector('[data-testid="tweetText"]')?.textContent || document.title).replace(/\s+/g, ' ').trim().slice(0, 120);
+		const tweetText = () => (isChannels && channelsInfo?.title || mainTweet()?.querySelector('[data-testid="tweetText"]')?.textContent || document.title).replace(/\s+/g, ' ').trim().slice(0, 120);
 
 		// The colours of the page it sits in: X has a light, a dim and a dark theme, and none of them is ours to choose.
 		const paint = (element: HTMLElement, where: 'side' | 'media') => {
 			const parts = getComputedStyle(document.body).backgroundColor.match(/\d+(\.\d+)?/g)?.map(Number) ?? [255, 255, 255], dark = (parts[0] * 299 + parts[1] * 587 + parts[2] * 114) / 1000 < 140;
 			const set = (name: string, value: string) => element.style.setProperty(name, value);
+			// Channels' playback page runs over any video, white or black: a solid dark card with light type reads on both.
+			if (isChannels) { set('--qm-bg', '#1f1f23'); set('--qm-card', '#1f1f23'); set('--qm-fg', '#f2f2f2'); set('--qm-fg2', '#b4b4bb'); set('--qm-line', '#3a3a42'); set('--qm-hover', 'rgba(255,255,255,.12)'); set('--qm-field', 'rgba(255,255,255,.1)'); set('--qm-margin', '0'); return; }
 			set('--qm-bg', dark ? '#16181c' : '#fff');
 			if (!isX) { set('--qm-card', dark ? '#16181c' : '#fff'); set('--qm-margin', '0'); }
 			if (dark) { set('--qm-fg', '#e7e9ea'); set('--qm-fg2', '#71767b'); set('--qm-line', '#2f3336'); set('--qm-hover', 'rgba(231,233,234,.1)'); set('--qm-field', 'rgba(231,233,234,.08)'); }
@@ -124,6 +138,7 @@ try {
 			if (mounting) return; mounting = true;
 			try {
 				if (host) remove();
+				await readChannels(url); if (post() !== url) return;
 				const nextKey = await webKey(url); if (post() !== url || !(panelOn && siteOn) || (isX && !xStatus(location.href))) return;
 				postUrl = url; key = nextKey; registerWebSource(key, url, pageMedia(url)?.audioUrl || pageMedia(url)?.mediaUrl || undefined);
 				const style = document.createElement('style'); style.textContent = BAR_STYLE + '.qiaomu-x{display:block;width:100%}' + WEB_BAR_STYLE;

@@ -323,6 +323,8 @@ def channels_share(page):
         if not public_https(page) or p.port not in (None, 443) or p.fragment: return False
         if p.hostname == 'weixin.qq.com': return bool(re.fullmatch(r'/sph/[A-Za-z0-9]{3,64}/?', p.path)) and not p.query
         q = parse_qs(p.query)
+        if p.hostname == 'channels.weixin.qq.com' and p.path == '/finder-preview/pages/feed':
+            return set(q) == {'eid'} and len(q['eid']) == 1 and 0 < len(q['eid'][0]) <= 200 and not re.search(r'[\x00-\x20]', q['eid'][0])
         return p.hostname == 'channels.weixin.qq.com' and p.path == '/finder-preview/pages/sph' and set(q) == {'id'} and len(q['id']) == 1 and bool(re.fullmatch(r'[A-Za-z0-9]{3,64}', q['id'][0]))
     except (TypeError, ValueError): return False
 

@@ -1,7 +1,7 @@
 import { handleChatImageSource } from './utils/chat-image-source';
 import { validChatTurns } from './utils/chat-content';
 import { validChatSession } from './utils/opencode-go';
-import { channelsStudyBridge, parseChannelsShare, readChannelsPlayback } from './utils/channels-study';
+import { channelsPlaybackPage, channelsStudyBridge, getChannelsPlaybackMedia, parseChannelsShare, readChannelsPlayback } from './utils/channels-study';
 import { protectedPageBridge, snapshotProtectedPage } from './utils/protected-study';
 import { createContentText } from './utils/content-i18n';
 import { getWebPageMedia, isTikTokMedia, snapshotDouyinPlayer, snapshotTikTokPlayer, tabMayLendTikTokMedia, tiktokVideoPath, validateDouyinTracks } from './utils/web-page-media';
@@ -1491,6 +1491,7 @@ browser.runtime.onMessage.addListener((raw: unknown, sender) => {
 		const [result] = await browser.scripting.executeScript({ target: { tabId }, world: 'MAIN', func: snapshotXhsPlayer });
 		return result?.result as ReturnType<typeof snapshotXhsPlayer> | undefined;
 	}).then(info => info || null);
+	if (channelsPlaybackPage(request.url)) return getChannelsPlaybackMedia(request.url, request.sourceTabId, browser.tabs as unknown as Parameters<typeof getChannelsPlaybackMedia>[2]).then(info => info || null);
 	return getWebPageMedia(request.url, request.sourceTabId, browser.tabs, async tabId => {
 		const [result] = await browser.scripting.executeScript({ target: { tabId }, func: snapshotDouyinPlayer });
 		const snapshot = result?.result as ReturnType<typeof snapshotDouyinPlayer> | undefined;
@@ -1530,7 +1531,7 @@ browser.runtime.onMessage.addListener((raw: unknown, sender) => {
 
 // User-selected third-party resolver; each reader owns only its own two tabs.
 const channelsStudy = channelsStudyBridge({
- create: options => browser.tabs.create(options), get: id => browser.tabs.get(id),
+ create: options => browser.tabs.create(options), get: id => browser.tabs.get(id), remove: id => browser.tabs.remove(id), update: (id, properties) => browser.tabs.update(id, properties),
  parse: (tabId, share) => browser.scripting.executeScript({ target: { tabId }, world: 'MAIN', func: parseChannelsShare, args: [share] }).then(results => results[0]?.result as Awaited<ReturnType<typeof parseChannelsShare>> || { state: 'unavailable' }),
  inspect: tabId => browser.scripting.executeScript({ target: { tabId }, world: 'MAIN', func: readChannelsPlayback }).then(results => results[0]?.result as Awaited<ReturnType<typeof readChannelsPlayback>> || { state: 'unavailable' }),
 });

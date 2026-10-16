@@ -5,6 +5,7 @@ import { patchClipPreview } from './clip-preview';
 import { bindRemotePreviewMedia, preserveRemotePreviewMedia, restoreRemotePreviewPlayback } from './remote-preview-media';
 import { mountStudyCaptionLanguage } from './study-caption-language';
 import { isProtectedStudy, probeProtectedStudy } from './protected-study';
+import { channelsPlaybackPage } from './channels-study';
 import { readTedMedia } from './ted-media';
 import { probeDouyinPage, probeWebStudy, probeXiaoeLive, type XiaoeAnswer } from './web-study-probe';
 import DOMPurify from 'dompurify';
@@ -78,6 +79,10 @@ const STYLE = `
 html .qiaomu-web-retry:has(.qiaomu-web-retry-actions){display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin:8px 0 16px;padding:18px 20px;border-radius:16px;background:linear-gradient(var(--background-secondary,rgba(127,127,127,.1)),var(--background-secondary,rgba(127,127,127,.1))),var(--background-primary,#fff);box-shadow:0 0 0 1px var(--background-modifier-border,rgba(127,127,127,.16))}
 html .qiaomu-web-retry b{font-size:16px;font-weight:600;line-height:24px;color:var(--text-normal,#222)}
 html .qiaomu-web-retry p{margin:0;color:var(--text-muted,#666);font-size:14px;line-height:22px}
+html .qiaomu-web-steps{display:flex;flex-direction:column;gap:2px;margin:2px 0 4px;padding:0;list-style:none;counter-reset:qw-step;color:var(--text-muted,#666);font-size:14px;line-height:22px}
+html .qiaomu-web-steps li{counter-increment:qw-step}
+html .qiaomu-web-steps li::before{content:counter(qw-step) '. '}
+html .qiaomu-web-steps li[aria-current=step]{color:var(--text-normal,#222);font-weight:600}
 html .qiaomu-web-retry-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 html .qiaomu-web-retry-actions button.qw-primary,html .qiaomu-web-retry-actions :is(a,button).qw-secondary{display:inline-flex;align-items:center;justify-content:center;width:auto;min-height:36px;padding:0 16px;border:0;border-radius:10px;font-size:14px;font-weight:600;line-height:1;text-decoration:none;cursor:pointer;box-shadow:none}
 html .qiaomu-web-retry-actions button.qw-primary{background:var(--text-normal,#111);color:var(--background-primary,#fff)}
@@ -317,6 +322,8 @@ export async function startAudioStudy(options: AudioStudyOptions): Promise<void>
 				if ('info' in found) { address = found.address; return { info: found.info, cookies: undefined }; }
 				return { info: { ok: false as const, error: 'xiaoe-' + found.error, message: found.message }, cookies: undefined };
 			})()
+			// The official playback page the viewer has open already holds its own media: no Yuanbao step.
+			: channelsPlaybackPage(address) ? { ...await probeDouyinPage(address, status, holder, source, 2, '视频号'), cookies: undefined }
 			: isProtectedStudy(address) ? await probeProtectedStudy(address, status, holder)
 			: await probeWebStudy(address, status, holder);
 		if (!info.ok && info.error.startsWith('xiaoe-')) {

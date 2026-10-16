@@ -879,5 +879,12 @@
  "设置": "Settings",
  "下载视频": "Download video",
  "下载音频": "Download audio",
- "原站高清": "Original HD"
+ "原站高清": "Original HD",
+ "通过腾讯元宝读取视频": "Read the video through Tencent Yuanbao",
+ "生成字幕": "Generate subtitles",
+ "只把这条链接交给元宝解析，登录信息不会交给字幕识别服务。": "Only this link is given to Yuanbao to parse. Your sign-in is never shared with the subtitle service.",
+ "打开元宝登录页": "Open the Yuanbao sign-in page",
+ "需要先登录腾讯元宝，登录后这里会自动继续。": "Sign in to Tencent Yuanbao first. This page will continue by itself afterwards.",
+ "正在读取。已登录元宝的话会自动完成。": "Reading… If you are already signed in to Yuanbao, this finishes by itself.",
+ "没能读取这条视频：链接可能已失效，或你的账号没有观看权限。": "Could not read this video: the link may have expired, or your account may not be allowed to watch it."
 }

@@ -879,5 +879,12 @@
  "设置": "Einstellungen",
  "下载视频": "Video herunterladen",
  "下载音频": "Audio herunterladen",
- "原站高清": "Original in HD"
+ "原站高清": "Original in HD",
+ "通过腾讯元宝读取视频": "Video über Tencent Yuanbao lesen",
+ "生成字幕": "Untertitel erstellen",
+ "只把这条链接交给元宝解析，登录信息不会交给字幕识别服务。": "Nur dieser Link wird an Yuanbao zur Auswertung übergeben. Deine Anmeldung wird nie an den Untertitel-Dienst weitergegeben.",
+ "打开元宝登录页": "Yuanbao-Anmeldeseite öffnen",
+ "需要先登录腾讯元宝，登录后这里会自动继续。": "Melde dich zuerst bei Tencent Yuanbao an. Danach geht es hier automatisch weiter.",
+ "正在读取。已登录元宝的话会自动完成。": "Wird gelesen … Bist du bei Yuanbao angemeldet, läuft das automatisch ab.",
+ "没能读取这条视频：链接可能已失效，或你的账号没有观看权限。": "Dieses Video konnte nicht gelesen werden: Der Link ist möglicherweise abgelaufen oder dein Konto darf es nicht ansehen."
 }
