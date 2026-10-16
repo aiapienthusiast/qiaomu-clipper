@@ -74,6 +74,23 @@ class DownloadTests(unittest.TestCase):
                 self.assertEqual(media.fetch_full(directory,{'video':True,'url':'https://www.bilibili.com/video/BV1xx411c7mD/'},{},{'yt-dlp':'ytdlp','ffmpeg':'ffmpeg'}).suffix,'.mkv')
             command=commands[0];self.assertEqual(command[command.index('-f')+1],media.PLAYABLE_VIDEO);self.assertEqual(command[command.index('--merge-output-format')+1],'mp4/mkv');self.assertIn('--ffmpeg-location',command);self.assertIn('--ignore-config',command);self.assertIn('youtube',command[command.index('--match-filter')+1]);self.assertIn('!has_drm',command[command.index('--match-filter')+1]);self.assertNotIn('--cookies-from-browser',command)
 
+    def test_youtube_is_tried_without_the_lent_login_first_and_with_it_only_when_needed(self):
+        spec = {'url': 'https://www.youtube.com/watch?v=x', 'video': True, 'allowYoutube': True, 'cookiesFile': True}
+        for first_ok, calls_expected in ((True, [False]), (False, [False, True])):
+            with tempfile.TemporaryDirectory() as temp:
+                directory = Path(temp); calls = []
+                def stream(command, env, progress):
+                    calls.append('--cookies' in command)
+                    if first_ok or len(calls) == 2: (directory / 'audio.mp4').write_bytes(b'complete'); return 0, []
+                    return 1, ['ERROR: [youtube] x: Requested format is not available']
+                with patch.object(asr, 'stream', side_effect=stream): self.assertEqual(media.fetch_full(directory, spec, {}, {'yt-dlp': 'y', 'ffmpeg': 'f'}).suffix, '.mp4')
+                self.assertEqual(calls, calls_expected)
+        with tempfile.TemporaryDirectory() as temp:  # other sites keep sending the login on the first and only try
+            directory = Path(temp); calls = []
+            def stream(command, env, progress): calls.append('--cookies' in command); (directory / 'audio.mp4').write_bytes(b'x'); return 0, []
+            with patch.object(asr, 'stream', side_effect=stream): media.fetch_full(directory, {'url': 'https://www.bilibili.com/video/BV1xx411c7mD/', 'video': True, 'cookiesFile': True}, {}, {'yt-dlp': 'y', 'ffmpeg': 'f'})
+            self.assertEqual(calls, [True])
+
     def test_selector_prefers_h264_aac_so_the_file_opens_in_any_player(self):
         first = media.PLAYABLE_VIDEO.split('/')[0]
         self.assertIn('avc1', first); self.assertIn('mp4a', first)
@@ -94,7 +111,7 @@ class DownloadTests(unittest.TestCase):
 
     def test_failures_say_why_and_keep_the_tool_output_in_the_private_job_folder(self):
         cases = (
-            (['ERROR: [youtube] abc123XYZ99: Requested format is not available. Use --list-formats'], 1, '这条视频暂时没有可下载的格式'),
+            (['ERROR: [youtube] abc123XYZ99: Requested format is not available. Use --list-formats'], 1, '这条视频暂时没有可下载的格式（YouTube 对它做了额外限制，字幕和学习不受影响）'),
             (['ERROR: [youtube] abc123XYZ99: Video unavailable'], 1, '这条视频不可用，或是私享视频'),
             (['[download] x does not pass filter (!is_live & !has_drm), skipping ..'], 0, '直播和受版权保护（DRM）的视频不能下载'),
             (['ERROR: [youtube] abc123XYZ99: Something odd happened'], 1, 'Something odd happened'),

@@ -27,7 +27,7 @@ def why_not(code, tail, files):
     detail = ' '.join(tail)
     errors = [re.sub(r'^ERROR:\s*(\[[^\]]+\]\s*)?([\w-]{6,}:\s*)?', '', line.strip()) for line in tail if line.strip().startswith('ERROR:')]
     low = detail.lower()
-    if 'requested format is not available' in low or 'only images are available' in low: return '这条视频暂时没有可下载的格式'
+    if 'requested format is not available' in low or 'only images are available' in low: return '这条视频暂时没有可下载的格式（YouTube 对它做了额外限制，字幕和学习不受影响）'
     if 'private video' in low or 'video unavailable' in low or 'this video is unavailable' in low: return '这条视频不可用，或是私享视频'
     if 'does not pass filter' in low: return '直播和受版权保护（DRM）的视频不能下载'
     if errors: return errors[-1][:140]
@@ -124,18 +124,26 @@ def fetch_full(directory, spec, env, tools):
         finally: shutil.rmtree(other, ignore_errors=True)
     # Never use an ASR bestaudio selector for video exports. Ignore user configs and reject
     # DRM formats and live streams, and YouTube extractors (including embeds/redirects) unless the standalone edition asked for a YouTube page.
-    command = [tools['yt-dlp'], '--ignore-config', '--no-playlist', '--no-warnings', '--newline', '--no-continue', '--abort-on-unavailable-fragments', '--socket-timeout', '30', '--retries', '3', '--fragment-retries', '3',
-               '--match-filter', '!is_live & !has_drm' if spec.get('allowYoutube') else 'extractor_key !~= (?i)youtube & !is_live & !has_drm', '--ffmpeg-location', tools['ffmpeg'],
-               '-f', PLAYABLE_VIDEO if spec['video'] else 'ba/b', '--merge-output-format', 'mp4/mkv', '-o', str(directory / 'audio.%(ext)s')]
-    if spec.get('cookiesFile'): command += ['--cookies', str(directory / 'cookies.txt')]
-    elif spec.get('cookies'): command += ['--cookies-from-browser', spec['cookies']]
-    command += ['--', spec['url']]
+    base = [tools['yt-dlp'], '--ignore-config', '--no-playlist', '--no-warnings', '--newline', '--no-continue', '--abort-on-unavailable-fragments', '--socket-timeout', '30', '--retries', '3', '--fragment-retries', '3',
+            '--match-filter', '!is_live & !has_drm' if spec.get('allowYoutube') else 'extractor_key !~= (?i)youtube & !is_live & !has_drm', '--ffmpeg-location', tools['ffmpeg'],
+            '-f', PLAYABLE_VIDEO if spec['video'] else 'ba/b', '--merge-output-format', 'mp4/mkv', '-o', str(directory / 'audio.%(ext)s')]
     def progress(line):
         match = re.search(r'\[download\]\s+([0-9.]+)%', line)
         if match: asr.write_state(directory, state='downloading', progress=min(95, float(match.group(1)) * .95))
-    code, tail = asr.stream(command, env, progress)
-    candidates = [p for p in directory.glob('audio.*') if p.suffix in ('.mp4', '.m4v', '.mkv', '.webm', '.mov', '.m4a', '.mp3', '.ogg', '.opus', '.aac', '.flac', '.wav', '.ts')]
+    def attempt(with_login):
+        command = list(base)
+        if with_login and spec.get('cookiesFile'): command += ['--cookies', str(directory / 'cookies.txt')]
+        elif with_login and spec.get('cookies'): command += ['--cookies-from-browser', spec['cookies']]
+        code, tail = asr.stream(command + ['--', spec['url']], env, progress)
+        return code, tail, [p for p in directory.glob('audio.*') if p.suffix in ('.mp4', '.m4v', '.mkv', '.webm', '.mov', '.m4a', '.mp3', '.ogg', '.opus', '.aac', '.flac', '.wav', '.ts')]
+    # YouTube hands a signed-in session only its "web" player, whose files need a token we do not have; the anonymous players give plain files.
+    # So a YouTube page is tried without the lent login first, and with it only when YouTube asks for it.
+    login_second = bool(spec.get('allowYoutube') and (spec.get('cookiesFile') or spec.get('cookies')))
+    code, tail, candidates = attempt(not login_second)
     # yt-dlp can leave separate streams after a failed merger. Only exit 0 and one file is success.
+    if login_second and (code or len(candidates) != 1):
+        for leftover in directory.glob('audio.*'): leftover.unlink(missing_ok=True)
+        code, tail, candidates = attempt(True)
     if code or len(candidates) != 1:
         detail = ' '.join(tail)
         if asr.NEEDS_LOGIN.search(detail): raise asr.Failed('这个平台要求登录状态才能下载这条视频的音频', code='needs-cookies')
