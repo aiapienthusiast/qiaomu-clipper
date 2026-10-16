@@ -242,3 +242,16 @@ When the user enables browser-login support and approves the optional permission
 - `downloads` 是可选权限，拒绝后不发起媒体下载。原有 cookies 可选权限、站点访问和 Native Messaging 功能保留。
 - 审核演示使用自有或明确允许下载的媒体。下载完成以浏览器文件状态为准；原有图片问答和小红书提取包含在本版。
 - 当前文件只是提交材料，不代表已提交或审核通过；实际提交结果单独记录。
+
+
+## 1.18.6 提审材料（2026-10-16，尚未提交）
+
+- 上传 `qiaomu-clipper-1.18.6-chrome-store.zip`，独立版包不得上传商店。商店构建剔除 `allowYoutube`；前端、后台及助手默认策略均拒绝 YouTube 文件下载。
+- downloads 为可选权限：用户点击下载后才请求，用于保存允许下载的非 YouTube 媒体并显示进度。分轨媒体或回放可由用户另装的本机助手下载合并，不解密 DRM。
+- cookies 为可选权限：用户开启登录支持并授权后，仅将当前媒体站点的登录信息交给本机助手向原站验证；临时文件在成功、失败、取消后删除，不发送给 AI、RSS 或开发者。
+- unlimitedStorage：保留用户本机的字幕、草稿和学习内容，避免小额度导致保存失败；缓存仍有数量和容量上限，不用于上传或追踪。
+- 视频号学习把当前分享链接交给用户登录的腾讯元宝解析，仅读取返回的官方播放页；需登录时由用户完成。隐私页已补充此处理。
+- 以上为本版本材料；旧版“商店无媒体导出”及“不合并分轨”的记录仅描述历史版本。
+
+Reviewer instructions (under 500 characters):
+1.18.6: Clip/read/edit/export a public article without login; RSS is off by default. Study pages offer original/bilingual captions. Optional subtitle generation needs the separately installed helper and your model/service. Optional downloads save non-YouTube media; the helper can merge split streams. YouTube file download is absent in this store build. Cookies are optional, passed only to the local helper and deleted after use. Channels links use your Tencent Yuanbao login. No DRM decryption.

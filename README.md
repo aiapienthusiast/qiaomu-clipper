@@ -18,7 +18,7 @@ Read, watch, listen, and turn what you learn into Obsidian notes.
 
 </div>
 
-> 本页介绍 GitHub 版 **1.17.0**。GitHub 与 [Chrome 应用商店](https://chromewebstore.google.com/detail/jniolfihillilkoajpnonlbkhfkiicoo)分别更新，请以各渠道页面显示的版本为准。希望立即使用本页功能，可安装下面的 GitHub 独立版；已有商店版无需为了日常使用同时安装两份。
+> 本页介绍 GitHub 版 **1.18.6**。GitHub 与 [Chrome 应用商店](https://chromewebstore.google.com/detail/jniolfihillilkoajpnonlbkhfkiicoo)分别更新，请以各渠道页面显示的版本为准。希望立即使用本页功能，可安装下面的 GitHub 独立版；已有商店版无需为了日常使用同时安装两份。
 
 ```text
 请帮我安装或升级乔木剪藏：https://github.com/joeseesun/qiaomu-clipper 。先读 README.md、docs/INSTALL-FOR-AGENTS.md 和 native/README.md，先告诉我该装商店版还是独立版、区别是什么，再按我的系统与浏览器操作。
@@ -163,9 +163,9 @@ AI 面板支持围绕全文或选中段落提问，流式显示回答，按文�
 
 ### 保存正在学习的音视频
 
-Chrome 商店版与 GitHub 独立版都可在支持的学习页下载完整音视频文件，显示进度、支持取消，并在浏览器确认保存完成后显示文件位置。首次点击时，商店版会申请可选的下载权限。文件保存在「下载/乔木剪藏」，只保存你有权下载的内容。
+Chrome 商店版与 GitHub 独立版都可在支持的学习页下载完整音视频文件，显示进度、支持取消，并在浏览器确认保存完成后显示文件位置。首次点击时，商店版会申请可选的下载权限。浏览器下载文件保存在「下载/乔木剪藏」，助手下载文件保存在「下载/Qiaomu Clipper」，只保存你有权下载的内容。
 
-**YouTube 视频和音频的文件下载只有独立版提供**：需要已安装本地助手，在 YouTube 学习页点「下载视频／下载音频」，文件保存到「下载/Qiaomu Clipper」；直播和 DRM 视频不支持。商店版不提供，也会拦截来自 YouTube 媒体域名的文件，并拒绝下载重定向。当前不提供 HLS/DASH 分段流合并、音视频分轨合并或 DRM 解密。部分站点读取媒体地址需要助手；已有直接媒体地址由浏览器保存，不经过我们的服务器。两版都保留 Markdown 和字幕文本导出。
+**YouTube 视频和音频的文件下载只有独立版提供**：需要已安装本地助手，在 YouTube 学习页点「下载视频／下载音频」，文件保存到「下载/Qiaomu Clipper」；直播和 DRM 视频不支持。商店版不提供，也会拦截来自 YouTube 媒体域名的文件，并拒绝下载重定向。完整文件下载可通过本地助手合并原站提供的分段或分轨媒体，不提供 DRM 解密。部分站点读取媒体地址需要助手；已有直接媒体地址由浏览器保存，不经过我们的服务器。两版都保留 Markdown 和字幕文本导出。
 
 ## 常见问题
 
@@ -229,7 +229,7 @@ node scripts/check-editions.mjs
 
 Qiaomu Clipper brings a clean reader, Markdown editor, media player, timed transcripts and contextual AI chat into one workflow. Study a passage, ask a question, and save your own understanding with its source.
 
-> This README describes GitHub **1.17.0**. GitHub and the [Chrome Web Store](https://chromewebstore.google.com/detail/jniolfihillilkoajpnonlbkhfkiicoo) update independently; check each channel for its available version. Install the GitHub standalone edition below for these features.
+> This README describes GitHub **1.18.6**. GitHub and the [Chrome Web Store](https://chromewebstore.google.com/detail/jniolfihillilkoajpnonlbkhfkiicoo) update independently; check each channel for its available version. Install the GitHub standalone edition below for these features.
 
 ### Quick start
 
