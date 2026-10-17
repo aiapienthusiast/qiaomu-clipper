@@ -4,6 +4,7 @@
 // `html button.x:not(.qw-x)` beats the global `button:not(.clickable-icon)` and its :hover.
 #write-page {
 	--qw-top: 52px;
+	--qw-accent: #3370ff;
 	--qw-serif: "Source Han Serif SC", "Noto Serif SC", "Songti SC", "STSong", Georgia, "Times New Roman", serif;
 
 	body { background: var(--qw-paper); }
@@ -253,4 +254,48 @@ html button.qw-chat-send:not(.qw-x) { background: var(--text-normal); color: var
 dialog.qw-image-dialog { width: min(560px, calc(100vw - 32px));
 	.qw-image-row { display: flex; gap: 8px; margin-top: 10px; select { width: auto; flex: 1; } }
 	.qw-image-preview { margin-top: 12px; border-radius: 10px; overflow: hidden; background: var(--qw-soft); img { display: block; width: 100%; max-height: 52vh; object-fit: contain; } }
+}
+
+// ---- AI drawer: context, strip, tools, thinking, questions, prompt menu ------------------------------------------------------------
+.qw-chat {
+	.qw-chat-hint { font-size: 12px; color: var(--text-faint); }
+	.qw-chat-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+	.qw-chat-chip { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 2px 8px; height: 24px; border-radius: 99px; background: var(--qw-soft); color: var(--qw-muted); font-size: 12px; line-height: 1; white-space: nowrap; &.on { color: var(--qw-ink); box-shadow: inset 0 0 0 1px var(--qw-line); } svg { flex: none; } }
+	.qw-chip-label { overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+	.qw-chip-thumb { width: 16px; height: 16px; border-radius: 3px; object-fit: cover; }
+	html & button.qw-chat-chip:not(.qw-x) { width: auto; box-shadow: none; border: none; cursor: pointer; &.on { box-shadow: inset 0 0 0 1px var(--qw-line); } &:hover { background: var(--background-modifier-hover); color: var(--qw-ink); } }
+	html & button.qw-chip-x:not(.qw-x) { width: 16px; height: 16px; min-width: 16px; padding: 0; border: none; border-radius: 99px; background: transparent; box-shadow: none; color: var(--qw-muted); cursor: pointer; font-size: 13px; line-height: 1; &:hover { background: var(--background-modifier-hover); color: var(--qw-ink); box-shadow: none; } }
+	.qw-chat-strip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; &:empty { display: none; } &::-webkit-scrollbar { display: none; } }
+	html & button.qw-strip-item:not(.qw-x) { flex: none; width: auto; height: 26px; padding: 0 10px; border: none; border-radius: 99px; background: var(--qw-soft); box-shadow: none; color: var(--qw-ink); font-size: 12px; white-space: nowrap; cursor: pointer; &:hover { background: var(--background-modifier-hover); box-shadow: none; } &:focus-visible { outline: 1px solid var(--text-muted); outline-offset: 1px; } }
+	.qw-chat-tools { display: flex; align-items: center; gap: 4px; }
+	html & button.qw-chat-tool:not(.qw-x) { display: inline-flex; align-items: center; gap: 5px; width: auto; height: 28px; padding: 0 8px; border: none; border-radius: 8px; background: transparent; box-shadow: none; color: var(--qw-muted); font-size: 12px; cursor: pointer; &:hover { background: var(--background-modifier-hover); color: var(--qw-ink); box-shadow: none; } &:focus-visible { outline: 1px solid var(--text-muted); outline-offset: 1px; } }
+	select.qw-chat-model { max-width: 140px; }
+	.qw-msg-refs { margin-top: 4px; font-size: 11px; color: var(--qw-muted); text-align: end; }
+	.qw-msg-actions { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 4px; }
+	html & button.qw-msg-copy:not(.qw-x) { gap: 4px; }
+	.qw-thought { margin-bottom: 8px; font-size: 12px; color: var(--qw-muted); summary { cursor: pointer; width: fit-content; &:hover { color: var(--qw-ink); } } .qw-thought-text { margin-top: 6px; padding: 8px 10px; border-radius: 8px; background: var(--qw-soft); white-space: pre-wrap; max-height: 200px; overflow-y: auto; line-height: 1.6; } }
+	.qw-prop-buttons { display: inline-flex; gap: 6px; }
+	html & button.qw-prop-undo:not(.qw-x) { height: 26px; padding: 0 8px; font-size: 12px; gap: 4px; }
+	.qw-ask .qw-ask-q { padding: 10px 12px 4px; font-size: 14px; font-weight: 500; }
+	.qw-ask .qw-ask-options { display: flex; flex-direction: column; gap: 6px; padding: 6px 12px 12px; }
+	html & button.qw-ask-option:not(.qw-x) { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 2px; width: 100%; height: auto; padding: 8px 12px; border: none; border-radius: 10px; background: var(--qw-soft); box-shadow: none; color: var(--qw-ink); font-size: 13px; text-align: start; white-space: normal; cursor: pointer; &:hover:not(:disabled) { background: var(--background-modifier-hover); box-shadow: none; } &:disabled { opacity: .5; cursor: default; } &.other { color: var(--qw-muted); } &:focus-visible { outline: 1px solid var(--text-muted); outline-offset: 1px; } }
+}
+
+.qw-prompts { position: absolute; inset-inline: 10px; bottom: 150px; z-index: 40; max-height: min(60vh, 460px); display: flex; flex-direction: column; border-radius: 12px; background: var(--background-primary); box-shadow: 0 0 0 1px var(--qw-line), 0 12px 36px rgba(0,0,0,.2); font-family: var(--font-default); overflow: hidden;
+	.qw-prompts-head { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--qw-line); color: var(--qw-muted); input.qw-prompts-search { flex: 1; border: none; box-shadow: none; background: transparent; padding: 4px 0; font-size: 13px; &:focus, &:focus-visible { outline: none; box-shadow: none; border: none; } } }
+	.qw-prompts-tabs { flex: none; display: flex; gap: 2px; padding: 6px 8px 0; min-height: 32px; overflow-x: auto; &[hidden] { display: none; } }
+	html & button.qw-prompts-tab:not(.qw-x) { flex: none; width: auto; height: 26px; padding: 0 10px; border: none; border-radius: 7px; background: transparent; box-shadow: none; color: var(--qw-muted); font-size: 12px; cursor: pointer; &:hover { background: var(--background-modifier-hover); box-shadow: none; } &.active { background: var(--qw-soft); color: var(--qw-ink); font-weight: 600; } }
+	.qw-prompts-list { flex: 1; overflow-y: auto; padding: 6px; &[hidden] { display: none; } }
+	.qw-prompts-empty { padding: 24px 12px; text-align: center; color: var(--qw-muted); font-size: 13px; }
+	.qw-prompts-row { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border-radius: 8px; cursor: pointer; &:hover, &:focus-visible { background: var(--background-modifier-hover); outline: none; } }
+	.qw-prompts-text { flex: 1; min-width: 0; }
+	.qw-prompts-title { font-size: 13px; font-weight: 600; }
+	.qw-prompts-snippet { margin-top: 2px; font-size: 12px; color: var(--qw-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.qw-prompts-meta { margin-top: 2px; font-size: 11px; color: var(--text-faint); }
+	.qw-prompts-actions { display: flex; align-items: center; gap: 2px; flex: none; }
+	html & button.qw-prompts-icon:not(.qw-x) { width: 24px; height: 24px; padding: 0; border: none; border-radius: 6px; background: transparent; box-shadow: none; color: var(--text-faint); cursor: pointer; &:hover { background: var(--background-modifier-hover); color: var(--qw-ink); box-shadow: none; } &.active { color: var(--qw-accent); svg { fill: currentColor; } } }
+	html & button.qw-prompts-toggle:not(.qw-x) { width: auto; height: 22px; padding: 0 8px; border: none; border-radius: 99px; background: var(--qw-soft); box-shadow: none; color: var(--qw-muted); font-size: 11px; cursor: pointer; &.on { color: var(--qw-ink); box-shadow: inset 0 0 0 1px var(--qw-line); } &:hover { background: var(--background-modifier-hover); box-shadow: none; } }
+	.qw-prompts-foot { flex: none; display: flex; gap: 2px; padding: 6px 8px; border-top: 1px solid var(--qw-line); }
+	html & button.qw-prompts-foot-btn:not(.qw-x) { display: inline-flex; align-items: center; gap: 5px; width: auto; height: 26px; padding: 0 8px; border: none; border-radius: 7px; background: transparent; box-shadow: none; color: var(--qw-muted); font-size: 12px; cursor: pointer; &:hover { background: var(--background-modifier-hover); color: var(--qw-ink); box-shadow: none; } }
+	.qw-prompts-form { padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; .qw-prompts-form-title { font-weight: 600; font-size: 14px; } .qw-prompts-field { display: grid; gap: 4px; font-size: 12px; color: var(--qw-muted); } }
 }

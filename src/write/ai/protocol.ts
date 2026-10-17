@@ -6,7 +6,9 @@ export type AiProposal =
 	| { type: 'setDigest'; text: string }
 	| { type: 'insert'; where: 'cursor' | 'start' | 'end'; markdown: string }
 	| { type: 'replace'; find: string; with: string }
-	| { type: 'image'; prompt: string; where: 'cursor' | 'end'; aspect: string };
+	| { type: 'image'; prompt: string; where: 'cursor' | 'end'; aspect: string }
+	// A question back to the writer, with options to pick from; the answer is sent as the next message.
+	| { type: 'ask'; question: string; options: { label: string; description?: string }[]; allowOther: boolean };
 
 const FENCE = /```qm-action[^\S\n]*\n([\s\S]*?)```/g;
 const ASPECTS = ['16:9', '4:3', '3:2', '1:1', '3:4', '2:3', '9:16', '21:9'];
@@ -21,6 +23,15 @@ export function normalizeProposal(raw: unknown): AiProposal | undefined {
 		case 'insert': { const markdown = str(o.markdown).trim(); return markdown ? { type: 'insert', where: o.where === 'start' || o.where === 'end' ? o.where : 'cursor', markdown } : undefined; }
 		case 'replace': { const find = str(o.find, 4000); const to = str(o.with ?? o.replace); return find.trim() ? { type: 'replace', find, with: to } : undefined; }
 		case 'image': { const prompt = str(o.prompt, 2000).trim(); return prompt ? { type: 'image', prompt, where: o.where === 'end' ? 'end' : 'cursor', aspect: ASPECTS.includes(String(o.aspect)) ? String(o.aspect) : '16:9' } : undefined; }
+		case 'ask': {
+			const question = str(o.question, 400).trim();
+			const options = (Array.isArray(o.options) ? o.options : []).flatMap((item): { label: string; description?: string }[] => {
+				const option = (typeof item === 'string' ? { label: item } : item) as Record<string, unknown> | null;
+				const label = str(option?.label, 80).trim(); const description = str(option?.description, 160).trim();
+				return label ? [{ label, ...(description ? { description } : {}) }] : [];
+			}).slice(0, 6);
+			return question ? { type: 'ask', question, options, allowOther: o.allowOther !== false || !options.length } : undefined;
+		}
 		default: return undefined;
 	}
 }
@@ -38,7 +49,7 @@ export function parseReply(text: string): { text: string; proposals: AiProposal[
 	return { text: shown.replace(/\n{3,}/g, '\n\n').trim(), proposals, pending };
 }
 
-export interface ChatContext { title: string; digest: string; markdown: string; selection: string; headings: string[]; imageReady: boolean }
+export interface ChatContext { title: string; digest: string; markdown: string; selection: string; headings: string[]; imageReady: boolean; includeArticle?: boolean; references?: string }
 export const MAX_ARTICLE_CHARS = 12000;
 export const MAX_SELECTION_CHARS = 3000;
 
@@ -53,13 +64,16 @@ export function buildSystemPrompt(ctx: ChatContext): string {
 		'{"type":"insert","where":"cursor 或 start 或 end","markdown":"要插入的 Markdown"}',
 		'{"type":"replace","find":"原文里要换掉的一段话，必须和原文逐字一致，且在同一个段落内","with":"替换后的内容"}',
 		ctx.imageReady ? '{"type":"image","prompt":"配图的详细描述，说明画面、风格和构图，不要出现文字","where":"cursor 或 end","aspect":"16:9"}' : '（作者还没有添加生图模型，所以不要提出 image 指令；需要配图时提醒作者先在设置里添加生图模型。）',
+		'{"type":"ask","question":"要问作者的一个问题","options":[{"label":"选项","description":"可选的说明"}]}',
 		'replace 的 find 要尽量短而准确；改多处就写多个指令块。不要编造文章里没有的事实。',
+		'需求不清、会影响写法时（比如目标读者、语气、篇幅），先用一个 ask 指令块问作者，给出 2 到 4 个选项，然后停下来等回答，不要一次问多个问题，也不要在没问清时就写一大段。',
 		'',
 		`【文章标题】${ctx.title.trim() || '（还没有标题）'}`,
 		ctx.digest.trim() ? `【摘要】${ctx.digest.trim()}` : '',
 		ctx.headings.length ? `【大纲】\n${ctx.headings.map(h => `- ${h}`).join('\n')}` : '',
 		ctx.selection.trim() ? `【作者当前选中的文字】\n${ctx.selection.trim().slice(0, MAX_SELECTION_CHARS)}` : '',
-		`【正文】\n${body.trim() || '（还没有正文）'}`,
+		ctx.includeArticle === false ? '【正文】（作者这次没有附上正文，只根据对话和附加资料回答）' : `【正文】\n${body.trim() || '（还没有正文）'}`,
+		ctx.references?.trim() ? `\n【作者附加的资料】\n${ctx.references.trim()}` : '',
 	].filter(Boolean).join('\n');
 }
 

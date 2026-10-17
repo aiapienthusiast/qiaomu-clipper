@@ -1,10 +1,15 @@
-import { getLocalStorage, setLocalStorage } from '../utils/storage-utils';
+import { t } from '../utils/ui-text';
+import { getLocalStorage, setLocalStorage, generalSettings, saveSettings } from '../utils/storage-utils';
+import { CHATGPT_BASE, CODEX_BASE, freshOAuth, oauthModelsRequest } from '../utils/oauth/accounts';
+import type { Provider } from '../types/types';
 
 // Picture-making services the writer can call. Keys stay in this browser's local storage (never synced), like the speech-recognition keys.
-export type ImageEngine = 'api' | 'ark' | 'gemini' | 'openrouter';
-export interface ImageModelConfig { id: string; sourceId: string; engine: ImageEngine; name: string; baseUrl: string; apiKey: string; model: string }
+export type ImageEngine = 'api' | 'ark' | 'gemini' | 'openrouter' | 'oauth';
+// One service the writer connected. `models` are the ones offered when making a picture (the first is the default); `model` mirrors it.
+// An account service (`engine: 'oauth'`) has no key: it uses the ChatGPT / Codex sign-in of the provider named by `providerId`.
+export interface ImageModelConfig { id: string; sourceId: string; engine: ImageEngine; name: string; baseUrl: string; apiKey: string; model: string; models: string[]; providerId?: string }
 export interface ImageModelStore { models: ImageModelConfig[]; defaultId: string }
-export interface ImageSource { id: string; name: string; sub: string; engine: ImageEngine; baseUrl: string; keyUrl: string; models: { id: string; name?: string }[] }
+export interface ImageSource { id: string; name: string; sub: string; engine: ImageEngine; baseUrl: string; keyUrl: string; models: { id: string; name?: string }[]; providerId?: string }
 
 export const IMAGE_SOURCES: ImageSource[] = [
 	{ id: 'ark', name: '豆包 Seedream', sub: '火山方舟 · ark.cn-beijing.volces.com', engine: 'ark', baseUrl: 'https://ark.cn-beijing.volces.com/api/v3', keyUrl: 'https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey',
@@ -25,8 +30,12 @@ export function emptyStore(): ImageModelStore { return { models: [], defaultId: 
 
 export function normalizeStore(raw: unknown): ImageModelStore {
 	const value = (raw ?? {}) as Partial<ImageModelStore>;
-	const models = (Array.isArray(value.models) ? value.models : []).filter((m): m is ImageModelConfig => !!m && typeof m.id === 'string' && typeof m.model === 'string' && ['api', 'ark', 'gemini', 'openrouter'].includes(m.engine))
-		.map(m => ({ id: m.id, sourceId: String(m.sourceId || 'custom'), engine: m.engine, name: String(m.name || ''), baseUrl: String(m.baseUrl || '').trim(), apiKey: String(m.apiKey || '').trim(), model: m.model.trim() }));
+	const models = (Array.isArray(value.models) ? value.models : []).filter((m): m is ImageModelConfig => !!m && typeof m.id === 'string' && typeof m.model === 'string' && ['api', 'ark', 'gemini', 'openrouter', 'oauth'].includes(m.engine))
+		.map(m => {
+			const primary = m.model.trim();
+			const list = Array.from(new Set([primary, ...(Array.isArray(m.models) ? m.models : []).filter((x): x is string => typeof x === 'string').map(x => x.trim())].filter(Boolean)));
+			return { id: m.id, sourceId: String(m.sourceId || 'custom'), engine: m.engine, name: String(m.name || ''), baseUrl: String(m.baseUrl || '').trim(), apiKey: String(m.apiKey || '').trim(), model: primary || list[0] || '', models: list, ...(typeof m.providerId === 'string' && m.providerId ? { providerId: m.providerId } : {}) };
+		});
 	const defaultId = models.some(m => m.id === value.defaultId) ? String(value.defaultId) : models[0]?.id ?? '';
 	return { models, defaultId };
 }
@@ -34,15 +43,31 @@ export function normalizeStore(raw: unknown): ImageModelStore {
 export async function loadImageModels(): Promise<ImageModelStore> { return normalizeStore(await getLocalStorage(KEY)); }
 export async function saveImageModels(store: ImageModelStore): Promise<void> { await setLocalStorage(KEY, normalizeStore(store)); }
 
+export const providerOf = (config: Pick<ImageModelConfig, 'providerId'>): Provider | undefined => generalSettings.providers.find(p => p.id === config.providerId && p.oauth);
+// Every model the writer can pick for this service when making a picture.
+export const modelsOf = (config: ImageModelConfig): string[] => (config.models.length ? config.models : [config.model]).filter(Boolean);
+
 export function isReady(model: ImageModelConfig): boolean {
 	if (!model.model.trim()) return false;
+	if (model.engine === 'oauth') return !!providerOf(model);
 	const local = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])/i.test(model.baseUrl);
 	if (model.engine === 'api') return !!model.baseUrl.trim() && (!!model.apiKey.trim() || local);
 	return !!model.apiKey.trim();
 }
-export function labelOf(model: ImageModelConfig): string {
-	const source = IMAGE_SOURCES.find(s => s.id === model.sourceId);
-	return model.name.trim() || `${source ? source.name : model.engine} · ${model.model}`;
+export function serviceName(model: ImageModelConfig): string {
+	if (model.name.trim()) return model.name.trim();
+	if (model.engine === 'oauth') return providerOf(model)?.name ?? t('账号登录');
+	return IMAGE_SOURCES.find(s => s.id === model.sourceId)?.name ?? model.engine;
+}
+export function labelOf(model: ImageModelConfig, modelId = model.model): string { return `${serviceName(model)} · ${modelId}`; }
+
+// Picture services that need no key: the ChatGPT / Codex accounts already signed in under the language-model providers.
+export function accountSources(): ImageSource[] {
+	return generalSettings.providers.filter(p => p.oauth).map(p => ({
+		id: `account:${p.id}`, providerId: p.id, engine: 'oauth' as const, baseUrl: '', keyUrl: '', name: p.name,
+		sub: p.oauth!.kind === 'codex' ? t('Codex 账号 · 用订阅额度生图') : t('ChatGPT 账号 · gpt-image'),
+		models: p.oauth!.kind === 'codex' ? [{ id: 'gpt-5.5' }, { id: 'gpt-5.4' }] : [{ id: 'gpt-image-1' }],
+	}));
 }
 export function readyModels(store: ImageModelStore): ImageModelConfig[] { return store.models.filter(isReady); }
 
@@ -85,10 +110,13 @@ export function arkBody(model: string, prompt: string, aspect: string): Record<s
 	return { model, prompt: `${prompt.trim()}\nImage aspect ratio: ${aspect}.`, size: arkSize(model, aspect), response_format: 'b64_json', watermark: false };
 }
 
-export async function generateImage(config: ImageModelConfig, prompt: string, aspect: string = '16:9', signal?: AbortSignal): Promise<Blob> {
+export async function generateImage(config: ImageModelConfig, prompt: string, aspect: string = '16:9', signal?: AbortSignal, modelId?: string): Promise<Blob> {
 	const text = prompt.trim();
+	// The writer may pick any of the service's models for this picture.
+	if (modelId && modelId !== config.model) config = { ...config, model: modelId };
 	if (!text) throw new Error('empty-prompt');
 	if (!isReady(config)) throw new Error('not-ready');
+	if (config.engine === 'oauth') return generateWithAccount(config, text, aspect, signal);
 	const key = config.apiKey.trim();
 	const source = IMAGE_SOURCES.find(s => s.id === config.sourceId);
 	const base = trimBase(config.baseUrl || source?.baseUrl || '');
@@ -122,4 +150,90 @@ export async function generateImage(config: ImageModelConfig, prompt: string, as
 	const url = item?.url;
 	if (!url) throw new Error('empty-image');
 	return await fromUrl(url, signal);
+}
+
+
+// ---- ChatGPT / Codex accounts ----------------------------------------------------------------------------------------------
+// A ChatGPT sign-in works like an API key for OpenAI's Images API. A Codex sign-in goes through the Codex backend's Responses API,
+// where the model draws with its built-in image tool (the same way the Codex app does).
+async function accountHeaders(provider: Provider): Promise<{ oauth: NonNullable<Provider['oauth']>; headers: Record<string, string> }> {
+	const oauth = await freshOAuth(provider, () => saveSettings());
+	const headers: Record<string, string> = { 'Content-Type': 'application/json', Authorization: `Bearer ${oauth.access}` };
+	return { oauth, headers };
+}
+
+export function imageFromResponsesEvents(lines: string[]): { b64?: string; partial?: string } {
+	let partial: string | undefined; let final: string | undefined;
+	for (const line of lines) {
+		if (!line.startsWith('data:')) continue;
+		const raw = line.slice(5).trim();
+		if (!raw || raw === '[DONE]') continue;
+		try {
+			const data = JSON.parse(raw);
+			if (data.type === 'response.image_generation_call.partial_image' && typeof data.partial_image_b64 === 'string') partial = data.partial_image_b64;
+			const item = data.item ?? data.output_item;
+			if ((data.type === 'response.output_item.done' || data.type === 'response.output_item.added') && item?.type === 'image_generation_call' && typeof item.result === 'string' && item.result) final = item.result;
+			for (const out of data.response?.output ?? []) if (out?.type === 'image_generation_call' && typeof out.result === 'string' && out.result) final = out.result;
+			if (data.type === 'response.failed' || data.type === 'error') throw new Error(String(data.response?.error?.message ?? data.error?.message ?? data.message ?? 'generation failed'));
+		} catch (error) { if ((error as Error).message && !(error instanceof SyntaxError)) throw error; }
+	}
+	return { b64: final, partial };
+}
+
+async function generateWithAccount(config: ImageModelConfig, prompt: string, aspect: string, signal?: AbortSignal): Promise<Blob> {
+	const provider = providerOf(config);
+	if (!provider?.oauth) throw new Error('not-ready');
+	const { oauth, headers } = await accountHeaders(provider);
+	const size = openAiSize(aspect);
+	if (oauth.kind !== 'codex') {
+		const json = await send(`${CHATGPT_BASE}/images/generations`, headers, { model: config.model, prompt, n: 1, size }, signal);
+		const item = json?.data?.[0];
+		if (item?.b64_json) return fromBase64(item.b64_json);
+		if (item?.url) return await fromUrl(item.url, signal);
+		throw new Error('empty-image');
+	}
+	if (oauth.accountId) headers['chatgpt-account-id'] = oauth.accountId;
+	headers.Accept = 'text/event-stream'; headers['OpenAI-Beta'] = 'responses=experimental'; headers.originator = 'codex_cli_rs';
+	const body = { model: config.model, instructions: 'Draw exactly one picture for the request using the image generation tool. Do not describe it in text.', input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text: prompt }] }], tools: [{ type: 'image_generation', output_format: 'png', size }], tool_choice: { type: 'image_generation' }, store: false, stream: true };
+	const timeout = AbortSignal.timeout ? AbortSignal.timeout(MAX_WAIT_MS) : undefined;
+	const res = await fetch(`${CODEX_BASE}/responses`, { method: 'POST', headers, body: JSON.stringify(body), signal: signal && timeout && (AbortSignal as any).any ? (AbortSignal as any).any([signal, timeout]) : signal ?? timeout, credentials: 'omit' });
+	if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 160)}`);
+	const found = imageFromResponsesEvents((await res.text()).split('\n'));
+	const b64 = found.b64 ?? found.partial;
+	if (!b64) throw new Error('empty-image');
+	return fromBase64(b64);
+}
+
+// ---- which models a service offers --------------------------------------------------------------------------------------------
+const IMAGE_ID = /image|flux|diffusion|dall|cogview|seedream|seededit|imagen|kolors|wanx|hunyuan-?image|stable|sd3|midjourney|banana/i;
+export interface ListedModel { id: string; name?: string }
+
+// Best effort, like Qiaomu Design: the service's own list narrowed to picture models (OpenRouter and Gemini can say so themselves).
+export async function fetchImageModels(source: ImageSource, baseUrl: string, apiKey: string, signal?: AbortSignal): Promise<ListedModel[]> {
+	const base = trimBase(baseUrl || source.baseUrl);
+	const get = async (url: string, headers: Record<string, string> = {}) => { const res = await fetch(url, { headers, signal, credentials: 'omit' }); if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); };
+	if (source.engine === 'oauth') {
+		const provider = generalSettings.providers.find(p => p.id === source.providerId && p.oauth);
+		if (!provider?.oauth) throw new Error('not-ready');
+		const oauth = await freshOAuth(provider, () => saveSettings());
+		const request = oauthModelsRequest(oauth);
+		const json = await get(request.url, request.headers);
+		const list: any[] = Array.isArray(json?.data) ? json.data : Array.isArray(json?.models) ? json.models : [];
+		const ids = list.map(m => ({ id: String(m.id ?? m.slug ?? ''), name: typeof m.display_name === 'string' ? m.display_name : undefined })).filter(m => m.id);
+		// A Codex account draws through a chat model; a ChatGPT account uses the image models.
+		return oauth.kind === 'codex' ? ids.filter(m => /^gpt-5|codex/i.test(m.id)) : ids.filter(m => IMAGE_ID.test(m.id));
+	}
+	if (source.id === 'openrouter') {
+		const json = await get('https://openrouter.ai/api/v1/models?output_modalities=image');
+		return (json?.data ?? []).map((m: any) => ({ id: m.id, name: m.name }));
+	}
+	if (source.engine === 'gemini') {
+		const json = await get(`${base}/models?pageSize=200`, { 'x-goog-api-key': apiKey });
+		return (json?.models ?? []).filter((m: any) => /image/i.test(m.name)).map((m: any) => ({ id: String(m.name).replace(/^models\//, ''), name: m.displayName }));
+	}
+	if (source.engine === 'ark') return source.models;
+	const json = await get(`${base}/models`, apiKey ? { Authorization: `Bearer ${apiKey}` } : {});
+	const all: ListedModel[] = (json?.data ?? json?.models ?? []).map((m: any) => ({ id: String(m.id ?? m.name ?? ''), name: typeof m.display_name === 'string' ? m.display_name : undefined })).filter((m: ListedModel) => m.id);
+	const images = all.filter(m => IMAGE_ID.test(m.id));
+	return images.length ? images : all;
 }

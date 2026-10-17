@@ -65,4 +65,13 @@ dialog.im-dialog { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh
 	.im-field { display: grid; gap: 4px; margin-top: 12px; font-size: 12px; color: var(--text-muted); input { font-size: 14px; } .im-key-link { font-size: 12px; justify-self: start; } }
 	.im-advanced { margin-top: 12px; summary { cursor: pointer; font-size: 12px; color: var(--text-muted); } }
 	.im-error { color: var(--text-error, #c0392b); }
+	.im-group { margin: 14px 0 6px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+	.im-hint { font-size: 11px; color: var(--text-muted); }
+	.im-chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; align-items: center; }
+	.im-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 10px; border-radius: 99px; background: var(--background-secondary); font-size: 12px; color: var(--text-normal); &.primary { box-shadow: inset 0 0 0 1px var(--text-normal); } }
+	.im-chip-tag { font-size: 10px; color: var(--text-muted); padding-inline-end: 4px; }
+	html & button.im-chip-btn:not(.qw-x) { width: 20px; height: 20px; padding: 0; border: none; border-radius: 99px; background: transparent; box-shadow: none; color: var(--text-muted); cursor: pointer; font-size: 12px; &:hover { background: var(--background-modifier-hover); color: var(--text-normal); box-shadow: none; } }
+	.im-models { display: flex; flex-direction: column; max-height: 220px; overflow-y: auto; margin-top: 6px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--background-modifier-border); }
+	html & button.im-model:not(.qw-x) { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; height: auto; padding: 7px 10px; border: none; border-radius: 0; background: transparent; box-shadow: none; text-align: start; white-space: normal; font-size: 13px; color: var(--text-normal); cursor: pointer; &:hover { background: var(--background-modifier-hover); box-shadow: none; } &.on { background: var(--background-secondary); font-weight: 600; } &:focus-visible { outline: 1px solid var(--text-muted); outline-offset: -2px; } }
+	.im-load { display: flex; align-items: center; gap: 10px; margin-top: 8px; .qw-dialog-note { margin: 0; } }
 }

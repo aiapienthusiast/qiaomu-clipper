@@ -1,7 +1,7 @@
 import { openDb, requestResult, transactionDone } from '../db';
 import { newId } from '../images';
 
-export interface ChatMessage { role: 'user' | 'assistant'; content: string; applied?: number[] }
+export interface ChatMessage { role: 'user' | 'assistant'; content: string; applied?: number[]; thought?: string; thinkMs?: number; refs?: string[] }
 export interface ChatSession { id: string; title: string; updatedAt: number; messages: ChatMessage[] }
 
 export const MAX_SESSIONS = 10;
@@ -20,7 +20,7 @@ export function normalizeSessions(raw: unknown): ChatSession[] {
 	return (Array.isArray(raw) ? raw : []).filter((s: any) => s && typeof s.id === 'string' && Array.isArray(s.messages)).map((s: any): ChatSession => ({
 		id: s.id, title: String(s.title ?? ''), updatedAt: Number(s.updatedAt) || 0,
 		messages: s.messages.filter((m: any) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string').slice(-MAX_MESSAGES)
-			.map((m: any): ChatMessage => ({ role: m.role, content: m.content.slice(0, MAX_CHARS), ...(Array.isArray(m.applied) ? { applied: m.applied.filter((n: unknown) => Number.isInteger(n)) } : {}) })),
+			.map((m: any): ChatMessage => ({ role: m.role, content: m.content.slice(0, MAX_CHARS), ...(Array.isArray(m.applied) ? { applied: m.applied.filter((n: unknown) => Number.isInteger(n)) } : {}), ...(typeof m.thought === 'string' && m.thought ? { thought: m.thought.slice(0, 6000) } : {}), ...(typeof m.thinkMs === 'number' ? { thinkMs: m.thinkMs } : {}), ...(Array.isArray(m.refs) ? { refs: m.refs.filter((r: unknown): r is string => typeof r === 'string').slice(0, 8) } : {}) })),
 	})).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, MAX_SESSIONS);
 }
 

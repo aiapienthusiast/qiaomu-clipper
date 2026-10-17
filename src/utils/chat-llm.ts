@@ -3,6 +3,7 @@ import { generalSettings, saveSettings } from './storage-utils';
 import { freshOAuth, responsesRequest, responsesText } from './oauth/accounts';
 import browser from './browser-polyfill';
 import type { ModelConfig, Provider } from '../types/types';
+import { thinkingFields, thoughtFromLine, validEffort } from './chat-thinking';
 
 import { t } from './ui-text';
 import { opencodeHeaders, supportsOpenCodeGoChat } from './opencode-go';
@@ -16,7 +17,11 @@ interface StreamOptions {
 	messages: ChatTurn[];
 	signal?: AbortSignal;
 	sessionId?: string;
+	// This request's thinking strength (low / medium / high …); absent keeps the model's own setting.
+	reasoningEffort?: string;
 	onDelta: (text: string) => void;
+	// The model's reasoning text, for services that stream it.
+	onThought?: (text: string) => void;
 }
 
 type Kind = 'anthropic' | 'gemini' | 'ollama' | 'openai' | 'responses';
@@ -51,30 +56,32 @@ export function enabledChatModels(): ModelConfig[] {
 	return generalSettings.models.filter(model => model.enabled && generalSettings.providers.some(p => p.id === model.providerId));
 }
 
-function buildRequest(provider: Provider, model: ModelConfig, system: string, messages: ChatTurn[], sessionId?: string): { url: string; init: RequestInit } {
+export function buildRequest(provider: Provider, model: ModelConfig, system: string, messages: ChatTurn[], sessionId?: string, effort?: string): { url: string; init: RequestInit } {
 	provider = { ...provider, apiKey: magpieKey(provider) };
 	const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(opencodeHeaders(provider.baseUrl, sessionId) || {}) };
 	const name = provider.name.toLowerCase();
 	let url = provider.baseUrl;
 	let body: unknown;
-	switch (kindOf(provider)) {
+	const kindNow = kindOf(provider);
+	const thinking = thinkingFields(kindNow, provider, effort);
+	switch (kindNow) {
 		case 'gemini':
 			url = `https://generativelanguage.googleapis.com/v1beta/models/${model.providerModelId}:streamGenerateContent?alt=sse`;
 			headers['X-goog-api-key'] = provider.apiKey;
-			body = { systemInstruction: { parts: [{ text: system }] }, contents: messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: geminiParts(m) })), generationConfig: { maxOutputTokens: 8000 } };
+			body = { systemInstruction: { parts: [{ text: system }] }, contents: messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: geminiParts(m) })), generationConfig: { maxOutputTokens: 8000 + (thinking.geminiBudget ?? 0), ...(thinking.geminiBudget ? { thinkingConfig: { thinkingBudget: thinking.geminiBudget } } : {}) } };
 			break;
 		case 'anthropic':
 			headers['x-api-key'] = provider.apiKey;
 			headers['anthropic-version'] = '2023-06-01';
 			headers['anthropic-dangerous-direct-browser-access'] = 'true';
-			body = { model: model.providerModelId, max_tokens: 8000, system, messages: messages.map(m => ({ role: m.role, content: anthropicContent(m) })), stream: true };
+			body = { model: model.providerModelId, max_tokens: 8000 + (thinking.anthropicBudget ?? 0), system, messages: messages.map(m => ({ role: m.role, content: anthropicContent(m) })), stream: true, ...(thinking.anthropicBudget ? { thinking: { type: 'enabled', budget_tokens: thinking.anthropicBudget } } : {}) };
 			break;
 		case 'ollama':
 			body = { model: model.providerModelId, messages: [{ role: 'system', content: system }, ...messages.map(m => ({ role: m.role, content: m.content + (m.images?.length ? '\n' + m.images.map(image => image.label).join('\n') : ''), ...(m.images?.length ? { images: m.images.map(image => imageData(image).data) } : {}) }))], stream: true, options: { num_ctx: 32768 } };
 			break;
 		case 'responses':
 			if (provider.apiKey) headers['Authorization'] = `Bearer ${provider.apiKey}`;
-			body = { model: model.providerModelId, instructions: system, input: messages.map(m => ({ role: m.role, content: responsesContent(m) })), stream: true, store: false };
+			body = { model: model.providerModelId, instructions: system, input: messages.map(m => ({ role: m.role, content: responsesContent(m) })), stream: true, store: false, ...(thinking.body ?? {}) };
 			break;
 		default: {
 			const withSystem = [{ role: 'system', content: system }, ...messages.map(m => ({ role: m.role, content: openAIContent(m) }))];
@@ -86,7 +93,7 @@ function buildRequest(provider: Provider, model: ModelConfig, system: string, me
 				url = normalizeOpenAIChatEndpoint(provider.baseUrl);
 				if (name.includes('hugging')) url = provider.baseUrl.replace('{model-id}', model.providerModelId);
 				if (provider.apiKey) headers['Authorization'] = `Bearer ${provider.apiKey}`;
-				body = { model: model.providerModelId, messages: withSystem, stream: true, ...(provider.presetId === 'magpie' && model.reasoningEffort && model.reasoningEfforts?.includes(model.reasoningEffort) ? { reasoning_effort: model.reasoningEffort } : {}), ...(name.includes('deepseek') ? { thinking: { type: 'disabled' } } : {}) };
+				body = { model: model.providerModelId, messages: withSystem, stream: true, ...(provider.presetId === 'magpie' && model.reasoningEffort && model.reasoningEfforts?.includes(model.reasoningEffort) ? { reasoning_effort: model.reasoningEffort } : {}), ...(name.includes('deepseek') ? { thinking: { type: 'disabled' } } : {}), ...(thinking.body ?? {}) };
 			}
 		}
 	}
@@ -123,22 +130,26 @@ function streamViaBackground(options: StreamOptions): Promise<string> {
 		};
 		const abort = () => finish(new DOMException('Aborted', 'AbortError'));
 		port.onMessage.addListener(raw => {
-			const message = raw as { delta?: string; error?: string; done?: boolean };
+			const message = raw as { delta?: string; thought?: string; error?: string; done?: boolean };
 			if (typeof message.delta === 'string') { answer += message.delta; options.onDelta(message.delta); }
+			if (typeof message.thought === 'string') options.onThought?.(message.thought);
 			if (message.error) finish(new Error(message.error));
 			else if (message.done) finish();
 		});
 		port.onDisconnect.addListener(() => finish(new Error(t('AI 连接已中断，请重试'))));
 		if (options.signal?.aborted) { abort(); return; }
 		options.signal?.addEventListener('abort', abort, { once: true });
-		port.postMessage({ modelId: options.model.id, system: options.system, messages: options.messages, ...(options.sessionId !== undefined ? { sessionId: options.sessionId } : {}) });
+		port.postMessage({ modelId: options.model.id, system: options.system, messages: options.messages, ...(options.sessionId !== undefined ? { sessionId: options.sessionId } : {}), ...(options.reasoningEffort ? { reasoningEffort: options.reasoningEffort } : {}) });
 	});
 }
 
-export async function streamChat({ model, system, messages, signal, onDelta, sessionId }: StreamOptions): Promise<string> {
+export async function streamChat({ model: chosen, system, messages, signal, onDelta, onThought, sessionId, reasoningEffort }: StreamOptions): Promise<string> {
+	const effort = validEffort(reasoningEffort);
+	// For account (OAuth) models the level travels on the model itself.
+	const model: ModelConfig = effort ? { ...chosen, reasoningEffort: effort, reasoningEfforts: Array.from(new Set([...(chosen.reasoningEfforts ?? []), effort])) } : chosen;
 	if (!validChatTurns(messages)) throw new Error(t('图片数量或大小超出限制，请减少所选图片后重试。'));
 	if (typeof location !== 'undefined' && /^https?:$/.test(location.protocol)) {
-		return streamViaBackground({ model, system, messages, signal, onDelta, sessionId });
+		return streamViaBackground({ model: chosen, system, messages, signal, onDelta, onThought, sessionId, reasoningEffort: effort });
 	}
 	const provider = generalSettings.providers.find(p => p.id === model.providerId);
 	if (!provider) throw new Error(`Provider not found for model ${model.name}`);
@@ -147,7 +158,7 @@ export async function streamChat({ model, system, messages, signal, onDelta, ses
 	if (!provider.oauth && !supportsOpenCodeGoChat(provider.baseUrl, model.providerModelId)) throw new Error(t('此 OpenCode Go 模型或端点尚不支持，请从聊天模型列表中选择。'));
 	const { url, init } = provider.oauth
 		? responsesRequest(await freshOAuth(provider, () => saveSettings()), model, system, messages)
-		: buildRequest(provider, model, system, messages, sessionId);
+		: buildRequest(provider, model, system, messages, sessionId, effort);
 	const response = await fetch(url, { ...init, signal });
 	if (!response.ok) {
 		const text = (await response.text()).slice(0, 300);
@@ -171,6 +182,7 @@ export async function streamChat({ model, system, messages, signal, onDelta, ses
 		for (const line of lines) {
 			const text = textFromLine(kind, line.trim());
 			if (text) { full += text; onDelta(text); }
+			else if (onThought) { const thought = thoughtFromLine(kind, line.trim()); if (thought) onThought(thought); }
 		}
 	}
 	const tail = textFromLine(kind, buffer.trim());

@@ -17,6 +17,7 @@ html button.qw-btn:not(.qw-x), html a.qw-btn:not(.qw-x) {
 	&:hover { background: var(--background-modifier-hover); box-shadow: none; }
 	&:focus-visible { outline: 1px solid var(--text-muted); outline-offset: 2px; }
 	&:disabled { opacity: .5; cursor: not-allowed; }
+	&[hidden] { display: none; }
 }
 html button.qw-btn.qw-btn-primary:not(.qw-x) { background: var(--text-normal); color: var(--background-primary); &:hover { background: var(--text-normal); opacity: .86; } }
 html button.qw-btn.qw-btn-danger:not(.qw-x) { background: var(--background-modifier-error); color: var(--text-error, #c0392b); &:hover { background: var(--background-modifier-error-border); } }

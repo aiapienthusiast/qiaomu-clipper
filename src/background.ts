@@ -17,6 +17,7 @@ import { describeHelperFailure } from './utils/native-helper-prompt';
 import { callHelper } from './utils/native-helper-call';
 import { incrementStat, loadSettings } from './utils/storage-utils';
 import { enabledChatModels, streamChat } from './utils/chat-llm';
+import { validEffort } from './utils/chat-thinking';
 import { openStudyWithPlayback } from './utils/study-playback-handoff';
 import { audioStudyPath, videoKey, videoStudyPath } from './utils/video-source';
 import { isSiteOn, loadStudySites, siteOf } from './utils/study-sites';
@@ -1361,7 +1362,7 @@ browser.runtime.onConnect.addListener(port => {
 	port.onDisconnect.addListener(() => controller.abort());
 	let started = false;
 	port.onMessage.addListener(async raw => {
-		const request = raw as { modelId?: string; system?: string; messages?: any[]; sessionId?: string };
+		const request = raw as { modelId?: string; system?: string; messages?: any[]; sessionId?: string; reasoningEffort?: string };
 		if (started) return;
 		started = true;
 		const send = (message: unknown) => { if (!controller.signal.aborted) port.postMessage(message); };
@@ -1371,7 +1372,7 @@ browser.runtime.onConnect.addListener(port => {
 			if (!model || typeof request.system !== 'string' || !Array.isArray(request.messages)
 				|| (request.sessionId !== undefined && !validChatSession(request.sessionId))
 				|| !validChatTurns(request.messages)) throw new Error(t('无效的 AI 对话请求'));
-			await streamChat({ model, system: request.system, sessionId: request.sessionId, messages: request.messages, signal: controller.signal, onDelta: delta => send({ delta }) });
+			await streamChat({ model, system: request.system, sessionId: request.sessionId, messages: request.messages, reasoningEffort: validEffort(request.reasoningEffort), signal: controller.signal, onDelta: delta => send({ delta }), onThought: thought => send({ thought }) });
 			send({ done: true });
 		} catch (error) { send({ error: error instanceof Error ? error.message : t('AI 请求失败') }); }
 	});

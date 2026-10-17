@@ -1,92 +1,157 @@
-import { ImagePlus, Pencil, Star, Trash2 } from 'lucide';
+import { ImagePlus, Pencil, RefreshCw, Star, Trash2 } from 'lucide';
+import browser from '../utils/browser-polyfill';
 import { t } from '../utils/ui-text';
 import { askConfirm, h, icon, toast } from '../write/editor/dom';
-import { IMAGE_SOURCES, isReady, loadImageModels, saveImageModels, type ImageModelConfig, type ImageModelStore } from '../write/image-models';
+import { IMAGE_SOURCES, accountSources, fetchImageModels, isReady, loadImageModels, modelsOf, saveImageModels, serviceName, type ImageModelConfig, type ImageModelStore, type ImageSource, type ListedModel } from '../write/image-models';
 import { newId } from '../write/images';
 
-// "Picture models" in the settings: the services that make pictures for articles and covers.
+// "Picture models" in the settings: connect a service once, load every model it offers, and choose which ones can be used for a picture.
 export async function initializeImageModelSettings(): Promise<void> {
 	const root = document.getElementById('image-models-home');
 	if (!root) return;
 	let store: ImageModelStore = await loadImageModels();
 	const list = h('div', { class: 'im-list', role: 'list' });
-	const add = h('button', { type: 'button', class: 'write-btn write-btn-primary' }, icon(ImagePlus, 15), t('添加生图模型'));
-	root.append(h('div', { class: 'im-bar' }, add), list, h('p', { class: 'write-note', text: t('密钥只保存在这台电脑的浏览器里，不会同步。生成图片时，你写的描述会发给你选的服务。') }));
+	const add = h('button', { type: 'button', class: 'write-btn write-btn-primary' }, icon(ImagePlus, 15), t('添加生图服务'));
+	root.append(h('div', { class: 'im-bar' }, add), list, h('p', { class: 'write-note', text: t('密钥只保存在这台电脑的浏览器里，不会同步。生成图片时，你写的描述会发给你选的服务。账号登录的服务不需要密钥，沿用「LLM 提供商」里已登录的账号。') }));
 
 	const persist = async () => { await saveImageModels(store); store = await loadImageModels(); render(); };
+	const sourceOf = (config: ImageModelConfig): ImageSource | undefined => (config.engine === 'oauth' ? accountSources().find(s => s.providerId === config.providerId) : IMAGE_SOURCES.find(s => s.id === config.sourceId));
 
 	function render() {
 		list.textContent = '';
-		if (!store.models.length) { list.append(h('div', { class: 'write-empty' }, h('p', { class: 'write-empty-title', text: t('还没有生图模型') }), h('p', { text: t('添加一个后，就能在写长文里让 AI 配图、生成封面。') }))); return; }
-		for (const model of store.models) {
-			const isDefault = model.id === store.defaultId;
-			const source = IMAGE_SOURCES.find(s => s.id === model.sourceId);
+		if (!store.models.length) { list.append(h('div', { class: 'write-empty' }, h('p', { class: 'write-empty-title', text: t('还没有生图服务') }), h('p', { text: t('添加一个后，就能在写长文里让 AI 配图、生成封面，生成时还能挑具体用哪个模型。') }))); return; }
+		for (const config of store.models) {
+			const isDefault = config.id === store.defaultId;
 			const buttons = h('div', { class: 'write-row-actions im-actions' });
 			const mk = (label: string, ic: Node, run: () => void | Promise<void>, danger = false) => {
 				const b = h('button', { type: 'button', class: `write-icon${danger ? ' danger' : ''}`, title: label, 'aria-label': label }, ic);
 				b.addEventListener('click', () => { void Promise.resolve(run()); });
 				buttons.append(b);
 			};
-			if (!isDefault) mk(t('设为默认'), icon(Star, 15), async () => { store.defaultId = model.id; await persist(); });
-			mk(t('编辑'), icon(Pencil, 15), () => openDialog(model));
+			if (!isDefault) mk(t('设为默认'), icon(Star, 15), async () => { store.defaultId = config.id; await persist(); });
+			mk(t('编辑'), icon(Pencil, 15), () => openDialog(config));
 			mk(t('删除'), icon(Trash2, 15), async () => {
-				if (!(await askConfirm({ title: t('删除这个生图模型？'), note: t('只删除这里保存的设置和密钥。'), confirm: t('删除'), cancel: t('取消'), danger: true }))) return;
-				store.models = store.models.filter(m => m.id !== model.id); await persist();
+				if (!(await askConfirm({ title: t('删除这个生图服务？'), note: t('只删除这里保存的设置和密钥。'), confirm: t('删除'), cancel: t('取消'), danger: true }))) return;
+				store.models = store.models.filter(m => m.id !== config.id); await persist();
 			}, true);
+			const models = modelsOf(config);
 			list.append(h('div', { class: 'write-row im-row', role: 'listitem' }, h('div', { class: 'write-row-main' },
-				h('div', { class: 'write-info' }, h('div', { class: 'write-title' }, model.name.trim() || source?.name || model.engine, isDefault ? h('span', { class: 'write-badge im-default', text: t('默认') }) : null),
-					h('div', { class: 'write-meta' }, h('span', { text: model.model }), isReady(model) ? null : h('span', { class: 'im-warn', text: t('还没填完整') })))), buttons));
+				h('div', { class: 'write-info' }, h('div', { class: 'write-title' }, serviceName(config), isDefault ? h('span', { class: 'write-badge im-default', text: t('默认') }) : null),
+					h('div', { class: 'write-meta' }, h('span', { text: models.length > 1 ? t('{0} 等 {1} 个模型', [config.model, models.length]) : config.model }), isReady(config) ? null : h('span', { class: 'im-warn', text: config.engine === 'oauth' ? t('账号已退出登录') : t('还没填完整') })))), buttons));
 		}
 	}
 
 	function openDialog(existing?: ImageModelConfig): void {
-		let source = IMAGE_SOURCES.find(s => s.id === existing?.sourceId) ?? IMAGE_SOURCES[0];
-		const dialog = h('dialog', { class: 'qw-dialog im-dialog', 'aria-label': existing ? t('编辑生图模型') : t('添加生图模型') });
-		const cards = h('div', { class: 'im-sources', role: 'radiogroup', 'aria-label': t('服务商') });
-		const key = h('input', { class: 'qw-field', type: 'password', autocomplete: 'off', spellcheck: false, placeholder: 'API key' });
-		const model = h('input', { class: 'qw-field', type: 'text', list: 'im-model-presets', spellcheck: false });
-		const presets = h('datalist', { id: 'im-model-presets' });
-		const base = h('input', { class: 'qw-field', type: 'text', spellcheck: false });
-		const name = h('input', { class: 'qw-field', type: 'text', spellcheck: false, placeholder: t('不填就用「服务商 · 模型」') });
-		const keyLink = h('a', { class: 'im-key-link', target: '_blank', rel: 'noopener noreferrer', text: t('获取密钥') });
-		const error = h('p', { class: 'qw-dialog-note im-error', role: 'alert', hidden: true });
-		key.value = existing?.apiKey ?? ''; model.value = existing?.model ?? ''; base.value = existing?.baseUrl ?? ''; name.value = existing?.name ?? '';
+		const accounts = accountSources();
+		const all: ImageSource[] = [...accounts, ...IMAGE_SOURCES];
+		let source: ImageSource | undefined = existing ? sourceOf(existing) ?? all.find(s => s.id === 'custom') : undefined;
+		const dialog = h('dialog', { class: 'qw-dialog im-dialog', 'aria-label': existing ? t('编辑生图服务') : t('添加生图服务') });
+		const body = h('div', { class: 'im-body' });
+		const selected: string[] = existing ? [...modelsOf(existing)] : [];
+		let loaded: ListedModel[] = [];
+		const state = { key: existing?.apiKey ?? '', base: existing?.baseUrl ?? '', name: existing?.name ?? '' };
+		const close = () => { dialog.close(); dialog.remove(); };
+		dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
+		dialog.append(body);
+		document.body.append(dialog);
+
 		const field = (label: string, input: HTMLElement, extra?: HTMLElement | null) => h('label', { class: 'im-field' }, h('span', { text: label }), input, extra);
 
-		const pick = (next: typeof source, keepModel = false) => {
-			source = next;
-			cards.querySelectorAll('button').forEach(b => { const on = (b as HTMLElement).dataset.id === next.id; b.classList.toggle('active', on); b.setAttribute('aria-checked', String(on)); });
-			presets.textContent = ''; for (const m of next.models) presets.append(h('option', { value: m.id, label: m.name ?? m.id }));
-			if (!keepModel) model.value = next.models[0]?.id ?? '';
-			base.placeholder = next.baseUrl || 'https://…/v1';
-			keyLink.hidden = !next.keyUrl; if (next.keyUrl) keyLink.href = next.keyUrl;
-		};
-		for (const s of IMAGE_SOURCES) {
-			const card = h('button', { type: 'button', class: 'im-source', role: 'radio', 'aria-checked': 'false', dataset: { id: s.id } }, h('span', { class: 'im-source-name', text: s.id === 'custom' ? t('自定义') : s.name }), h('span', { class: 'im-source-sub', text: s.id === 'custom' ? t('OpenAI 兼容 /images/generations') : s.sub }));
-			card.addEventListener('click', () => pick(s));
-			cards.append(card);
+		function gallery() {
+			body.textContent = '';
+			const groups: { title: string; items: ImageSource[]; hint?: string }[] = [
+				{ title: t('账号登录（不用密钥）'), items: accounts, hint: accounts.length ? undefined : t('还没有登录的 ChatGPT 或 Codex 账号。先到「LLM 提供商与模型」里登录，这里就会出现。') },
+				{ title: t('云服务商'), items: IMAGE_SOURCES.filter(s => s.id !== 'custom') },
+				{ title: t('自定义'), items: IMAGE_SOURCES.filter(s => s.id === 'custom') },
+			];
+			body.append(h('h2', { class: 'qw-dialog-title', text: t('添加生图服务') }), h('p', { class: 'qw-dialog-note', text: t('先选一个来源，下一步选模型。') }));
+			for (const group of groups) {
+				body.append(h('div', { class: 'im-group', text: group.title }));
+				if (group.hint) { const hint = h('p', { class: 'qw-dialog-note', text: group.hint }); const go = h('a', { href: browser.runtime.getURL('settings.html?section=interpreter'), target: '_blank', text: t('去登录') }); hint.append(' ', go); body.append(hint); }
+				const grid = h('div', { class: 'im-sources', role: 'radiogroup', 'aria-label': group.title });
+				for (const s of group.items) {
+					const card = h('button', { type: 'button', class: 'im-source' }, h('span', { class: 'im-source-name', text: s.id === 'custom' ? t('自定义') : s.name }), h('span', { class: 'im-source-sub', text: s.id === 'custom' ? t('OpenAI 兼容 /images/generations') : s.sub }));
+					card.addEventListener('click', () => { source = s; selected.length = 0; selected.push(...s.models.slice(0, 1).map(m => m.id)); form(); });
+					grid.append(card);
+				}
+				body.append(grid);
+			}
+			body.append(h('div', { class: 'qw-dialog-actions' }, h('button', { type: 'button', class: 'qw-btn', text: t('取消'), onclick: close })));
 		}
-		pick(source, !!existing);
 
-		const save = h('button', { type: 'button', class: 'qw-btn qw-btn-primary', text: t('保存') });
-		const cancel = h('button', { type: 'button', class: 'qw-btn', text: t('取消') });
-		const close = () => { dialog.close(); dialog.remove(); };
-		cancel.addEventListener('click', close);
-		dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
-		save.addEventListener('click', async () => {
-			const config: ImageModelConfig = { id: existing?.id ?? newId('imm_'), sourceId: source.id, engine: source.engine, name: name.value.trim(), baseUrl: base.value.trim(), apiKey: key.value.trim(), model: model.value.trim() };
-			const problem = !config.model ? t('请填写模型名') : source.id === 'custom' && !config.baseUrl ? t('自定义服务需要填写接口地址') : !isReady({ ...config, baseUrl: config.baseUrl || source.baseUrl }) ? t('请填写密钥') : '';
-			if (problem) { error.hidden = false; error.textContent = problem; return; }
-			store.models = existing ? store.models.map(m => (m.id === existing.id ? config : m)) : [...store.models, config];
-			if (!store.defaultId) store.defaultId = config.id;
-			close(); await persist(); toast(t('已保存'));
-		});
-		dialog.append(h('h2', { class: 'qw-dialog-title', text: existing ? t('编辑生图模型') : t('添加生图模型') }), cards,
-			field(t('密钥'), key, keyLink), field(t('模型'), model, presets), h('details', { class: 'im-advanced' }, h('summary', { text: t('更多设置') }), field(t('接口地址'), base), field(t('显示名称'), name)),
-			error, h('div', { class: 'qw-dialog-actions' }, cancel, save));
-		document.body.append(dialog);
+		function form() {
+			const s = source!;
+			const isAccount = s.engine === 'oauth';
+			body.textContent = '';
+			const key = h('input', { class: 'qw-field', type: 'password', autocomplete: 'off', spellcheck: false, placeholder: 'API key' }); key.value = state.key;
+			const base = h('input', { class: 'qw-field', type: 'text', spellcheck: false, placeholder: s.baseUrl || 'https://…/v1' }); base.value = state.base;
+			const name = h('input', { class: 'qw-field', type: 'text', spellcheck: false, placeholder: t('不填就用服务名') }); name.value = state.name;
+			const keyLink = s.keyUrl ? h('a', { class: 'im-key-link', href: s.keyUrl, target: '_blank', rel: 'noopener noreferrer', text: t('获取密钥') }) : null;
+			const search = h('input', { class: 'qw-field', type: 'text', spellcheck: false, placeholder: t('搜索或直接输入模型名，回车添加') });
+			const chips = h('div', { class: 'im-chips' });
+			const options = h('div', { class: 'im-models' });
+			const status = h('p', { class: 'qw-dialog-note', role: 'status' });
+			const error = h('p', { class: 'qw-dialog-note im-error', role: 'alert', hidden: true });
+
+			const drawChips = () => {
+				chips.textContent = '';
+				if (!selected.length) { chips.append(h('span', { class: 'im-hint', text: t('还没选模型') })); return; }
+				selected.forEach((id, index) => {
+					const chip = h('span', { class: `im-chip${index === 0 ? ' primary' : ''}` }, h('span', { text: id }));
+					if (index > 0) chip.append(h('button', { type: 'button', class: 'im-chip-btn', title: t('设为默认'), 'aria-label': t('设为默认'), text: '★', onclick: () => { selected.splice(index, 1); selected.unshift(id); drawChips(); drawOptions(); } }));
+					else chip.append(h('span', { class: 'im-chip-tag', text: t('默认') }));
+					chip.append(h('button', { type: 'button', class: 'im-chip-btn', title: t('移除'), 'aria-label': t('移除'), text: '×', onclick: () => { selected.splice(index, 1); drawChips(); drawOptions(); } }));
+					chips.append(chip);
+				});
+			};
+			const pool = (): ListedModel[] => { const seen = new Set<string>(); return [...loaded, ...s.models, ...selected.map(id => ({ id }))].filter(m => !seen.has(m.id) && !!seen.add(m.id)); };
+			const drawOptions = () => {
+				options.textContent = '';
+				const q = search.value.trim().toLowerCase();
+				for (const m of pool().filter(item => !q || item.id.toLowerCase().includes(q) || (item.name ?? '').toLowerCase().includes(q)).slice(0, 60)) {
+					const on = selected.includes(m.id);
+					const row = h('button', { type: 'button', class: `im-model${on ? ' on' : ''}`, 'aria-pressed': String(on) }, h('span', { text: m.name ?? m.id }), m.name ? h('span', { class: 'im-hint', text: m.id }) : null);
+					row.addEventListener('click', () => { if (on) selected.splice(selected.indexOf(m.id), 1); else selected.push(m.id); drawChips(); drawOptions(); });
+					options.append(row);
+				}
+			};
+			search.addEventListener('input', drawOptions);
+			search.addEventListener('keydown', event => { if (event.key === 'Enter' && !event.isComposing) { event.preventDefault(); const id = search.value.trim(); if (id && !selected.includes(id)) { selected.push(id); search.value = ''; drawChips(); drawOptions(); } } });
+			const load = h('button', { type: 'button', class: 'qw-btn' }, icon(RefreshCw, 14), t('获取可用模型'));
+			load.addEventListener('click', async () => {
+				state.key = key.value.trim(); state.base = base.value.trim();
+				load.disabled = true; status.textContent = t('正在获取…');
+				try {
+					const got = await fetchImageModels(s, state.base, state.key);
+					loaded = got;
+					status.textContent = got.length ? t('获取到 {0} 个模型，点一下就加入可选', [got.length]) : t('这个服务没有返回模型列表，可以直接输入模型名');
+					if (!selected.length && got.length) selected.push(got[0].id);
+				} catch (e) { status.textContent = t('没获取到列表（{0}），可以直接输入模型名', [String((e as Error).message).slice(0, 80)]); }
+				finally { load.disabled = false; drawChips(); drawOptions(); }
+			});
+
+			const save = h('button', { type: 'button', class: 'qw-btn qw-btn-primary', text: t('保存') });
+			save.addEventListener('click', async () => {
+				const primary = selected[0] ?? '';
+				const config: ImageModelConfig = { id: existing?.id ?? newId('imm_'), sourceId: s.id, engine: s.engine, name: name.value.trim(), baseUrl: base.value.trim(), apiKey: isAccount ? '' : key.value.trim(), model: primary, models: [...selected], ...(isAccount ? { providerId: s.providerId } : {}) };
+				const problem = !primary ? t('至少选一个模型') : s.id === 'custom' && !config.baseUrl ? t('自定义服务需要填写接口地址') : !isAccount && !isReady({ ...config, baseUrl: config.baseUrl || s.baseUrl }) ? t('请填写密钥') : '';
+				if (problem) { error.hidden = false; error.textContent = problem; return; }
+				store.models = existing ? store.models.map(m => (m.id === existing.id ? config : m)) : [...store.models, config];
+				if (!store.defaultId) store.defaultId = config.id;
+				close(); await persist(); toast(t('已保存'));
+			});
+			const back = existing ? null : h('button', { type: 'button', class: 'qw-btn', text: t('返回'), onclick: () => { gallery(); } });
+			body.append(h('h2', { class: 'qw-dialog-title', text: existing ? t('编辑生图服务') : t('添加生图服务') }),
+				h('p', { class: 'qw-dialog-note', text: `${s.id === 'custom' ? t('自定义') : s.name} · ${s.sub}` }),
+				...(isAccount ? [h('p', { class: 'qw-dialog-note', text: t('用这个账号的额度生成图片，不需要密钥。') })] : [field(t('密钥'), key, keyLink)]),
+				h('div', { class: 'im-field' }, h('span', { text: t('可选用的模型（第一个是默认）') }), chips, search, options, h('div', { class: 'im-load' }, load, status)),
+				h('details', { class: 'im-advanced', open: s.id === 'custom' }, h('summary', { text: t('更多设置') }), ...(isAccount ? [] : [field(t('接口地址'), base)]), field(t('显示名称'), name)),
+				error, h('div', { class: 'qw-dialog-actions' }, ...(back ? [back] : []), h('button', { type: 'button', class: 'qw-btn', text: t('取消'), onclick: close }), save));
+			drawChips(); drawOptions();
+		}
+
+		if (source) form(); else gallery();
 		dialog.showModal();
-		key.focus();
 	}
 
 	add.addEventListener('click', () => openDialog());

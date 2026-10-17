@@ -45,3 +45,11 @@ it('finds quoted text inside a single paragraph', () => {
 	expect(findInBlocks(blocks, '  第一段  ')).toEqual({ from: 1, to: 4 });
 	expect(findInBlocks(blocks, '不存在')).toBeUndefined();
 });
+
+it('accepts a question for the writer with a few options', () => {
+	expect(normalizeProposal({ type: 'ask', question: '写给谁看？', options: [{ label: '同行', description: '懂行的人' }, '普通读者', { label: '' }] })).toEqual({ type: 'ask', question: '写给谁看？', options: [{ label: '同行', description: '懂行的人' }, { label: '普通读者' }], allowOther: true });
+	expect(normalizeProposal({ type: 'ask', question: '这样行吗？', options: [{ label: '行' }], allowOther: false })).toMatchObject({ allowOther: false });
+	expect(normalizeProposal({ type: 'ask', question: '', options: [] })).toBeUndefined();
+	expect(buildSystemPrompt({ title: 't', digest: '', markdown: '正文', selection: '', headings: [], imageReady: false, includeArticle: false, references: '<网页>x</网页>' })).toContain('这次没有附上正文');
+	expect(buildSystemPrompt({ title: 't', digest: '', markdown: '正文', selection: '', headings: [], imageReady: false, references: '<网页>x</网页>' })).toContain('【作者附加的资料】');
+});

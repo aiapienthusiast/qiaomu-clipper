@@ -2,7 +2,8 @@ import browser from '../../utils/browser-polyfill';
 import { t } from '../../utils/ui-text';
 import { h, toast } from '../editor/dom';
 import { saveImage } from '../images';
-import { ASPECTS, generateImage, labelOf, loadImageModels, readyModels, type ImageModelConfig } from '../image-models';
+import { ASPECTS, generateImage, loadImageModels, modelsOf, readyModels, serviceName, type ImageModelConfig } from '../image-models';
+import { getLocalStorage, setLocalStorage } from '../../utils/storage-utils';
 
 export function describeImageError(error: unknown): string {
 	const text = String((error as Error)?.message ?? error);
@@ -46,9 +47,17 @@ export async function openImageDialog(options: ImageDialogOptions): Promise<void
 	const aspect = h('select', { class: 'qw-field', 'aria-label': t('画面比例') });
 	for (const a of ASPECTS) aspect.append(h('option', { value: a, text: a }));
 	aspect.value = options.aspect && (ASPECTS as readonly string[]).includes(options.aspect) ? options.aspect : '16:9';
+	// Every model of every connected service, grouped by service; the last choice is remembered.
 	const model = h('select', { class: 'qw-field', 'aria-label': t('生图模型') });
-	for (const m of models) model.append(h('option', { value: m.id, text: labelOf(m) }));
-	model.value = models.some(m => m.id === store.defaultId) ? store.defaultId : models[0].id;
+	const choices: { key: string; config: ImageModelConfig; modelId: string }[] = [];
+	for (const config of models) {
+		const group = h('optgroup', { label: serviceName(config) });
+		for (const modelId of modelsOf(config)) { const key = `${config.id}\u0000${modelId}`; choices.push({ key, config, modelId }); group.append(h('option', { value: key, text: modelId })); }
+		model.append(group);
+	}
+	const fallback = models.find(m => m.id === store.defaultId) ?? models[0];
+	const remembered = String(await getLocalStorage('qiaomuWriteImageChoice') ?? '');
+	model.value = choices.some(c => c.key === remembered) ? remembered : `${fallback.id}\u0000${fallback.model}`;
 	const status = h('p', { class: 'qw-dialog-note', role: 'status', 'aria-live': 'polite' });
 	const preview = h('div', { class: 'qw-image-preview', hidden: true });
 	const generate = h('button', { type: 'button', class: 'qw-btn qw-btn-primary', text: t('生成') });
@@ -59,12 +68,13 @@ export async function openImageDialog(options: ImageDialogOptions): Promise<void
 	const run = async () => {
 		const text = prompt.value.trim();
 		if (!text) { status.textContent = t('先写下想要的画面'); prompt.focus(); return; }
-		const config = models.find(m => m.id === model.value) as ImageModelConfig;
+		const choice = choices.find(c => c.key === model.value) ?? choices[0];
+		void setLocalStorage('qiaomuWriteImageChoice', choice.key);
 		controller?.abort(); controller = new AbortController();
 		blob = undefined; applies.forEach(({ b }) => { b.hidden = true; });
 		generate.disabled = true; generate.textContent = t('生成中…'); status.textContent = t('通常需要十几秒到一分钟，可以先做别的事，这个窗口别关。');
 		try {
-			blob = await generateImage(config, text, aspect.value, controller.signal);
+			blob = await generateImage(choice.config, text, aspect.value, controller.signal, choice.modelId);
 			if (url) URL.revokeObjectURL(url);
 			url = URL.createObjectURL(blob);
 			preview.textContent = ''; preview.hidden = false;
@@ -85,7 +95,7 @@ export async function openImageDialog(options: ImageDialogOptions): Promise<void
 			catch { toast(t('这张图片没能保存'), 'error'); b.disabled = false; }
 		});
 	}
-	const row = h('div', { class: 'qw-image-row' }, aspect, models.length > 1 ? model : null);
+	const row = h('div', { class: 'qw-image-row' }, aspect, choices.length > 1 ? model : null);
 	dialog.append(title, prompt, row, status, preview, h('div', { class: 'qw-dialog-actions' }, cancel, generate, ...applies.map(({ b }) => b)));
 	dialog.showModal();
 	prompt.focus();
