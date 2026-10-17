@@ -57,6 +57,9 @@ module.exports = (env, argv) => {
 			// Injected into an X Articles tab only while an article is being published (see src/write/publish/x.ts).
 			'x-publish-main': './src/x-publish/main-world.js',
 			'x-publish-content': './src/x-publish/x-content.ts',
+			// Injected on demand when Obsidian hands over an article (src/publish-bridge).
+			'zhihu-publish-content': './src/publish-bridge/zhihu-content.ts',
+			'xhs-publish-content': './src/publish-bridge/xhs-content.ts',
 			content: './src/content.ts',
 			background: './src/background.ts',
 			style: './src/style.scss',

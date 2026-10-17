@@ -29,9 +29,11 @@ import { cookiesGranted, handleAsrMessage, handleLearningNativeMessage } from '.
 import { enableYouTubeEmbedRule, disableYouTubeEmbedRule } from './utils/youtube-embed-rules';
 
 import { t } from './utils/ui-text';
+import { registerPublishBridge } from './publish-bridge';
 import { helperInstallUrl } from './utils/helper-install';
 import { pruneHandedFiles } from './utils/file-handoff';
 void pruneHandedFiles();
+registerPublishBridge();
 browser.runtime.onMessage.addListener(handleLearningNativeMessage);
 browser.runtime.onMessage.addListener(handleAsrMessage);
 browser.runtime.onMessage.addListener(handleChatImageSource);
