@@ -406,6 +406,24 @@
         "src/utils/study-download.test.ts",
         "src/utils/local-save-learning.test.ts"
       ]
+    },
+    {
+      "id": "podcast-sticky-player",
+      "title": "播客紧凑播放条与文稿吸顶避让",
+      "origin": "小宇宙滚动遮挡反馈",
+      "files": [
+        "src/utils/audio-study.ts",
+        "src/utils/media-study-player.ts",
+        "src/utils/reader-transcript.ts",
+        "src/utils/audio-controls.ts"
+      ],
+      "tests": [
+        "src/utils/media-study-player.test.ts",
+        "src/utils/reader-transcript-timing.test.ts",
+        "src/utils/audio-study.test.ts",
+        "src/utils/transcript-heading.test.ts",
+        "src/utils/audio-controls.test.ts"
+      ]
     }
   ]
 }
