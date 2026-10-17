@@ -64,27 +64,32 @@ export async function saveArticle(article: Article, expectedRevision?: number): 
 	const tx = db.transaction('articles', 'readwrite');
 	const store = tx.objectStore('articles');
 	const current = await requestResult(store.get(article.id)) as Article | undefined;
-	if (current && expectedRevision !== undefined && current.revision !== expectedRevision) { tx.abort(); throw new RevisionConflict(); }
-	const saved: Article = { ...article, wordCount: countWords(article.markdown), updatedAt: Date.now(), revision: (current?.revision ?? -1) + 1 };
+	if (expectedRevision !== undefined && (!current || current.revision !== expectedRevision)) { tx.abort(); throw new RevisionConflict(); }
+	const saved: Article = { ...article, publishes: current?.publishes ?? article.publishes, wordCount: countWords(article.markdown), updatedAt: Date.now(), revision: (current?.revision ?? -1) + 1 };
 	store.put(saved);
 	await transactionDone(tx);
 	return saved;
 }
 
 export async function updateArticleFields(id: string, patch: Partial<Pick<Article, 'author' | 'digest' | 'sourceUrl' | 'coverImageId' | 'title'>>): Promise<Article | undefined> {
-	const current = await getArticle(id);
-	if (!current) return undefined;
-	return saveArticle({ ...current, ...patch });
+	return mutateArticle(id, current => ({ ...current, ...patch, updatedAt: Date.now(), revision: current.revision + 1 }));
+}
+
+// Keep the read and the write in one transaction so another tab cannot save between them.
+async function mutateArticle(id: string, change: (current: Article) => Article): Promise<Article | undefined> {
+	const db = await openDb();
+	const tx = db.transaction('articles', 'readwrite');
+	const store = tx.objectStore('articles');
+	const current = await requestResult(store.get(id)) as Article | undefined;
+	const next = current ? change(current) : undefined;
+	if (next) store.put(next);
+	await transactionDone(tx);
+	return next;
 }
 
 export async function recordPublish(id: string, target: PublishTarget, record: PublishRecord): Promise<void> {
-	const current = await getArticle(id);
-	if (!current) return;
 	// Publishing does not count as an edit: keep the edit time and the revision the editor holds.
-	const db = await openDb();
-	const tx = db.transaction('articles', 'readwrite');
-	tx.objectStore('articles').put({ ...current, publishes: { ...current.publishes, [target]: record } });
-	await transactionDone(tx);
+	await mutateArticle(id, current => ({ ...current, publishes: { ...current.publishes, [target]: record } }));
 }
 
 export async function duplicateArticle(id: string): Promise<Article | undefined> {
@@ -95,22 +100,14 @@ export async function duplicateArticle(id: string): Promise<Article | undefined>
 }
 
 export async function trashArticle(id: string): Promise<void> {
-	const current = await getArticle(id);
-	if (!current) return;
-	const db = await openDb();
-	const tx = db.transaction('articles', 'readwrite');
-	tx.objectStore('articles').put({ ...current, trashedAt: Date.now() });
-	await transactionDone(tx);
+	await mutateArticle(id, current => ({ ...current, trashedAt: Date.now(), revision: current.revision + 1 }));
 }
 
 export async function restoreArticle(id: string): Promise<void> {
-	const current = await getArticle(id);
-	if (!current) return;
-	const { trashedAt: _gone, ...rest } = current;
-	const db = await openDb();
-	const tx = db.transaction('articles', 'readwrite');
-	tx.objectStore('articles').put(rest);
-	await transactionDone(tx);
+	await mutateArticle(id, current => {
+		const { trashedAt: _gone, ...rest } = current;
+		return { ...rest, revision: current.revision + 1 };
+	});
 }
 
 export async function deleteArticle(id: string): Promise<void> {

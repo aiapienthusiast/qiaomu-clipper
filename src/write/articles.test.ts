@@ -102,3 +102,28 @@ it('keeps formulas, tags and fenced code out of the list excerpt', async () => {
 	const { excerptOf } = await import('./articles');
 	expect(excerptOf('Hello $E=mc^2$ and $5 or $6\n\n$$\n\\int x\n$$\n\n<img src="a" width="3"> tail')).toBe('Hello E=mc^2 and $5 or $6 tail');
 });
+
+it('preserves the newest text when recording a publish while an editor saves', async () => {
+	const article = await saveArticle({ ...blankArticle(), markdown: 'before' });
+	await Promise.all([
+		recordPublish(article.id, 'x', { at: 1, url: 'https://x.com/draft' }),
+		saveArticle({ ...article, markdown: 'after' }, article.revision),
+	]);
+	const saved = await getArticle(article.id);
+	expect(saved?.markdown).toBe('after');
+	expect(saved?.publishes.x?.url).toBe('https://x.com/draft');
+});
+
+it('keeps publish receipts when an editor saves its older in-memory copy', async () => {
+	const article = await saveArticle({ ...blankArticle(), markdown: 'before' });
+	await recordPublish(article.id, 'x', { at: 1, url: 'https://x.com/draft' });
+	await saveArticle({ ...article, markdown: 'after' }, article.revision);
+	expect((await getArticle(article.id))?.publishes.x?.url).toBe('https://x.com/draft');
+});
+
+it('does not let an already open editor resurrect an article moved to trash', async () => {
+	const article = await saveArticle({ ...blankArticle(), markdown: 'before' });
+	await trashArticle(article.id);
+	await expect(saveArticle({ ...article, markdown: 'stale editor' }, article.revision)).rejects.toBeInstanceOf(RevisionConflict);
+	expect((await getArticle(article.id))?.trashedAt).toBeTruthy();
+});
