@@ -424,6 +424,50 @@
         "src/utils/transcript-heading.test.ts",
         "src/utils/audio-controls.test.ts"
       ]
+    },
+    {
+      "id": "write-long-articles",
+      "title": "写长文：本地文章库、所见即所得编辑器、飞书式大纲、AI 助手（选区上下文、思考强度、提示词库、附件、插入文章）与生图模型（含 ChatGPT/Codex 账号）、三次 U 入口，以及发到 X 文章",
+      "origin": "feat/write-long-form",
+      "files": [
+        "src/write/page.ts",
+        "src/write/articles.ts",
+        "src/write/editor/extensions.ts",
+        "src/write/publish/x.ts",
+        "src/x-publish/main-world.js",
+        "src/x-publish/x-content.ts",
+        "src/managers/write-settings.ts",
+        "src/utils/triple-key.ts",
+        "src/write.html",
+        "src/write/outline.ts",
+        "src/write/ai/chat-panel.ts",
+        "src/write/ai/protocol.ts",
+        "src/write/ai/image-dialog.ts",
+        "src/write/image-models.ts",
+        "src/managers/image-model-settings.ts",
+        "src/managers/settings-section-ui.ts",
+        "src/write/ai/prompt-panel.ts",
+        "src/write/ai/prompt-library.ts",
+        "src/write/ai/attachments.ts",
+        "src/utils/chat-thinking.ts",
+        "src/utils/chat-llm.ts"
+      ],
+      "tests": [
+        "src/write/articles.test.ts",
+        "src/write/editor/roundtrip.test.ts",
+        "src/write/publish/x-prepare.test.ts",
+        "src/triple-key.test.ts",
+        "src/write/outline.test.ts",
+        "src/write/ai/chat-panel.test.ts",
+        "src/write/ai/protocol.test.ts",
+        "src/write/ai/image-dialog.test.ts",
+        "src/write/image-models.test.ts",
+        "src/managers/settings-routing.test.ts",
+        "src/write/editor/slash.test.ts",
+        "src/write/ai/prompts.test.ts",
+        "src/write/ai/attachments.test.ts",
+        "src/utils/chat-thinking.test.ts"
+      ]
     }
   ]
 }

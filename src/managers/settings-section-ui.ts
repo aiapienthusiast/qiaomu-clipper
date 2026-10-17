@@ -4,7 +4,7 @@ import { generalSettings } from '../utils/storage-utils';
 import { updatePromptContextVisibility } from './interpreter-settings';
 import { initializePropertyTypesManager } from './property-types-manager';
 
-export type SettingsSection = 'general' | 'study' | 'asr' | 'clip' | 'learning' | 'video' | 'properties' | 'highlighter' | 'interpreter' | 'asr-models' | 'about' | 'reader' | 'templates' | 'templates-home';
+export type SettingsSection = 'general' | 'write' | 'study' | 'asr' | 'clip' | 'learning' | 'video' | 'properties' | 'highlighter' | 'interpreter' | 'asr-models' | 'image-models' | 'about' | 'reader' | 'templates' | 'templates-home';
 
 export function showSettingsSection(requested: SettingsSection | 'video', templateId?: string): void {
 	// Subtitle bar settings now sit on the Subtitles and transcription page.
@@ -29,6 +29,7 @@ export function showSettingsSection(requested: SettingsSection | 'video', templa
 	updateUrl(section, templateId);
 	// The study page lists what was studied last: look again whenever it is opened.
 	if (section === 'study') document.dispatchEvent(new CustomEvent('qiaomu-study-shown'));
+	if (section === 'write') document.dispatchEvent(new CustomEvent('qiaomu-write-shown'));
 
 	if (section === 'templates-home') {
 		initializePropertyTypesManager();
@@ -98,6 +99,8 @@ export function initializeSidebar(): void {
 				|| section === 'highlighter'
 				|| section === 'interpreter'
 				|| section === 'asr-models'
+				|| section === 'image-models'
+				|| section === 'write'
 				|| section === 'about'
 				|| section === 'reader'
 				|| section === 'templates-home') {

@@ -53,6 +53,10 @@ module.exports = (env, argv) => {
 			highlights: './src/core/highlights.ts',
 			'reader-page': './src/core/reader-view.ts',
 			'clip-editor': './src/core/clip-editor.ts',
+			write: ['./src/core/write.ts', './src/styles/write.scss'],
+			// Injected into an X Articles tab only while an article is being published (see src/write/publish/x.ts).
+			'x-publish-main': './src/x-publish/main-world.js',
+			'x-publish-content': './src/x-publish/x-content.ts',
 			content: './src/content.ts',
 			background: './src/background.ts',
 			style: './src/style.scss',
@@ -176,6 +180,10 @@ module.exports = (env, argv) => {
 					{ from: "src/highlights.html", to: "highlights.html" },
 					{ from: "src/reader.html", to: "reader.html" },
 					{ from: "src/editor.html", to: "editor.html" },
+					{ from: "src/write.html", to: "write.html" },
+					// Formulas: KaTeX's stylesheet next to its fonts (the css asks for fonts/KaTeX_*).
+					{ from: "node_modules/katex/dist/katex.min.css", to: "katex.css" },
+					{ from: "node_modules/katex/dist/fonts/*.woff2", to: "fonts/[name][ext]" },
 					{ from: "src/icons", to: "icons", globOptions: { ignore: ["**/*.ts"] } },
 					{ from: "node_modules/webextension-polyfill/dist/browser-polyfill.min.js", to: "browser-polyfill.min.js" },
 					{ from: "src/flatten-shadow-dom.js", to: "flatten-shadow-dom.js" },
@@ -200,7 +208,9 @@ module.exports = (env, argv) => {
 			new webpack.DefinePlugin({
 				'process.env.NODE_ENV': JSON.stringify(argv.mode),
 				'DEBUG_MODE': JSON.stringify(!isProduction),
-				'__LOCAL_EDITION__': JSON.stringify(isLocal)
+				'__LOCAL_EDITION__': JSON.stringify(isLocal),
+				// MathJax reads its version from package.json through eval("require") unless this is defined, and extension pages forbid eval.
+				'PACKAGE_VERSION': JSON.stringify('3.2.1')
 			}),
 			{
 				apply(compiler) {

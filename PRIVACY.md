@@ -1,6 +1,6 @@
 # 乔木剪藏隐私说明 / Privacy
 
-更新日期：2026-10-08。适用于乔木剪藏 Chrome 扩展。
+更新日期：2026-10-17。适用于乔木剪藏 Chrome 扩展。
 
 剪藏功能读取用户打开的网页、链接、标题、元数据及选中文字，用于提取 Markdown、预览和保存。模板、设置、历史记录、待保存内容及预览草稿存储在浏览器扩展存储中；部分模板和设置通过浏览器同步存储同步。预览草稿最多读取 24 小时，在下次创建预览时清理过期草稿；待重试内容保留到成功或用户清理扩展数据。扩展代码不提供访问统计上传功能。
 
@@ -19,6 +19,8 @@ AI 问题与对话上下文也会发送到用户选择的服务商；用户输�
 可选账号登录：用户可在设置中选择 ChatGPT、Codex 或词元跳动登录，授权页面由对应服务提供。扩展接收授权结果，并与对应服务交换或刷新访问凭证；返回的账号邮箱、账号标识、套餐信息及访问/刷新令牌保存在服务商设置中，可能随浏览器设置同步。词元跳动返回的 API Key 按 AI 服务商凭证保存。相关凭证仅用于所选服务的模型请求，网页脚本无法直接读取；删除该服务商可移除扩展中的凭证，撤销服务端授权需到对应服务操作。ChatGPT 登录使用本机生成的随机主机标识联系认证服务。登录不会让扩展读取用户的密码。
 
 AI 对话的文章地址、标题、问题、所选片段和模型回答保存在本机浏览器存储中，最多保留 40 篇文章、每篇 15 段对话，每段最多 40 条消息。用户可以删除对话记录。三连击快捷键只在本机判断配置的按键序列，输入框内不触发，不上传原始按键记录。
+
+写长文：你在「写长文」里写的文章和插入的图片只保存在这台电脑的这个浏览器扩展里（IndexedDB），不同步、不上传，也不经过任何乔木服务器；清除站点数据或卸载扩展会丢失，可在列表里导出备份。把网页上的图片「保存到本地」时，扩展会请求这些图片的原地址。只有你点击「AI 帮我改」「AI 续写」时，选中的文字（续写时为文章末尾部分）才会发送到你在设置里选择的 AI 服务商。只有你点击「发布 → 发到 X 文章」时，文章正文和图片才会交给你已登录的 X 标签页，由 X 页面本身写入你的 X 文章草稿；扩展不读取你的 X 密码，也不替你点击发布。文章里的推文预览通过 X 的公开 oEmbed 地址读取推文文字，视频嵌入由 YouTube、哔哩哔哩、Vimeo 的播放器提供。
 
 用户数据仅用于用户选择的剪藏、阅读、编辑、问答和分享功能，不出售用户数据，不用于广告投放、信用评估或与这些功能无关的用途。扩展对用户数据的使用遵循 Chrome Web Store User Data Policy，包括 Limited Use 要求。
 
@@ -42,5 +44,7 @@ Previewing alone does not submit content. Original sites may receive page and im
 AI questions and conversation context are also sent to the chosen provider. User-entered API credentials are stored in extension settings, may sync with browser settings, and are used only with the configured provider.
 
 Optional account sign-in: users may choose ChatGPT, Codex or TokenDance in settings. The provider hosts the authorization page. The extension receives the authorization result and exchanges or refreshes credentials with that provider. Returned email, account identifier, plan information and access/refresh tokens are stored in provider settings and may sync through browser settings. TokenDance API keys are stored as AI provider credentials. Credentials are used only for requests to the selected service and are not directly readable by website scripts. Removing a provider removes its saved credentials from extension settings; revoke server-side authorization through the provider. ChatGPT sign-in sends a locally generated random host identifier to its authentication service. The extension does not read user passwords.
+
+Long articles: articles you write in "Long articles" and the pictures you insert are kept only inside this browser extension on this computer (IndexedDB). They are not synced, not uploaded and do not pass through any Qiaomu server; clearing site data or removing the extension loses them, and you can export a backup from the list. When you save web pictures locally, the extension requests those pictures from their original addresses. Selected text (or, for "continue writing", the end of the article) is sent to your chosen AI provider only when you press an AI action. Article text and pictures are handed to your signed-in X tab only when you press Publish → Send to X Article, and the X page itself writes them into your X article draft; the extension never reads your X password and never presses Publish for you. Post previews inside an article read the post's text from X's public oEmbed address, and video embeds are served by the YouTube, Bilibili and Vimeo players.
 
 AI chat history (article URL/title, questions, selected passages and model answers) stays in local browser storage, limited to 40 articles, 15 conversations per article and 40 messages per conversation. Users can delete conversations. Triple-press shortcuts inspect configured key sequences locally, ignore typing in editable fields, and do not upload raw keystroke logs. User data is used only for the clipping, reading, editing, AI and sharing features the user chooses; it is not sold or used for advertising, creditworthiness or unrelated purposes. Use of user data complies with the Chrome Web Store User Data Policy, including the Limited Use requirements.
