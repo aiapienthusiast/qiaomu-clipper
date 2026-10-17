@@ -59,7 +59,13 @@ export function relayPort(port: ReturnType<typeof browser.tabs.connect>, client:
 			else if (message?.type === 'error') finish({ ok: false, message: message.error });
 		});
 		port.onDisconnect.addListener(() => finish({ ok: false, message: '和网页的连接断开了，可能是页面被刷新或关闭' }));
-		send(message => port.postMessage(message)).catch(error => finish({ ok: false, message: (error as Error).message || String(error) }));
+		send(message => {
+			if (client.cancelled) throw Object.assign(new Error('已停止'), { stopped: true });
+			if (settled) throw new Error('和网页的连接已结束');
+			port.postMessage(message);
+		}).catch(error => finish((error as { stopped?: boolean }).stopped
+			? { ok: false, cancelled: true }
+			: { ok: false, message: (error as Error).message || String(error) }));
 	});
 }
 
@@ -68,6 +74,7 @@ export async function sendAssets(client: BridgeClient, assets: BridgeAsset[], po
 		if (client.cancelled) throw Object.assign(new Error('已停止'), { stopped: true });
 		report(`正在取图片 ${index + 1}/${assets.length}…`);
 		const data = await client.asset(asset);
+		if (client.cancelled) throw Object.assign(new Error('已停止'), { stopped: true });
 		post({ type: 'image', source: source(asset), mime: asset.mime, fileName: asset.name, bytes: data.byteLength, base64: bytesToBase64(data) });
 	}
 }

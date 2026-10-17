@@ -22,9 +22,10 @@ const sleep = (ms: number) => new Promise<void>(resolve => window.setTimeout(res
 const isPublishRoute = () => location.hostname === 'creator.xiaohongshu.com' && location.pathname.startsWith('/publish');
 const visible = (node: Element | null): node is HTMLElement => node instanceof HTMLElement && node.offsetParent !== null && node.getBoundingClientRect().width > 0;
 
-async function waitFor<T>(find: () => T | null | undefined | false, timeoutMs: number, step = 250): Promise<T | null> {
+async function waitFor<T>(find: () => T | null | undefined | false, timeoutMs: number, step = 250, check = () => {}): Promise<T | null> {
 	const deadline = Date.now() + timeoutMs;
 	for (;;) {
+		check();
 		const found = find();
 		if (found) return found;
 		if (Date.now() > deadline) return null;
@@ -86,11 +87,13 @@ function caretToEnd(editor: HTMLElement): void {
 }
 
 /** Types `#话题` and picks the matching suggestion so the platform makes a real topic. Returns false when no suggestion appeared. */
-async function addTopic(editor: HTMLElement, topic: string): Promise<boolean> {
+async function addTopic(editor: HTMLElement, topic: string, check: () => void): Promise<boolean> {
+	check();
 	caretToEnd(editor);
 	document.execCommand('insertParagraph');
 	document.execCommand('insertText', false, `#${topic}`);
-	const item = await waitFor(() => Array.from(document.querySelectorAll<HTMLElement>(SEL.mention)).filter(visible).find(node => (node.textContent ?? '').includes(topic)) ?? Array.from(document.querySelectorAll<HTMLElement>(SEL.mention)).find(visible), 2500);
+	const item = await waitFor(() => Array.from(document.querySelectorAll<HTMLElement>(SEL.mention)).filter(visible).find(node => (node.textContent ?? '').includes(topic)) ?? Array.from(document.querySelectorAll<HTMLElement>(SEL.mention)).find(visible), 2500, 250, check);
+	check();
 	if (!item) { document.execCommand('insertText', false, ' '); return false; }
 	item.click();
 	await sleep(300);
@@ -101,9 +104,10 @@ async function runImport(message: { title: string; text: string; topics: string[
 	const say = (text: string) => post({ type: 'progress', text });
 	const check = () => { if (state.cancel) throw new Stopped('已停止'); };
 	try {
+		check();
 		if (!isPublishRoute()) throw new Error('这个标签页不是小红书发布页，请先登录小红书创作平台');
 		say('正在切换到「上传图文」…');
-		if (!(await waitFor(() => clickImageTextTab(), 20000))) throw new Error('没找到「上传图文」，小红书页面可能改版了');
+		if (!(await waitFor(() => clickImageTextTab(), 20000, 250, check))) throw new Error('没找到「上传图文」，小红书页面可能改版了');
 		check();
 
 		const files: File[] = message.cards.map((source, index) => {
@@ -113,17 +117,18 @@ async function runImport(message: { title: string; text: string; topics: string[
 			return new File([bytes], picture.fileName, { type: picture.mime });
 		});
 		say(`正在上传 ${files.length} 张图片…`);
-		const input = await waitFor(() => Array.from(document.querySelectorAll<HTMLInputElement>(SEL.fileInput)).find(node => /image|png|jpe?g/i.test(node.accept) || !node.accept), 20000);
+		const input = await waitFor(() => Array.from(document.querySelectorAll<HTMLInputElement>(SEL.fileInput)).find(node => /image|png|jpe?g/i.test(node.accept) || !node.accept), 20000, 250, check);
 		if (!input) throw new Error('没找到图片上传入口，小红书页面可能改版了');
+		check();
 		const transfer = new DataTransfer();
 		files.forEach(file => transfer.items.add(file));
 		input.files = transfer.files;
 		input.dispatchEvent(new Event('change', { bubbles: true }));
 
-		const titleInput = await waitFor(() => Array.from(document.querySelectorAll<HTMLInputElement>(SEL.title)).find(visible), 90000, 500);
+		const titleInput = await waitFor(() => Array.from(document.querySelectorAll<HTMLInputElement>(SEL.title)).find(visible), 90000, 500, check);
 		if (!titleInput) throw new Error('图片上传后没有出现标题框，可能上传失败了');
-		const settled = await waitFor(() => document.querySelectorAll(SEL.previews).length >= files.length, 120000, 500);
-		if (!settled && document.querySelectorAll(SEL.previews).length === 0) say('图片还在上传，页面上看不到进度，先继续填写…');
+		const settled = await waitFor(() => document.querySelectorAll(SEL.previews).length >= files.length, 120000, 500, check);
+		if (!settled) throw new Error(`图片尚未全部就绪（需要 ${files.length} 张，看到 ${document.querySelectorAll(SEL.previews).length} 张），请检查上传结果后重试。`);
 		check();
 
 		say('正在填写标题…');
@@ -131,8 +136,9 @@ async function runImport(message: { title: string; text: string; topics: string[
 		await sleep(300);
 		check();
 
-		const editor = await waitFor(() => Array.from(document.querySelectorAll<HTMLElement>(SEL.editor)).find(visible), 20000);
+		const editor = await waitFor(() => Array.from(document.querySelectorAll<HTMLElement>(SEL.editor)).find(visible), 20000, 250, check);
 		if (!editor) throw new Error('没找到正文编辑框，小红书页面可能改版了');
+		check();
 		say('正在填写正文…');
 		fillEditor(editor, message.text);
 		await sleep(300);
@@ -141,8 +147,9 @@ async function runImport(message: { title: string; text: string; topics: string[
 		for (const [index, topic] of message.topics.entries()) {
 			check();
 			say(`正在添加话题 ${index + 1}/${message.topics.length}…`);
-			if (!(await addTopic(editor, topic))) missed++;
+			if (!(await addTopic(editor, topic, check))) missed++;
 		}
+		check();
 		const note = missed
 			? `已预填到小红书，但有 ${missed} 个话题没能变成话题标签，请在正文里手动点一下。检查后点「发布」或「暂存离开」。`
 			: '已预填到小红书，请检查后点「发布」或「暂存离开」。';

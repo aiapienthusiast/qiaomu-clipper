@@ -488,7 +488,23 @@
         "src/x-publish/driver.ts"
       ],
       "tests": [
-        "src/publish-bridge/publish-bridge.test.ts"
+        "src/publish-bridge/publish-bridge.test.ts",
+        "src/publish-bridge/content-safety.test.ts",
+        "src/publish-bridge/relay.test.ts"
+      ]
+    },
+    {
+      "id": "write-ai-panel-resize-progress",
+      "title": "写长文助手宽度调整、窄屏布局和长文生成进度",
+      "origin": "codex/write-ai-panel (7ab050a)",
+      "files": [
+        "src/write/ai/chat-panel.ts",
+        "src/write/ai/protocol.ts",
+        "src/styles/write.scss"
+      ],
+      "tests": [
+        "src/write/ai/chat-panel.test.ts",
+        "src/write/ai/protocol.test.ts"
       ]
     }
   ]

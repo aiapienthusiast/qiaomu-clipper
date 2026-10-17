@@ -66,6 +66,7 @@ async function runImport(message: { title: string; html: string; cover: string; 
 	const say = (text: string) => post({ type: 'progress', text });
 	const check = () => { if (state.cancel) throw new Stopped('已停止'); };
 	try {
+		check();
 		say('正在检查知乎登录…');
 		const me = await fetch('https://www.zhihu.com/api/v4/me', { credentials: 'include', headers: headers() }).then(r => r.json()).catch(() => ({})) as { id?: string };
 		if (!me.id) throw new Error('还没有登录知乎。请在这个浏览器里登录知乎，再回 Obsidian 重新发布。');
@@ -90,10 +91,12 @@ async function runImport(message: { title: string; html: string; cover: string; 
 			urls.set(source, await uploadPicture(picture));
 		}
 
+		check();
 		say('正在写入正文…');
 		const content = toZhihuHtml(message.html, urls);
 		const patched = await fetch(`${API}/articles/${draftId}/draft`, { method: 'PATCH', credentials: 'include', headers: headers(true), body: JSON.stringify({ title: message.title, content }) });
 		if (!patched.ok) await fail(patched, '写入正文');
+		check();
 		let note = '草稿已写入知乎，请检查后再发布。';
 		const cover = message.cover ? urls.get(message.cover) : '';
 		if (cover) {
@@ -101,6 +104,7 @@ async function runImport(message: { title: string; html: string; cover: string; 
 			if (!titled?.ok) note = '草稿已写入知乎，但题图没能设置，请在知乎里手动加。';
 		}
 		const url = `https://zhuanlan.zhihu.com/p/${draftId}/edit`;
+		check();
 		post({ type: 'done', summary: { url, remoteId: draftId }, message: note });
 		window.setTimeout(() => { location.assign(url); }, 400);
 	} catch (error) {
