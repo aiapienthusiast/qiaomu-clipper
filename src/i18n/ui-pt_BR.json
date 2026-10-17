@@ -1277,5 +1277,11 @@
  "导出我的": "Exportar os meus",
  "账号登录": "Login de conta",
  "Codex 账号 · 用订阅额度生图": "Conta Codex · usa sua assinatura",
- "ChatGPT 账号 · gpt-image": "Conta ChatGPT · gpt-image"
+ "ChatGPT 账号 · gpt-image": "Conta ChatGPT · gpt-image",
+ "调整宽度": "Ajustar largura",
+ "拖动调整宽度，双击恢复": "Arraste para redimensionar; clique duas vezes para redefinir",
+ "一起把这篇写好": "Vamos aprimorar este texto juntos",
+ "正在写，已写 {0} 字…": "Escrevendo… {0} caracteres",
+ "模型太久没有回应": "O modelo parou de responder",
+ "模型太久没有回应，请重试或换一个模型": "O modelo parou de responder. Tente de novo ou escolha outro modelo"
 }

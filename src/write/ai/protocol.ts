@@ -36,17 +36,36 @@ export function normalizeProposal(raw: unknown): AiProposal | undefined {
 	}
 }
 
+// Long text inside a JSON string often arrives with raw line breaks (invalid JSON); escape them and try once more instead of dropping the block.
+function parseBlock(body: string): AiProposal | undefined {
+	const text = body.trim();
+	try { return normalizeProposal(JSON.parse(text)); } catch { /* try the repair below */ }
+	try {
+		let inString = false, escaped = false, fixed = '';
+		for (const ch of text) {
+			if (inString && !escaped && ch === '\n') { fixed += '\\n'; continue; }
+			if (inString && !escaped && ch === '\t') { fixed += '\\t'; continue; }
+			if (ch === '"' && !escaped) inString = !inString;
+			escaped = ch === '\\' && !escaped;
+			fixed += ch;
+		}
+		return normalizeProposal(JSON.parse(fixed));
+	} catch { return undefined; }
+}
+
 // Splits a reply into what to show and what was proposed. A block still being written is held back until its closing fence arrives.
-export function parseReply(text: string): { text: string; proposals: AiProposal[]; pending: boolean } {
+export function parseReply(text: string): { text: string; proposals: AiProposal[]; pending: boolean; pendingChars: number } {
 	const proposals: AiProposal[] = [];
 	let shown = text.replace(FENCE, (_whole, body: string) => {
-		try { const proposal = normalizeProposal(JSON.parse(body.trim())); if (proposal) proposals.push(proposal); } catch { /* not valid JSON: dropped */ }
+		const proposal = parseBlock(body);
+		if (proposal) proposals.push(proposal);
 		return '';
 	});
 	const open = shown.indexOf('```qm-action');
 	const pending = open >= 0;
+	const pendingChars = pending ? shown.length - open : 0;
 	if (pending) shown = shown.slice(0, open);
-	return { text: shown.replace(/\n{3,}/g, '\n\n').trim(), proposals, pending };
+	return { text: shown.replace(/\n{3,}/g, '\n\n').trim(), proposals, pending, pendingChars };
 }
 
 export interface ChatContext { title: string; digest: string; markdown: string; selection: string; headings: string[]; imageReady: boolean; includeArticle?: boolean; references?: string }
@@ -67,6 +86,7 @@ export function buildSystemPrompt(ctx: ChatContext): string {
 		'{"type":"ask","question":"要问作者的一个问题","options":[{"label":"选项","description":"可选的说明"}]}',
 		'replace 的 find 要尽量短而准确；改多处就写多个指令块。不要编造文章里没有的事实。',
 		'需求不清、会影响写法时（比如目标读者、语气、篇幅），先用一个 ask 指令块问作者，给出 2 到 4 个选项，然后停下来等回答，不要一次问多个问题，也不要在没问清时就写一大段。',
+		'要写大段正文（小说章节、长文、几百字以上）时，直接用文字回复，不要放进 insert 指令块；作者会用「放进文章」按钮把你的回复放进文章。指令块只用于标题、摘要、短句替换这类小改动。',
 		'',
 		`【文章标题】${ctx.title.trim() || '（还没有标题）'}`,
 		ctx.digest.trim() ? `【摘要】${ctx.digest.trim()}` : '',
