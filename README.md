@@ -18,7 +18,7 @@ Read, watch, listen, and turn what you learn into Obsidian notes.
 
 </div>
 
-> 本页介绍 GitHub 版 **1.18.6**。GitHub 与 [Chrome 应用商店](https://chromewebstore.google.com/detail/jniolfihillilkoajpnonlbkhfkiicoo)分别更新，请以各渠道页面显示的版本为准。希望立即使用本页功能，可安装下面的 GitHub 独立版；已有商店版无需为了日常使用同时安装两份。
+> 本页介绍 GitHub 版 **1.18.7**。GitHub 与 [Chrome 应用商店](https://chromewebstore.google.com/detail/jniolfihillilkoajpnonlbkhfkiicoo)分别更新，请以各渠道页面显示的版本为准。希望立即使用本页功能，可安装下面的 GitHub 独立版；已有商店版无需为了日常使用同时安装两份。
 
 ```text
 请帮我安装或升级乔木剪藏：https://github.com/joeseesun/qiaomu-clipper 。先读 README.md、docs/INSTALL-FOR-AGENTS.md 和 native/README.md，先告诉我该装商店版还是独立版、区别是什么，再按我的系统与浏览器操作。
@@ -229,7 +229,7 @@ node scripts/check-editions.mjs
 
 Qiaomu Clipper brings a clean reader, Markdown editor, media player, timed transcripts and contextual AI chat into one workflow. Study a passage, ask a question, and save your own understanding with its source.
 
-> This README describes GitHub **1.18.6**. GitHub and the [Chrome Web Store](https://chromewebstore.google.com/detail/jniolfihillilkoajpnonlbkhfkiicoo) update independently; check each channel for its available version. Install the GitHub standalone edition below for these features.
+> This README describes GitHub **1.18.7**. GitHub and the [Chrome Web Store](https://chromewebstore.google.com/detail/jniolfihillilkoajpnonlbkhfkiicoo) update independently; check each channel for its available version. Install the GitHub standalone edition below for these features.
 
 ### Quick start
 
