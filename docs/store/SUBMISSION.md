@@ -255,3 +255,15 @@ When the user enables browser-login support and approves the optional permission
 
 Reviewer instructions (under 500 characters):
 1.18.6: Clip/read/edit/export a public article without login; RSS is off by default. Study pages offer original/bilingual captions. Optional subtitle generation needs the separately installed helper and your model/service. Optional downloads save non-YouTube media; the helper can merge split streams. YouTube file download is absent in this store build. Cookies are optional, passed only to the local helper and deleted after use. Channels links use your Tencent Yuanbao login. No DRM decryption.
+
+## 1.18.7 提审材料（2026-10-17）
+
+新包包含小宇宙紧凑吸顶播放条、写长文编辑器及助手、Obsidian 发布桥和取消/图片完整性修复。使用 chrome-store.zip；商店版继续排除 YouTube 文件下载。现有 cookies/downloads 仍为可选权限，无新增权限。
+
+写长文与发布桥的数据处理详见公开隐私页。Website content 包含写作文章、附图与选定发布目标；仅用户主动操作才交给选定 AI 服务或已登录的 X/知乎/小红书平台，不自动点击最终发布。
+
+审核说明（500 字符内）：
+
+1.18.7: Clip/read/edit/export public articles without login. Open Write long articles to create/save/export locally; AI uses your provider. Optional Qiaomu Publish handoff sends selected content via localhost to signed-in X/Zhihu/Xiaohongshu draft editors; no final Publish click. Captions may use a separately installed helper/model. Downloads exclude YouTube. Cookies are optional and passed only to the local helper. Channels resolution uses your Yuanbao login. RSS is off by default. No DRM decryption.
+
+上传及提交结果以后台实际状态为准，此处不代表已经送审。
