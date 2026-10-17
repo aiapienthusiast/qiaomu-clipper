@@ -468,6 +468,28 @@
         "src/write/ai/attachments.test.ts",
         "src/utils/chat-thinking.test.ts"
       ]
+    },
+    {
+      "id": "obsidian-publish-bridge",
+      "title": "Obsidian 乔木 Publish 一键发到 X 文章、知乎和小红书：从 Obsidian 交接文章，在已登录的浏览器里写入草稿",
+      "origin": "feat/publish-bridge",
+      "files": [
+        "src/publish-bridge/index.ts",
+        "src/publish-bridge/client.ts",
+        "src/publish-bridge/protocol.ts",
+        "src/publish-bridge/relay.ts",
+        "src/publish-bridge/x.ts",
+        "src/publish-bridge/zhihu.ts",
+        "src/publish-bridge/zhihu-content.ts",
+        "src/publish-bridge/zhihu-html.ts",
+        "src/publish-bridge/xhs.ts",
+        "src/publish-bridge/xhs-content.ts",
+        "src/publish-bridge/md5.ts",
+        "src/x-publish/driver.ts"
+      ],
+      "tests": [
+        "src/publish-bridge/publish-bridge.test.ts"
+      ]
     }
   ]
 }
