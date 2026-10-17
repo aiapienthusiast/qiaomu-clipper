@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { buildSystemPrompt, findInBlocks, normalizeProposal, parseReply } from './protocol';
 
 const block = (json: unknown) => `\`\`\`qm-action\n${JSON.stringify(json)}\n\`\`\``;
@@ -52,4 +52,16 @@ it('accepts a question for the writer with a few options', () => {
 	expect(normalizeProposal({ type: 'ask', question: '', options: [] })).toBeUndefined();
 	expect(buildSystemPrompt({ title: 't', digest: '', markdown: '正文', selection: '', headings: [], imageReady: false, includeArticle: false, references: '<网页>x</网页>' })).toContain('这次没有附上正文');
 	expect(buildSystemPrompt({ title: 't', digest: '', markdown: '正文', selection: '', headings: [], imageReady: false, references: '<网页>x</网页>' })).toContain('【作者附加的资料】');
+});
+
+describe('long blocks', () => {
+	it('repairs raw line breaks inside a JSON string', () => {
+		const parsed = parseReply('好。\n```qm-action\n{"type":"insert","where":"end","markdown":"第一段\n\n第二段"}\n```');
+		expect(parsed.proposals).toHaveLength(1);
+	});
+	it('reports how much of an unfinished block has arrived', () => {
+		const parsed = parseReply('好。\n```qm-action\n{"type":"insert","markdown":"abc');
+		expect(parsed.pending).toBe(true);
+		expect(parsed.pendingChars).toBeGreaterThan(10);
+	});
 });

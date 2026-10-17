@@ -69,7 +69,7 @@ export function mountChatPanel(host: ChatHost) {
 	const list = h('div', { class: 'qw-chat-list', role: 'log', 'aria-live': 'polite' });
 	const chips = h('div', { class: 'qw-chat-chips' });
 	const strip = h('div', { class: 'qw-chat-strip' });
-	const input = h('textarea', { class: 'qw-chat-input', rows: 2, placeholder: t('问问 AI，或让它改文章…（/ 选提示词，@ 引用文章）'), 'aria-label': t('给 AI 的话'), spellcheck: false });
+	const input = h('textarea', { class: 'qw-chat-input', rows: 3, placeholder: t('问问 AI，或让它改文章…（/ 选提示词，@ 引用文章）'), 'aria-label': t('给 AI 的话'), spellcheck: false });
 	const send = h('button', { type: 'button', class: 'qw-chat-send', title: t('发送'), 'aria-label': t('发送') }, icon(Send, 16));
 	const stop = h('button', { type: 'button', class: 'qw-chat-send', title: t('停止'), 'aria-label': t('停止'), hidden: true }, icon(Square, 14));
 	const attach = h('button', { type: 'button', class: 'qw-chat-tool', title: t('添加图片、网页或其他文章'), 'aria-label': t('添加图片、网页或其他文章'), 'aria-haspopup': 'menu' }, icon(Paperclip, 15));
@@ -78,8 +78,36 @@ export function mountChatPanel(host: ChatHost) {
 	const effort = h('select', { class: 'qw-chat-model qw-chat-effort', 'aria-label': t('思考强度'), title: t('思考强度：越高想得越久，答得越好，也越慢') });
 	const tools = h('div', { class: 'qw-chat-tools' }, attach, promptsButton, h('span', { class: 'qw-spacer' }), model, effort);
 	const foot = h('div', { class: 'qw-chat-foot' }, chips, strip, h('div', { class: 'qw-chat-compose' }, input, send, stop), tools);
-	const panel = h('aside', { class: 'qw-chat', 'aria-label': t('AI 助手'), hidden: true }, head, list, foot);
+	const grip = h('div', { class: 'qw-chat-grip', role: 'separator', 'aria-orientation': 'vertical', 'aria-label': t('调整宽度'), title: t('拖动调整宽度，双击恢复'), tabindex: 0 });
+	const panel = h('aside', { class: 'qw-chat', 'aria-label': t('AI 助手'), hidden: true }, grip, head, list, foot);
 	document.body.append(panel);
+
+	// Width: drag the left edge (or use the arrow keys); the choice is remembered. The editor column makes room for it.
+	const IDLE_MS = 120_000;
+	const WIDTH_KEY = 'qw-chat-width', MIN_W = 340, DEFAULT_W = 420;
+	const maxWidth = () => Math.max(MIN_W, Math.min(760, Math.floor(window.innerWidth * 0.6)));
+	const setWidth = (value: number, save = true) => {
+		const width = Math.round(Math.max(MIN_W, Math.min(maxWidth(), value)));
+		document.body.style.setProperty('--qw-chat-w', `${width}px`);
+		grip.setAttribute('aria-valuenow', String(width)); grip.setAttribute('aria-valuemin', String(MIN_W)); grip.setAttribute('aria-valuemax', String(maxWidth()));
+		if (save) { try { localStorage.setItem(WIDTH_KEY, String(width)); } catch { /* private window */ } }
+	};
+	let savedWidth = DEFAULT_W;
+	try { savedWidth = Number(localStorage.getItem(WIDTH_KEY)) || DEFAULT_W; } catch { /* private window */ }
+	setWidth(savedWidth, false);
+	grip.addEventListener('pointerdown', event => {
+		event.preventDefault(); grip.setPointerCapture(event.pointerId); panel.classList.add('resizing');
+		const move = (e: PointerEvent) => setWidth(document.dir === 'rtl' ? e.clientX : window.innerWidth - e.clientX);
+		const up = () => { grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); grip.removeEventListener('pointercancel', up); panel.classList.remove('resizing'); };
+		grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up); grip.addEventListener('pointercancel', up);
+	});
+	grip.addEventListener('dblclick', () => setWidth(DEFAULT_W));
+	grip.addEventListener('keydown', event => {
+		const step = event.shiftKey ? 48 : 16, now = panel.getBoundingClientRect().width, rtl = document.dir === 'rtl';
+		if (event.key === 'ArrowLeft') setWidth(now + (rtl ? -step : step)); else if (event.key === 'ArrowRight') setWidth(now + (rtl ? step : -step)); else return;
+		event.preventDefault();
+	});
+	window.addEventListener('resize', () => setWidth(panel.getBoundingClientRect().width || savedWidth, false));
 
 	const persist = () => { current.title = titleOf(current.messages); current.updatedAt = Date.now(); sessions = [current, ...sessions.filter(s => s.id !== current.id)]; void saveChat(host.articleId, sessions); };
 	const articleChars = () => host.getMarkdown().replace(/\s+/g, '').length;
@@ -173,7 +201,8 @@ export function mountChatPanel(host: ChatHost) {
 		const parsed = parseReply(message.content);
 		const body = h('div', { class: 'qw-msg-body' });
 		if (parsed.text) body.innerHTML = renderMarkdown(parsed.text); // sanitised
-		else if (streaming && !message.thought) body.append(h('span', { class: 'qw-typing', text: t('正在想…') }));
+		else if (streaming && !message.thought && !parsed.pending) body.append(h('span', { class: 'qw-typing', text: t('正在想…') }));
+		if (streaming && parsed.pending) body.append(h('div', { class: 'qw-typing', text: t('正在写，已写 {0} 字…', [parsed.pendingChars]) }));
 		body.querySelectorAll('a').forEach(a => { a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener noreferrer'); });
 		const out = h('div', { class: 'qw-msg assistant' });
 		if (message.thought || (message.thinkMs ?? 0) > 1500) {
@@ -261,7 +290,12 @@ export function mountChatPanel(host: ChatHost) {
 			go.addEventListener('click', () => { void browser.tabs.create({ url: browser.runtime.getURL('settings.html?section=interpreter') }); });
 			list.append(h('div', { class: 'qw-chat-empty' }, h('p', { text: t('还没有可用的 AI 模型。添加一个以后，就能让它看你的文章、提意见、直接改。') }), go));
 		} else if (!current.messages.length) {
-			list.append(h('div', { class: 'qw-chat-empty' }, h('p', { text: t('我能看到你正在写的文章和选中的文字。问我问题，或者让我改标题、写摘要、润色、配图。') }), h('p', { class: 'qw-chat-hint', text: t('下面的快捷条会跟着你在做的事变化；输入 / 打开提示词库，输入 @ 引用别的文章。') })));
+			list.append(h('div', { class: 'qw-chat-empty qw-chat-welcome' },
+				h('div', { class: 'qw-welcome-mark', 'aria-hidden': 'true' }, icon(Sparkles, 22)),
+				h('p', { class: 'qw-welcome-title', text: t('一起把这篇写好') }),
+				h('p', { class: 'qw-welcome-lead', text: t('我能看到你正在写的文章和选中的文字。问我问题，或者让我改标题、写摘要、润色、配图。') }),
+				h('span', { class: 'qw-welcome-rule', 'aria-hidden': 'true' }),
+				h('p', { class: 'qw-chat-hint', text: t('下面的快捷条会跟着你在做的事变化；输入 / 打开提示词库，输入 @ 引用别的文章。') })));
 		} else current.messages.forEach((message, i) => list.append(drawMessage(message, i, streaming && i === current.messages.length - 1)));
 		drawChips(); drawStrip();
 		if (atBottom || streaming) list.scrollTop = list.scrollHeight;
@@ -354,16 +388,21 @@ export function mountChatPanel(host: ChatHost) {
 		controller = new AbortController(); setBusy(true); draw(true);
 		const started = Date.now();
 		let firstText = 0;
+		let stalled = false;
+		let idle = 0;
+		const watch = () => { window.clearTimeout(idle); idle = window.setTimeout(() => { stalled = true; controller?.abort(); }, IDLE_MS); };
+		watch();
 		try {
 			await streamChat({
 				model: chosen, system, messages: turns, signal: controller.signal, reasoningEffort: level,
-				onThought: delta => { reply.thought = (reply.thought ?? '') + delta; reply.thinkMs = Date.now() - started; schedule(); },
-				onDelta: delta => { if (!firstText) { firstText = Date.now(); reply.thinkMs = firstText - started; } reply.content += delta; schedule(); },
+				onThought: delta => { watch(); reply.thought = (reply.thought ?? '') + delta; reply.thinkMs = Date.now() - started; schedule(); },
+				onDelta: delta => { watch(); if (!firstText) { firstText = Date.now(); reply.thinkMs = firstText - started; } reply.content += delta; schedule(); },
 			});
 		} catch (error) {
-			if ((error as Error)?.name !== 'AbortError') reply.content = reply.content ? `${reply.content}\n\n${t('（中断：{0}）', [String((error as Error)?.message ?? error).slice(0, 160)])}` : t('出错了：{0}', [String((error as Error)?.message ?? error).slice(0, 200)]);
+			if (stalled) reply.content = reply.content ? `${reply.content}\n\n${t('（中断：{0}）', [t('模型太久没有回应')])}` : t('出错了：{0}', [t('模型太久没有回应，请重试或换一个模型')]);
+			else if ((error as Error)?.name !== 'AbortError') reply.content = reply.content ? `${reply.content}\n\n${t('（中断：{0}）', [String((error as Error)?.message ?? error).slice(0, 160)])}` : t('出错了：{0}', [String((error as Error)?.message ?? error).slice(0, 200)]);
 		} finally {
-			controller = undefined; setBusy(false);
+			window.clearTimeout(idle); controller = undefined; setBusy(false);
 			// A streaming redraw still queued would repaint the unfinished state over the final one.
 			if (renderTimer) { cancelAnimationFrame(renderTimer); renderTimer = 0; }
 			if (!reply.content.trim() && !reply.thought) current.messages.splice(-2, 2); // nothing came back; do not keep an empty exchange
@@ -373,7 +412,7 @@ export function mountChatPanel(host: ChatHost) {
 	}
 	function schedule() { if (!renderTimer) renderTimer = requestAnimationFrame(() => { renderTimer = 0; draw(true); }); }
 
-	const resize = () => { input.style.height = 'auto'; input.style.height = `${Math.min(140, input.scrollHeight)}px`; };
+	const resize = () => { input.style.height = 'auto'; input.style.height = `${Math.min(220, input.scrollHeight)}px`; };
 	input.addEventListener('input', () => {
 		resize();
 		// "/" at the very start opens the prompt library; "@" after a space or at the start picks another article.
