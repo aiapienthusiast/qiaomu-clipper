@@ -506,6 +506,19 @@
         "src/write/ai/chat-panel.test.ts",
         "src/write/ai/protocol.test.ts"
       ]
+    },
+    {
+      "id": "code-block-preservation",
+      "title": "代码块、字符图示与 Markdown 空白保留",
+      "origin": "fix/preserve-code-blocks",
+      "files": [
+        "src/utils/code-preservation.ts",
+        "src/utils/defuddle.ts",
+        "src/styles/reader/code-blocks.scss"
+      ],
+      "tests": [
+        "src/utils/code-preservation.test.ts"
+      ]
     }
   ]
 }
