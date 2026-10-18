@@ -506,6 +506,33 @@
         "src/write/ai/chat-panel.test.ts",
         "src/write/ai/protocol.test.ts"
       ]
+    },
+    {
+      "id": "x-article-study-routing",
+      "title": "X 长文章与 GIF 保持图文沉浸学习，排除回复视频误识别",
+      "origin": "codex/x-article-study-routing",
+      "files": [
+        "src/utils/web-media-page.ts",
+        "src/utils/web-study-path.ts",
+        "src/background.ts"
+      ],
+      "tests": [
+        "src/utils/web-media-page.test.ts",
+        "src/utils/web-study-path.test.ts",
+        "src/web-content.test.ts"
+      ]
+    },
+    {
+      "id": "caption-paragraph-spacing",
+      "title": "合并字幕段落时保留中文句间空格，原始播放字幕与时间不变",
+      "origin": "issue #67",
+      "files": [
+        "src/utils/youtube-dom-transcript.ts"
+      ],
+      "tests": [
+        "src/utils/youtube-dom-transcript.test.ts",
+        "src/utils/youtube-innertube-transcript.test.ts"
+      ]
     }
   ]
 }
