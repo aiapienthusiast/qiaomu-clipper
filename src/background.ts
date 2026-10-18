@@ -1,3 +1,4 @@
+import { openAiSidebar } from './utils/ai-sidebar';
 import { handleChatImageSource } from './utils/chat-image-source';
 import { validChatTurns } from './utils/chat-content';
 import { validChatSession } from './utils/opencode-go';
@@ -932,6 +933,10 @@ browser.commands.onCommand.addListener(async (command, tab) => {
 		tab = tabs[0];
 	}
 
+	if (command === 'open_ai_sidebar' && tab?.windowId !== undefined) {
+		await openAiSidebar(tab.windowId);
+		return;
+	}
 	if (command === 'quick_clip') {
 		if (tab?.id) {
 			openPopup();
@@ -1026,6 +1031,10 @@ const debouncedUpdateContextMenu = debounce(async (tabId: number) => {
 			];
 
 		const browserType = await detectBrowser();
+		// Feature detection works even when the polyfill exposes `browser` in a Chrome worker.
+		if (typeof chrome !== 'undefined' && chrome.sidePanel) {
+			menuItems.push({ id: 'open-ai-sidebar', title: t('AI 对话'), contexts: ['page', 'selection', 'action'] });
+		}
 		if (browserType === 'chrome') {
 			menuItems.push({
 				id: 'open-side-panel',
@@ -1045,7 +1054,9 @@ const debouncedUpdateContextMenu = debounce(async (tabId: number) => {
 }, 100); // 100ms debounce time
 
 browser.contextMenus.onClicked.addListener(async (info, tab) => {
-	if (info.menuItemId === "open-obsidian-clipper") {
+	if (info.menuItemId === 'open-ai-sidebar' && tab?.windowId !== undefined) {
+		await openAiSidebar(tab.windowId);
+	} else if (info.menuItemId === "open-obsidian-clipper") {
 		openPopup();
 	} else if (info.menuItemId === "enter-highlighter" && tab && tab.id) {
 		await setHighlighterMode(tab.id, true);
@@ -1062,7 +1073,7 @@ browser.contextMenus.onClicked.addListener(async (info, tab) => {
 	} else if (info.menuItemId === 'open-embedded' && tab && tab.id) {
 		await sendMessageToContentScript(tab.id, { action: "toggle-iframe" });
 	} else if (info.menuItemId === 'open-side-panel' && tab && tab.id && tab.windowId) {
-		chrome.sidePanel.open({ tabId: tab.id });
+		await Promise.all([chrome.sidePanel.setOptions({ path: 'side-panel.html', enabled: true }), chrome.sidePanel.open({ tabId: tab.id })]);
 		sidePanelOpenWindows.add(tab.windowId);
 		await ensureContentScriptLoadedInBackground(tab.id);
 	} else if (info.menuItemId === 'copy-markdown-to-clipboard' && tab && tab.id) {

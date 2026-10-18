@@ -16,9 +16,11 @@ import { t } from './ui-text';
 import { articleImages, imageAwareArticle, ChatImageSession, type ArticleImage } from './chat-images';
 export interface ClipChatOptions {
 	// Current article text; read fresh on every question so edits are included.
-	getContext: () => { title: string; markdown: string; url: string };
+	getContext: () => { title: string; markdown: string; url: string; available?: boolean };
 	// Append an answer to the note being clipped.
-	onInsert: (text: string) => void | Promise<void>;
+	onInsert?: (text: string) => void | Promise<void>;
+	prepareContext?: () => Promise<void>;
+	onClose?: () => void;
 	// Reading page only: turn the selection into a highlight.
 	onHighlight?: () => void;
 	onLearningRecord?: (text: string) => void;
@@ -59,7 +61,7 @@ function selectedArticleText(): string {
 }
 
 // Side panel using the models configured under LLM providers and models.
-export function mountClipChat(options: ClipChatOptions): { toggle: (open?: boolean) => boolean } {
+export function mountClipChat(options: ClipChatOptions): { toggle: (open?: boolean) => boolean; quote: (text: string) => void } {
 	const root = document.documentElement;
 	const panel = el('aside', 'clip-chat');
 	panel.hidden = true;
@@ -389,8 +391,9 @@ export function mountClipChat(options: ClipChatOptions): { toggle: (open?: boole
 		copy.addEventListener('click', async () => { await navigator.clipboard.writeText(answer).catch(() => {}); showClipStatus(getMessage('qiaomuEditorCopied')); });
 		const insert = iconButton('clip-chat-action', FilePlus2, getMessage('qiaomuChatInsert'));
 		insert.append(el('span', '', getMessage('qiaomuChatInsert')));
-		insert.addEventListener('click', async () => { await options.onInsert(answer); showClipStatus(getMessage('qiaomuChatInserted')); });
-		actions.append(copy, insert);
+		insert.addEventListener('click', async () => { await options.onInsert?.(answer); showClipStatus(getMessage('qiaomuChatInserted')); });
+		actions.append(copy);
+		if (options.onInsert) actions.append(insert);
 		if (options.onLearningAi) {
 			const diary = iconButton('clip-chat-action', NotebookPen, t('加入今日日记的 AI 补充'));
 			diary.append(el('span', '', t('加入日记')));
@@ -443,8 +446,8 @@ export function mountClipChat(options: ClipChatOptions): { toggle: (open?: boole
 	}
 
 	function refreshContext() {
-		const { markdown, url } = options.getContext();
-		contextText.textContent = getMessage('qiaomuChatContext', String(markdown.length));
+		const { markdown, url, available } = options.getContext();
+		contextText.textContent = available === false ? t('普通对话') : getMessage('qiaomuChatContext', String(markdown.length));
 		const images = articleImages(markdown, url);
 		const key = JSON.stringify([url, images]);
 		if (key !== imageKey) { currentImages = images; imageKey = key; selectedImages = null; imageStatus.textContent = ''; imageSession.clear(); renderImageList(); }
@@ -461,7 +464,7 @@ export function mountClipChat(options: ClipChatOptions): { toggle: (open?: boole
 
 	function renderSuggestions() {
 		suggestions.replaceChildren();
-		if (input.disabled) return;
+		if (input.disabled || options.getContext().available === false) return;
 		for (const item of visibleQuickPrompts(preferences, !!quote, getMessage)) {
 			const chip = el('button', 'clip-chat-chip', item.title);
 			chip.type = 'button';
@@ -507,12 +510,21 @@ export function mountClipChat(options: ClipChatOptions): { toggle: (open?: boole
 		content: (turn.quote ? `${getMessage('qiaomuChatAboutSelection')}\n"""\n${turn.quote}\n"""\n\n${turn.content}` : turn.content) + (turn.imageNumbers?.length ? `\n[本轮选择的图片编号：${turn.imageNumbers.join(', ')}]` : ''),
 	});
 
+	let preparing = false, disposed = false;
+	window.addEventListener('pagehide', () => { disposed = true; controller?.abort(); persist(); });
 	async function ask(question: string) {
 		await preferencesReady;
 		const text = question.trim();
-		if (!text || controller) return;
+		if (!text || controller || preparing || disposed) return;
 		const model = enabledChatModels().find(m => m.id === picker.value);
 		if (!model) return;
+		if (options.prepareContext) {
+			preparing = true; send.disabled = true;
+			try { await options.prepareContext(); }
+			catch (error) { showClipStatus(String((error as Error).message)); return; }
+			finally { preparing = false; send.disabled = false; }
+			if (disposed) return;
+		}
 		refreshContext();
 		const selected = currentImages.filter(image => selectedImages === null || selectedImages.has(image.url));
 		const activeConversation = conversation;
@@ -614,11 +626,11 @@ export function mountClipChat(options: ClipChatOptions): { toggle: (open?: boole
 	});
 	input.addEventListener('keydown', event => {
 		if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); composer.requestSubmit(); }
-		if (event.key === 'Escape') toggle();
+		if (event.key === 'Escape') { if (options.onClose) options.onClose(); else toggle(); }
 	});
 	historyButton.addEventListener('click', () => { if (!settingsForm.hidden) closePreferences(); void showHistory(); });
 	newChat.addEventListener('click', () => { if (!settingsForm.hidden) closePreferences(); cancelRequest(); conversation = newConversation(); historyList.hidden = true; renderConversation(); refreshContext(); input.focus(); });
-	close.addEventListener('click', () => toggle());
+	close.addEventListener('click', () => { if (options.onClose) options.onClose(); else toggle(); });
 	quoteClear.addEventListener('click', () => { quote = ''; refreshQuote(); });
 
 	let storedWidth = 0;
@@ -660,7 +672,7 @@ export function mountClipChat(options: ClipChatOptions): { toggle: (open?: boole
 	}
 	mountSelectionPill(askAbout, options.onHighlight, options.onLearningRecord);
 
-	return { toggle: (open?: boolean) => toggle(open) };
+	return { toggle: (open?: boolean) => toggle(open), quote: askAbout };
 }
 
 // One small capsule next to the selection: Highlight (reading page) and Ask AI. Can be turned off in the settings.
