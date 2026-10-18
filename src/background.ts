@@ -21,8 +21,8 @@ import { enabledChatModels, streamChat } from './utils/chat-llm';
 import { validEffort } from './utils/chat-thinking';
 import { openStudyWithPlayback } from './utils/study-playback-handoff';
 import { audioStudyPath, videoKey, videoStudyPath } from './utils/video-source';
-import { isSiteOn, loadStudySites, siteOf } from './utils/study-sites';
-import { isMediaItemAddress, webMediaAddress } from './utils/web-media-page';
+import { siteOf } from './utils/study-sites';
+import { webStudyPath } from './utils/web-study-path';
 import { getXhsPageMedia, snapshotXhsPlayer } from './utils/xiaohongshu';
 import { followXiaoeLink, readXiaoeLive, xiaoeParts, fetchXiaoePlaylist } from './utils/xiaoe';
 import { hasStoredHighlights } from './utils/url-utils';
@@ -1291,18 +1291,6 @@ async function openNoteCard(tabId: number, quote?: string): Promise<void> {
 		await browser.scripting.insertCSS({ target: { tabId }, files: ['note-card.css'] });
 		await browser.scripting.executeScript({ target: { tabId }, files: ['note-card.js'] });
 	} catch { /* restricted page */ }
-}
-
-// Supported media detail pages share the native study player. A feed adapter supplies the currently playing item address.
-async function webStudyPath(url: string, tabId: number): Promise<string | null> {
-	const site = siteOf(url); if (!site || site.builtin || !isSiteOn(await loadStudySites(), site.id)) return null;
-	let post = webMediaAddress(url);
-	try { const source = await browser.tabs.sendMessage(tabId, { action: 'qiaomuWebMediaSource' }) as { url?: unknown } | undefined; if (site.id === 'xiaohongshu' && !source?.url) return null; if (typeof source?.url === 'string' && siteOf(source.url)?.id === site.id) post = webMediaAddress(source.url); } catch { if (site.id === 'xiaohongshu') return null; /* adapter not loaded */ }
-	if (!post) return null;
-	try {
-		const [result] = await browser.scripting.executeScript({ target: { tabId }, func: () => Boolean(document.querySelector('video, audio, iframe[src*="player.vimeo.com"], iframe[src*="player.twitch.tv"], iframe[src*="dailymotion.com"], [data-testid="videoPlayer"], meta[property="og:video"], meta[property="og:video:url"], meta[property="og:audio"]')) });
-		return result?.result || isMediaItemAddress(post) ? `reader.html?study=web&url=${encodeURIComponent(post)}&sourceTab=${tabId}` : null;
-	} catch { return null; }
 }
 
 // The triple-press commands open the clipper, which runs read / edit / clip once the clip is ready.
