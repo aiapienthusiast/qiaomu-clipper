@@ -25,7 +25,7 @@ import { extractContentBySelector as extractContentBySelectorShared } from '../u
 import { setPageUrl, setPageTitle, updatePageDomainSettings, getHighlights, repositionHighlights } from '../utils/highlighter';
 import { throttle } from '../utils/throttle';
 import { loadSettings, generalSettings } from '../utils/storage-utils';
-import Defuddle from 'defuddle';
+import Defuddle from '../utils/defuddle';
 import { withReliableBilibili } from '../utils/bilibili-captions';
 
 import { t } from '../utils/ui-text';

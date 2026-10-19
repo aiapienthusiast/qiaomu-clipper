@@ -1,6 +1,6 @@
 import type { ClipSyncAction } from './clip-bar';
 import { transcriptHeadingTools } from './transcript-heading';
-import { createMarkdownContent } from 'defuddle/full';
+import { createMarkdownContent } from './defuddle';
 import { type ClipPreview, updateClipPreview } from './clip-preview';
 import { generateFrontmatter } from './obsidian-note-creator';
 
