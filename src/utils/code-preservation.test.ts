@@ -6,6 +6,7 @@ import { createMarkdownContent as originalMarkdown } from 'defuddle/full';
 import Defuddle, { createMarkdownContent } from './defuddle';
 import { escapeCode } from './code-preservation';
 import { parseHTML } from 'linkedom';
+import DOMPurify from 'dompurify';
 
 const url = 'https://example.org/code-blocks';
 const diagram = '┌──────────────┐\n│  Client      │\n└──────┬───────┘\n       ↓\n    Server';
@@ -42,6 +43,26 @@ describe('lossless code blocks', () => {
 			const markdown = createMarkdownContent(wrapper(html(nested, 'python')), url);
 			expect(markdown).not.toContain('QCCode');
 			expect(renderedCodes(markdown)).toEqual([nested]);
+		}
+	});
+	it('preserves recipe tabs through nested Markdown and the sanitized preview renderer', () => {
+		const text = 'build:\n\techo "<done>"  \n\n\tprintf "|`value`"\n';
+		for (const wrapper of [
+			(block: string) => `<ul><li><p>Build</p>${block}</li></ul>`,
+			(block: string) => `<ol start="10"><li>${block}</li></ol>`,
+			(block: string) => `<ul><li>Outer<ul><li><p>Inner</p>${block}</li></ul></li></ul>`,
+			(block: string) => `<blockquote><ul><li>${block}</li></ul></blockquote>`,
+			(block: string) => `<ul><li><blockquote>${block}</blockquote></li></ul>`,
+		]) {
+			const input = wrapper(html(text, 'makefile'));
+			// The upstream renderer expands a recipe tab into spaces inside lists.
+			expect(renderedCodes(originalMarkdown(input, url))).not.toEqual([text]);
+			const markdown = createMarkdownContent(input, url);
+			const preview = DOMPurify.sanitize(marked.parse(markdown) as string);
+			const code = new DOMParser().parseFromString(preview, 'text/html').querySelector('pre > code');
+			expect(code?.textContent).toBe(text);
+			expect(code?.classList.contains('language-makefile')).toBe(true);
+			expect(markdown).not.toContain('QCCode');
 		}
 	});
 	it('keeps inline code inline and leaves non-code prose conversion unchanged', () => {

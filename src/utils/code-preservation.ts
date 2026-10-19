@@ -28,6 +28,14 @@ export function escapeCode(text: string): string {
 	return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// Keep payload whitespace out of Markdown's list/table normalization. Numeric
+// entities are decoded back to the exact text by the sanitized HTML renderer.
+function inlineCodeHtml(text: string, language: string): string {
+	const code = escapeCode(text).replace(/\n/g, '&#10;').replace(/\t/g, '&#9;')
+		.replace(/\|/g, '&#124;').replace(/`/g, '&#96;');
+	return `<pre><code${language ? ` class="language-${language}"` : ''}>${code}</code></pre>`;
+}
+
 // Match Defuddle's whitespace/CJK word counting when removing temporary
 // markers, so the transport mechanism does not inflate article statistics.
 export function countHtmlWords(html: string): number {
@@ -95,12 +103,17 @@ export function restoreCodeMarkdown(markdown: string, records: CodeBlock[]): str
 		if (inTable) {
 			// Pipe tables cannot contain fenced blocks. Inline HTML retains the
 			// code's newlines without introducing physical table rows or delimiters.
-			const code = escapeCode(text).replace(/\n/g, '&#10;').replace(/\|/g, '&#124;').replace(/`/g, '&#96;');
-			markdown = markdown.replace(new RegExp('```[^`\\n]*?' + token + ' *```', 'g'), () => `<pre><code${language ? ` class="language-${language}"` : ''}>${code}</code></pre>`);
+			markdown = markdown.replace(new RegExp('```[^`\\n]*?' + token + ' *```', 'g'), () => inlineCodeHtml(text, language));
 		}
 		const fence = '`'.repeat(Array.from(text.matchAll(/`+/g)).reduce((length, match) => Math.max(length, match[0].length + 1), 3));
 		const pattern = new RegExp('(^[^\\n]*?)```[^\\n]*\\n([ \\t>]*?)' + token + '\\n([ \\t>]*?)```(?=\\n|$)', 'gm');
 		markdown = markdown.replace(pattern, (_, opening: string, body: string, closing: string) => {
+			// Marked expands tabs while parsing list items, before fenced-code
+			// tokenization. Preserve tab-sensitive code (e.g. Makefile recipes)
+			// as one HTML line in nested contexts, with the existing list prefix.
+			if (text.includes('\t') && (opening || body || closing)) {
+				return opening + inlineCodeHtml(text.endsWith('\n') ? text : text + '\n', language);
+			}
 			// Turndown uses a tab even for a three-column ordered-list marker.
 			// CommonMark treats that as an extra code column. Align with the marker.
 			const list = opening.match(/^([ \t>]*)(?:\d+[.)]|[-+*]) +$/);
