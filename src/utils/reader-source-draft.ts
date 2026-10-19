@@ -1,4 +1,4 @@
-import { createMarkdownContent } from 'defuddle/full';
+import { createMarkdownContent } from './defuddle';
 import { ClipPreview, updateClipPreview, loadClipPreview, loadEditedStudyPreview } from './clip-preview';
 import { generalSettings, loadSettings } from './storage-utils';
 import browser from './browser-polyfill';
