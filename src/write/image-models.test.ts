@@ -7,7 +7,7 @@ vi.mock('../utils/oauth/accounts', () => ({
 	freshOAuth: async (provider: any) => provider.oauth,
 	oauthModelsRequest: (oauth: any) => oauth.kind === 'codex' ? { url: 'https://chatgpt.com/backend-api/codex/models?client_version=1', headers: { Authorization: `Bearer ${oauth.access}` } } : { url: 'https://api.openai.com/v1/models', headers: { Authorization: `Bearer ${oauth.access}` } },
 }));
-import { IMAGE_SOURCES, accountSources, arkBody, arkSize, fetchImageModels, generateImage, imageFromResponsesEvents, isReady, labelOf, loadImageModels, modelsOf, normalizeStore, openAiSize, saveImageModels, serviceName, type ImageModelConfig } from './image-models';
+import { IMAGE_SOURCES, accountSources, isChatGptAccount, arkBody, arkSize, fetchImageModels, generateImage, imageFromResponsesEvents, isReady, labelOf, loadImageModels, modelsOf, normalizeStore, openAiSize, saveImageModels, serviceName, type ImageModelConfig } from './image-models';
 
 const model = (over: Partial<ImageModelConfig> = {}): ImageModelConfig => ({ id: 'a', sourceId: 'openai', engine: 'api', name: '', baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-1', model: 'gpt-image-1', models: ['gpt-image-1'], ...over });
 const PNG_B64 = btoa(String.fromCharCode(0x89, 0x50, 0x4e, 0x47, 1, 2, 3));
@@ -95,23 +95,28 @@ const chatgpt = { id: 'prov', name: 'ChatGPT', baseUrl: '', apiKey: '', oauth: {
 const codex = { id: 'cdx', name: 'Codex', baseUrl: '', apiKey: '', oauth: { kind: 'codex', access: 'ctok', refresh: 'r', expires: Date.now() + 3_600_000, clientId: 'c', accountId: 'acct' } };
 const account = (provider: any, over: Partial<ImageModelConfig> = {}): ImageModelConfig => model({ sourceId: `account:${provider.id}`, engine: 'oauth', providerId: provider.id, apiKey: '', baseUrl: '', model: 'gpt-image-1', models: ['gpt-image-1'], ...over });
 
-it('offers signed-in ChatGPT and Codex accounts as keyless services and needs the sign-in to be there', () => {
+it('offers only signed-in Codex accounts as keyless services and needs the sign-in to be there', () => {
 	settings.providers = [chatgpt, codex, { id: 'plain', name: 'Plain', baseUrl: 'x', apiKey: 'k' }];
-	expect(accountSources().map(s => [s.id, s.engine, s.providerId])).toEqual([['account:prov', 'oauth', 'prov'], ['account:cdx', 'oauth', 'cdx']]);
-	expect(isReady(account(chatgpt))).toBe(true);
-	expect(serviceName(account(chatgpt))).toBe('ChatGPT');
+	expect(accountSources().map(s => [s.id, s.engine, s.providerId])).toEqual([['account:cdx', 'oauth', 'cdx']]);
+	expect(isReady(account(codex))).toBe(true);
+	expect(serviceName(account(codex))).toBe('Codex');
 	settings.providers = [];
-	expect(isReady(account(chatgpt))).toBe(false);
+	expect(isReady(account(codex))).toBe(false);
 });
 
-it('draws through a ChatGPT sign-in with the Images API and its token', async () => {
+it('no longer treats a ChatGPT sign-in as a picture service', async () => {
 	settings.providers = [chatgpt];
-	respond({ data: [{ b64_json: PNG_B64 }] });
-	const blob = await generateImage(account(chatgpt), '山水', '16:9');
-	expect(calls[0].url).toBe('https://api.openai.com/v1/images/generations');
-	expect(calls[0].init.headers.Authorization).toBe('Bearer tok');
-	expect(JSON.parse(calls[0].init.body)).toMatchObject({ model: 'gpt-image-1', size: '1536x1024' });
-	expect(blob.size).toBe(7);
+	expect(accountSources()).toEqual([]);
+	expect(isReady(account(chatgpt))).toBe(false);
+	expect(isChatGptAccount(account(chatgpt))).toBe(true);
+	await expect(generateImage(account(chatgpt), '山水', '16:9')).rejects.toThrow('not-ready');
+	expect(calls.length).toBe(0);
+});
+
+it('reports a refused Codex sign-in as its own error', async () => {
+	settings.providers = [codex];
+	vi.stubGlobal('fetch', vi.fn(async () => new Response('no', { status: 401 })));
+	await expect(generateImage(account(codex, { model: 'gpt-5.5', models: ['gpt-5.5'] }), '山水', '1:1')).rejects.toThrow('account-denied');
 });
 
 it('draws through a Codex sign-in with the image tool and reads the picture from the event stream', async () => {
@@ -147,9 +152,6 @@ it('loads the models a service offers, narrowed to picture models', async () => 
 	expect(calls[calls.length - 1].url).toContain('output_modalities=image');
 	respond({ models: [{ name: 'models/gemini-2.5-flash-image', displayName: 'Nano Banana' }, { name: 'models/gemini-2.5-pro' }] });
 	expect((await fetchImageModels(IMAGE_SOURCES.find(s => s.id === 'gemini')!, '', 'g')).map(m => m.id)).toEqual(['gemini-2.5-flash-image']);
-	settings.providers = [chatgpt];
-	respond({ data: [{ id: 'gpt-4.1' }, { id: 'gpt-image-1' }] });
-	expect((await fetchImageModels(accountSources()[0], '', '')).map(m => m.id)).toEqual(['gpt-image-1']);
 	settings.providers = [codex];
 	respond({ models: [{ slug: 'gpt-5.5' }, { slug: 'codex-mini' }, { slug: 'o3' }] });
 	expect((await fetchImageModels(accountSources()[0], '', '')).map(m => m.id)).toEqual(['gpt-5.5', 'codex-mini']);

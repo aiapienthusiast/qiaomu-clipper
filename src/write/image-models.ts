@@ -1,6 +1,6 @@
 import { t } from '../utils/ui-text';
 import { getLocalStorage, setLocalStorage, generalSettings, saveSettings } from '../utils/storage-utils';
-import { CHATGPT_BASE, CODEX_BASE, freshOAuth, oauthModelsRequest } from '../utils/oauth/accounts';
+import { CODEX_BASE, freshOAuth, oauthModelsRequest } from '../utils/oauth/accounts';
 import type { Provider } from '../types/types';
 
 // Picture-making services the writer can call. Keys stay in this browser's local storage (never synced), like the speech-recognition keys.
@@ -49,7 +49,7 @@ export const modelsOf = (config: ImageModelConfig): string[] => (config.models.l
 
 export function isReady(model: ImageModelConfig): boolean {
 	if (!model.model.trim()) return false;
-	if (model.engine === 'oauth') return !!providerOf(model);
+	if (model.engine === 'oauth') return providerOf(model)?.oauth?.kind === 'codex';
 	const local = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])/i.test(model.baseUrl);
 	if (model.engine === 'api') return !!model.baseUrl.trim() && (!!model.apiKey.trim() || local);
 	return !!model.apiKey.trim();
@@ -61,14 +61,16 @@ export function serviceName(model: ImageModelConfig): string {
 }
 export function labelOf(model: ImageModelConfig, modelId = model.model): string { return `${serviceName(model)} · ${modelId}`; }
 
-// Picture services that need no key: the ChatGPT / Codex accounts already signed in under the language-model providers.
+// Picture services that need no key: the Codex accounts already signed in under the language-model providers.
+// A ChatGPT sign-in is left out on purpose: OpenAI's plan-usage route does not allow image generation.
 export function accountSources(): ImageSource[] {
-	return generalSettings.providers.filter(p => p.oauth).map(p => ({
+	return generalSettings.providers.filter(p => p.oauth?.kind === 'codex').map(p => ({
 		id: `account:${p.id}`, providerId: p.id, engine: 'oauth' as const, baseUrl: '', keyUrl: '', name: p.name,
-		sub: p.oauth!.kind === 'codex' ? t('Codex 账号 · 用订阅额度生图') : t('ChatGPT 账号 · gpt-image'),
-		models: p.oauth!.kind === 'codex' ? [{ id: 'gpt-5.5' }, { id: 'gpt-5.4' }] : [{ id: 'gpt-image-1' }],
+		sub: t('Codex 账号 · 用订阅额度生图'), models: [{ id: 'gpt-5.5' }, { id: 'gpt-5.4' }],
 	}));
 }
+// An account service saved while it was a ChatGPT sign-in: it can no longer make pictures.
+export const isChatGptAccount = (model: ImageModelConfig): boolean => model.engine === 'oauth' && providerOf(model)?.oauth?.kind === 'chatgpt';
 export function readyModels(store: ImageModelStore): ImageModelConfig[] { return store.models.filter(isReady); }
 
 // ---- making a picture ---------------------------------------------------------------------------------------------------------
@@ -154,8 +156,8 @@ export async function generateImage(config: ImageModelConfig, prompt: string, as
 
 
 // ---- ChatGPT / Codex accounts ----------------------------------------------------------------------------------------------
-// A ChatGPT sign-in works like an API key for OpenAI's Images API. A Codex sign-in goes through the Codex backend's Responses API,
-// where the model draws with its built-in image tool (the same way the Codex app does).
+// A Codex sign-in goes through the Codex backend's Responses API, where the model draws with its built-in image tool (the same way
+// the Codex app does). A ChatGPT sign-in cannot: its plan-usage token is refused by the Images API and the image tool is unsupported.
 async function accountHeaders(provider: Provider): Promise<{ oauth: NonNullable<Provider['oauth']>; headers: Record<string, string> }> {
 	const oauth = await freshOAuth(provider, () => saveSettings());
 	const headers: Record<string, string> = { 'Content-Type': 'application/json', Authorization: `Bearer ${oauth.access}` };
@@ -183,20 +185,15 @@ export function imageFromResponsesEvents(lines: string[]): { b64?: string; parti
 async function generateWithAccount(config: ImageModelConfig, prompt: string, aspect: string, signal?: AbortSignal): Promise<Blob> {
 	const provider = providerOf(config);
 	if (!provider?.oauth) throw new Error('not-ready');
+	if (provider.oauth.kind !== 'codex') throw new Error('account-unsupported');
 	const { oauth, headers } = await accountHeaders(provider);
 	const size = openAiSize(aspect);
-	if (oauth.kind !== 'codex') {
-		const json = await send(`${CHATGPT_BASE}/images/generations`, headers, { model: config.model, prompt, n: 1, size }, signal);
-		const item = json?.data?.[0];
-		if (item?.b64_json) return fromBase64(item.b64_json);
-		if (item?.url) return await fromUrl(item.url, signal);
-		throw new Error('empty-image');
-	}
 	if (oauth.accountId) headers['chatgpt-account-id'] = oauth.accountId;
 	headers.Accept = 'text/event-stream'; headers['OpenAI-Beta'] = 'responses=experimental'; headers.originator = 'codex_cli_rs';
 	const body = { model: config.model, instructions: 'Draw exactly one picture for the request using the image generation tool. Do not describe it in text.', input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text: prompt }] }], tools: [{ type: 'image_generation', output_format: 'png', size }], tool_choice: { type: 'image_generation' }, store: false, stream: true };
 	const timeout = AbortSignal.timeout ? AbortSignal.timeout(MAX_WAIT_MS) : undefined;
 	const res = await fetch(`${CODEX_BASE}/responses`, { method: 'POST', headers, body: JSON.stringify(body), signal: signal && timeout && (AbortSignal as any).any ? (AbortSignal as any).any([signal, timeout]) : signal ?? timeout, credentials: 'omit' });
+	if (res.status === 401 || res.status === 403) throw new Error('account-denied');
 	if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 160)}`);
 	const found = imageFromResponsesEvents((await res.text()).split('\n'));
 	const b64 = found.b64 ?? found.partial;

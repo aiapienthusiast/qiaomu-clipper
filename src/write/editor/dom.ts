@@ -72,10 +72,11 @@ export function askConfirm(options: ConfirmOptions): Promise<boolean> {
 }
 
 let toastTimer: number | undefined;
-export function toast(message: string, kind: 'info' | 'error' = 'info'): void {
+export function toast(message: string, kind: 'info' | 'error' = 'info', action?: { label: string; run: () => void }): void {
 	document.querySelector('.qw-toast')?.remove();
-	const node = h('div', { class: `qw-toast ${kind}`, role: kind === 'error' ? 'alert' : 'status', text: message });
+	const node = h('div', { class: `qw-toast ${kind}`, role: kind === 'error' ? 'alert' : 'status' }, h('span', { text: message }));
+	if (action) node.append(h('button', { type: 'button', class: 'qw-toast-action', text: action.label, onclick: () => { node.remove(); action.run(); } }));
 	document.body.append(node);
 	window.clearTimeout(toastTimer);
-	toastTimer = window.setTimeout(() => node.remove(), kind === 'error' ? 6000 : 2600);
+	toastTimer = window.setTimeout(() => node.remove(), kind === 'error' ? 6000 : action ? 9000 : 2600);
 }

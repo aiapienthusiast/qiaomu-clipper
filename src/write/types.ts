@@ -40,6 +40,14 @@ export interface StoredImage {
 	hash: string;
 	name: string;
 	createdAt: number;
+	// Gallery bookkeeping: pictures the writer made or kept stay even when no article uses them.
+	kept?: boolean;
+	prompt?: string;
+	tags?: string[];
+	// Where a free stock photo came from; kept so the author is always credited.
+	credit?: ImageCredit;
 }
+
+export interface ImageCredit { provider: 'unsplash' | 'pexels' | 'pixabay'; author: string; authorUrl: string; pageUrl: string }
 
 export const IMAGE_SCHEME = 'qm-image://';

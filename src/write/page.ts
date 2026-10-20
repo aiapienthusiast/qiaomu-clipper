@@ -6,6 +6,9 @@ import { t } from '../utils/ui-text';
 import { aiReady, runAi } from './editor/ai';
 import { mountChatPanel } from './ai/chat-panel';
 import { openImageDialog } from './ai/image-dialog';
+import { openGallery } from './ai/image-gallery';
+import { providerName } from './stock-photos';
+import { startImageJobAlerts } from './ai/image-job-alerts';
 import { suggestCoverPrompt, suggestDigest, suggestTitles } from './ai/meta';
 import { enabledChatModels } from '../utils/chat-llm';
 import { imageUrlFor } from './images';
@@ -126,6 +129,7 @@ function mountEditor(root: HTMLElement, initial: Article): void {
 		localizeImages: localizeRemoteImages,
 		aiReady,
 		runAi,
+		openGallery: ed => { void openGallery({ applies: [{ label: t('插入文章'), run: (id, prompt, credit) => { ed.chain().focus().insertContent([{ type: 'image', attrs: { src: imageUrlFor(id), alt: prompt.slice(0, 80) } }, ...(credit ? [{ type: 'paragraph', content: [{ type: 'text', text: 'Photo by ', marks: [{ type: 'italic' }] }, { type: 'text', text: credit.author, marks: [{ type: 'italic' }, { type: 'link', attrs: { href: credit.authorUrl } }] }, { type: 'text', text: ' on ', marks: [{ type: 'italic' }] }, { type: 'text', text: providerName(credit.provider), marks: [{ type: 'italic' }, { type: 'link', attrs: { href: credit.pageUrl } }] }] }] : [])]).run(); } }, { label: t('设为封面'), run: id => setCover(id) }] }); },
 		aiImage: ed => { void openImageDialog({ applies: [{ label: t('插入文章'), run: (id, prompt) => { ed.chain().focus().insertContent({ type: 'image', attrs: { src: imageUrlFor(id), alt: prompt.slice(0, 80) } }).run(); } }] }); },
 	};
 	const outlineRail = mountOutline(outline, () => editor, () => title.value);
@@ -293,6 +297,7 @@ function mountEditor(root: HTMLElement, initial: Article): void {
 
 	// ---- AI: chat drawer, title and summary suggestions, cover ------------------------------------------------------------------
 	const fire = (name: string, node: HTMLElement) => node.dispatchEvent(new Event('input', { bubbles: true }));
+	startImageJobAlerts(() => host.openGallery(editor));
 	const chat = mountChatPanel({
 		editor, articleId: article.id, getMarkdown: currentMarkdown,
 		getTitle: () => title.value, setTitle: value => { title.value = value; fire('title', title); },

@@ -1,6 +1,6 @@
 // One IndexedDB database for everything the writer keeps: articles, pictures and small bookkeeping values.
 export const DB_NAME = 'qiaomu-write';
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 
 let opened: Promise<IDBDatabase> | undefined;
 
@@ -18,6 +18,7 @@ export function openDb(): Promise<IDBDatabase> {
 				const images = db.createObjectStore('images', { keyPath: 'id' });
 				images.createIndex('hash', 'hash', { unique: false });
 			}
+			if (!db.objectStoreNames.contains('jobs')) db.createObjectStore('jobs', { keyPath: 'id' });
 			if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta');
 		};
 		request.onsuccess = () => {

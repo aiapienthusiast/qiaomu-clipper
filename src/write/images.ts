@@ -39,13 +39,15 @@ export function newId(prefix: string): string {
 }
 
 // The same picture added twice is stored once.
-export async function saveImage(blob: Blob, name = ''): Promise<StoredImage> {
+export type ImageExtras = Pick<StoredImage, 'kept' | 'prompt' | 'tags' | 'credit'>;
+
+export async function saveImage(blob: Blob, name = '', extras: ImageExtras = {}): Promise<StoredImage> {
 	const hash = await sha256(blob);
 	const db = await openDb();
 	const existing = await requestResult(db.transaction('images').objectStore('images').index('hash').get(hash)) as StoredImage | undefined;
-	if (existing) return existing;
+	if (existing) return (extras.kept && !existing.kept) || (extras.credit && !existing.credit) ? await updateImage(existing.id, extras) ?? existing : existing;
 	const { width, height } = await measure(blob);
-	const image: StoredImage = { id: newId('img_'), blob, mime: blob.type || 'image/png', width, height, hash, name, createdAt: Date.now() };
+	const image: StoredImage = { id: newId('img_'), blob, mime: blob.type || 'image/png', width, height, hash, name, createdAt: Date.now(), ...extras };
 	const tx = db.transaction('images', 'readwrite');
 	tx.objectStore('images').put(image);
 	await transactionDone(tx);
@@ -96,4 +98,27 @@ export async function fetchRemoteImage(url: string): Promise<Blob> {
 	const blob = await response.blob();
 	if (!blob.type.startsWith('image/')) throw new Error('not an image');
 	return blob;
+}
+
+// Rename, tag or keep a picture; returns the stored result.
+export async function updateImage(id: string, patch: Partial<Pick<StoredImage, 'name' | 'tags' | 'prompt' | 'kept' | 'credit'>>): Promise<StoredImage | undefined> {
+	const db = await openDb();
+	const tx = db.transaction('images', 'readwrite');
+	const store = tx.objectStore('images');
+	const current = await requestResult(store.get(id)) as StoredImage | undefined;
+	if (!current) return undefined;
+	const next = { ...current, ...patch };
+	store.put(next);
+	await transactionDone(tx);
+	return next;
+}
+
+export async function listImages(): Promise<StoredImage[]> {
+	const db = await openDb();
+	const all = await requestResult(db.transaction('images').objectStore('images').getAll()) as StoredImage[];
+	return all.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export async function keptImageIds(): Promise<Set<string>> {
+	return new Set((await listImages()).filter(image => image.kept).map(image => image.id));
 }

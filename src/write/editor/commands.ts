@@ -32,6 +32,7 @@ export function blockCommands(host: EditorHost): BlockCommand[] {
 		{ id: 'table', title: t('表格'), hint: '3 × 3', keywords: 'table biaoge', icon: Table, run: e => { chain(e).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(); } },
 		{ id: 'image', title: t('图片'), hint: t('从电脑选择，也可直接粘贴或拖入'), keywords: 'image picture photo tupian', icon: ImageIcon, run: (_e, h) => h.pickImages() },
 		{ id: 'ai-image', title: t('AI 配图'), hint: t('描述画面，让 AI 生成'), keywords: 'ai image generate picture peitu shengtu', icon: ImagePlus, run: (e, h) => h.aiImage(e) },
+		{ id: 'image-gallery', title: t('图库'), hint: t('浏览、搜索和再次插入用过的图片'), keywords: 'gallery library image picture tuku', icon: ImageIcon, run: (e, h) => h.openGallery(e) },
 		{ id: 'math', title: t('行内公式'), hint: '$x$', keywords: 'math formula inline gongshi', icon: Sigma, run: e => { chain(e).insertContent({ type: 'mathInline', attrs: { latex: '' } }).run(); } },
 		{ id: 'math-block', title: t('公式块'), hint: '$$', keywords: 'math formula block latex gongshi', icon: SquareSigma, run: e => { chain(e).insertContent({ type: 'mathBlock', attrs: { latex: '' } }).run(); } },
 		{ id: 'embed', title: t('推文 / 视频链接'), hint: t('X 推文、YouTube、B 站'), keywords: 'tweet twitter x video youtube bilibili embed tuiwen shipin', icon: Video, run: async e => {

@@ -256,6 +256,34 @@ dialog.qw-image-dialog { width: min(560px, calc(100vw - 32px));
 	.qw-image-preview { margin-top: 12px; border-radius: 10px; overflow: hidden; background: var(--qw-soft); img { display: block; width: 100%; max-height: 52vh; object-fit: contain; } }
 }
 
+// ---- gallery and background picture tasks ------------------------------------------------------------------------------------
+dialog.qw-gallery { width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 48px); display: flex; flex-direction: column; gap: 10px;
+	&[open] { display: flex; }
+	[hidden] { display: none !important; }
+	.qw-gallery-tasks { display: flex; flex-direction: column; gap: 6px; }
+	.qw-gallery-task { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--qw-soft);
+		.qw-gallery-task-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; strong { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } span { font-size: 12px; color: var(--text-muted); } }
+		&.failed span, &.interrupted span { color: var(--text-normal); } }
+	.qw-gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; overflow-y: auto; min-height: 120px; max-height: 38vh; padding: 2px; }
+	.qw-gallery-empty { grid-column: 1 / -1; margin: 24px 0; text-align: center; color: var(--text-muted); font-size: 13px; }
+	.qw-gallery-tile { display: flex; flex-direction: column; gap: 4px; padding: 4px; border-radius: 10px; cursor: pointer; background: var(--qw-soft);
+		img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 7px; background: var(--background-modifier-border); }
+		.qw-gallery-name { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
+		&:hover { background: var(--background-modifier-hover); }
+		&:focus-visible { outline: 1px solid var(--text-muted); outline-offset: 2px; }
+		&.is-selected { outline: 1px solid var(--text-normal); outline-offset: 1px; } }
+	.qw-gallery-detail { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--background-modifier-border);
+		.qw-gallery-fields { display: flex; gap: 8px; input { flex: 1; min-width: 0; } }
+		.qw-gallery-prompt { margin: 0; font-size: 12px; color: var(--text-muted); max-height: 4.5em; overflow-y: auto; }
+		.qw-gallery-actions { display: flex; flex-wrap: wrap; gap: 8px; } }
+	.qw-gallery-tabs { display: flex; gap: 6px; }
+	.qw-gallery-stock { display: flex; flex-direction: column; gap: 8px; min-height: 0; select { flex: 0 0 130px; width: auto; } }
+	.qw-gallery-prompt a { color: var(--text-normal); text-decoration: underline; }
+	.qw-gallery-count { margin-inline-end: auto; font-size: 12px; color: var(--text-muted); align-self: center; }
+}
+html .qw-toast button.qw-toast-action:not(.qw-x) { width: auto; height: 26px; margin-inline-start: 12px; padding: 0 10px; border-radius: 7px; background: var(--background-primary); color: var(--text-normal); box-shadow: none; font-size: 12px; &:hover { background: var(--background-secondary); color: var(--text-normal); } }
+.qw-toast { display: flex; align-items: center; }
+
 // ---- AI drawer: context, strip, tools, thinking, questions, prompt menu ------------------------------------------------------------
 .qw-chat {
 	.qw-chat-hint { font-size: 12px; color: var(--text-faint); }

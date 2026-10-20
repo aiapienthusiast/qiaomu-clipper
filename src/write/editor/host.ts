@@ -12,5 +12,7 @@ export interface EditorHost {
 	aiReady(): boolean;
 	// Opens the picture-making window and puts the chosen picture at the cursor.
 	aiImage(editor: Editor): void;
+	// Opens the gallery of made and used pictures; choosing one puts it at the cursor.
+	openGallery(editor: Editor): void;
 	runAi(editor: Editor, action: AiAction): void;
 }

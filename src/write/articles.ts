@@ -1,5 +1,5 @@
 import { openDb, requestResult, transactionDone } from './db';
-import { allImageIds, deleteImages, imageIdsIn, newId } from './images';
+import { allImageIds, deleteImages, imageIdsIn, keptImageIds, newId } from './images';
 import { deleteChat } from './ai/chat-store';
 import type { Article, ArticleSummary, PublishRecord, PublishTarget } from './types';
 
@@ -139,12 +139,19 @@ export async function emptyTrash(now = Date.now(), olderThan = 0): Promise<numbe
 export function purgeOldTrash(now = Date.now()): Promise<number> { return emptyTrash(now, TRASH_KEEP_MS); }
 
 // A picture nothing points at any more (not in any article text, not a cover) is removed.
-export async function collectUnusedImages(): Promise<number> {
+export async function usedImageIds(): Promise<Set<string>> {
 	const db = await openDb();
 	const articles = await requestResult(db.transaction('articles').objectStore('articles').getAll()) as Article[];
 	const used = new Set<string>();
 	for (const article of articles) { imageIdsIn(article.markdown).forEach(id => used.add(id)); if (article.coverImageId) used.add(article.coverImageId); }
-	const unused = (await allImageIds()).filter(id => !used.has(id));
+	return used;
+}
+
+// Pictures kept in the gallery (made with AI, or kept on purpose) stay until the writer deletes them there.
+export async function collectUnusedImages(): Promise<number> {
+	const used = await usedImageIds();
+	const kept = await keptImageIds();
+	const unused = (await allImageIds()).filter(id => !used.has(id) && !kept.has(id));
 	await deleteImages(unused);
 	return unused.length;
 }

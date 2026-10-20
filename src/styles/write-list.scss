@@ -46,6 +46,9 @@ html button.write-btn.write-btn-danger:not(.write-x) { background: var(--backgro
 
 // ---- picture models in the settings ---------------------------------------------------------------------------------------
 #image-models-section {
+	.sp-section { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--background-modifier-border); }
+	.sp-title { margin: 0 0 4px; font-size: 14px; font-weight: 600; }
+	.sp-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; .sp-name { width: 120px; display: flex; flex-direction: column; gap: 2px; a { font-size: 12px; } } input { flex: 1; min-width: 0; } }
 	.im-bar { display: flex; justify-content: flex-end; margin: 4px 0 10px; }
 	.im-list { display: flex; flex-direction: column; }
 	.im-default { margin-inline-start: 8px; }

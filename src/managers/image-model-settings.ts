@@ -2,8 +2,9 @@ import { ImagePlus, Pencil, RefreshCw, Star, Trash2 } from 'lucide';
 import browser from '../utils/browser-polyfill';
 import { t } from '../utils/ui-text';
 import { askConfirm, h, icon, toast } from '../write/editor/dom';
-import { IMAGE_SOURCES, accountSources, fetchImageModels, isReady, loadImageModels, modelsOf, saveImageModels, serviceName, type ImageModelConfig, type ImageModelStore, type ImageSource, type ListedModel } from '../write/image-models';
+import { IMAGE_SOURCES, accountSources, fetchImageModels, isChatGptAccount, isReady, loadImageModels, modelsOf, saveImageModels, serviceName, type ImageModelConfig, type ImageModelStore, type ImageSource, type ListedModel } from '../write/image-models';
 import { newId } from '../write/images';
+import { initializeStockPhotoSettings } from './stock-photo-settings';
 
 // "Picture models" in the settings: connect a service once, load every model it offers, and choose which ones can be used for a picture.
 export async function initializeImageModelSettings(): Promise<void> {
@@ -13,6 +14,7 @@ export async function initializeImageModelSettings(): Promise<void> {
 	const list = h('div', { class: 'im-list', role: 'list' });
 	const add = h('button', { type: 'button', class: 'write-btn write-btn-primary' }, icon(ImagePlus, 15), t('添加生图服务'));
 	root.append(h('div', { class: 'im-bar' }, add), list, h('p', { class: 'write-note', text: t('密钥只保存在这台电脑的浏览器里，不会同步。生成图片时，你写的描述会发给你选的服务。账号登录的服务不需要密钥，沿用「LLM 提供商」里已登录的账号。') }));
+	void initializeStockPhotoSettings(root);
 
 	const persist = async () => { await saveImageModels(store); store = await loadImageModels(); render(); };
 	const sourceOf = (config: ImageModelConfig): ImageSource | undefined => (config.engine === 'oauth' ? accountSources().find(s => s.providerId === config.providerId) : IMAGE_SOURCES.find(s => s.id === config.sourceId));
@@ -37,7 +39,7 @@ export async function initializeImageModelSettings(): Promise<void> {
 			const models = modelsOf(config);
 			list.append(h('div', { class: 'write-row im-row', role: 'listitem' }, h('div', { class: 'write-row-main' },
 				h('div', { class: 'write-info' }, h('div', { class: 'write-title' }, serviceName(config), isDefault ? h('span', { class: 'write-badge im-default', text: t('默认') }) : null),
-					h('div', { class: 'write-meta' }, h('span', { text: models.length > 1 ? t('{0} 等 {1} 个模型', [config.model, models.length]) : config.model }), isReady(config) ? null : h('span', { class: 'im-warn', text: config.engine === 'oauth' ? t('账号已退出登录') : t('还没填完整') })))), buttons));
+					h('div', { class: 'write-meta' }, h('span', { text: models.length > 1 ? t('{0} 等 {1} 个模型', [config.model, models.length]) : config.model }), isReady(config) ? null : h('span', { class: 'im-warn', text: isChatGptAccount(config) ? t('ChatGPT 账号不能生图，请改用 Codex 账号') : config.engine === 'oauth' ? t('账号已退出登录') : t('还没填完整') })))), buttons));
 		}
 	}
 
@@ -60,7 +62,7 @@ export async function initializeImageModelSettings(): Promise<void> {
 		function gallery() {
 			body.textContent = '';
 			const groups: { title: string; items: ImageSource[]; hint?: string }[] = [
-				{ title: t('账号登录（不用密钥）'), items: accounts, hint: accounts.length ? undefined : t('还没有登录的 ChatGPT 或 Codex 账号。先到「LLM 提供商与模型」里登录，这里就会出现。') },
+				{ title: t('账号登录（不用密钥）'), items: accounts, hint: accounts.length ? undefined : t('生图要用 Codex 账号（ChatGPT 账号暂不支持生图）。先到「LLM 提供商与模型」里登录 Codex，这里就会出现。') },
 				{ title: t('云服务商'), items: IMAGE_SOURCES.filter(s => s.id !== 'custom') },
 				{ title: t('自定义'), items: IMAGE_SOURCES.filter(s => s.id === 'custom') },
 			];
