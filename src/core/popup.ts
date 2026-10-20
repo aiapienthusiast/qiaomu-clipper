@@ -1545,22 +1545,27 @@ function setupCompactPopup() {
     const close = () => { menu.hidden = true; toggle.setAttribute('aria-expanded', 'false'); };
     // Turn the triple-press shortcuts off (or back on) for the site of the current page.
     const siteLabel = document.getElementById('toggle-triple-site-label');
+    const siteItem = document.getElementById('toggle-triple-site');
     let siteHost = '';
+    // The row is a switch: on means the shortcuts work on this site.
+    const paintSiteItem = () => {
+        if (siteItem) siteItem.setAttribute('aria-checked', String(!isSiteBlocked(siteHost, generalSettings.tripleKeyBlockedSites)));
+    };
     const refreshSiteItem = async () => {
         try { siteHost = new URL((await getCurrentTabInfo()).url).hostname.replace(/^www\./, ''); } catch { siteHost = ''; }
-        const item = document.getElementById('toggle-triple-site');
-        if (item) item.hidden = !siteHost;
-        if (siteLabel && siteHost) siteLabel.textContent = getMessage(isSiteBlocked(siteHost, generalSettings.tripleKeyBlockedSites) ? 'tripleKeySiteOn' : 'tripleKeySiteOff', siteHost);
+        if (siteItem) siteItem.hidden = !siteHost;
+        if (siteLabel) siteLabel.textContent = siteHost;
+        if (siteHost) paintSiteItem();
     };
-    document.getElementById('toggle-triple-site')?.addEventListener('click', async event => {
+    siteItem?.addEventListener('click', async event => {
         event.preventDefault();
+        event.stopPropagation(); // stay open so the switch visibly flips
         if (!siteHost) return;
         const list = normalizeSites(generalSettings.tripleKeyBlockedSites);
         const blocked = isSiteBlocked(siteHost, list);
         const next = blocked ? list.filter(site => siteHost !== site && !siteHost.endsWith(`.${site}`)) : [...list, siteHost];
         await saveSettings({ ...generalSettings, tripleKeyBlockedSites: next });
-        const status = document.getElementById('clip-action-status');
-        if (status) status.textContent = getMessage(blocked ? 'tripleKeySiteEnabled' : 'tripleKeySiteDisabled', siteHost);
+        paintSiteItem();
     });
     toggle.addEventListener('click', () => {
         menu.hidden = !menu.hidden;
