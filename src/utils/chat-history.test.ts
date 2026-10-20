@@ -48,3 +48,14 @@ it('stores image numbers but never image bytes even if a caller passes a request
  expect(stored[0].messages[0].imageNumbers).toEqual([2]);
  expect(JSON.stringify(store)).not.toContain('base64');
 });
+
+it('isolates original-page sidebar history across hash routes, including deletion', async () => {
+ await saveConversation('https://example.com/#/a', 'A', conversation('a'), true);
+ await saveConversation('https://example.com/#/b', 'B', conversation('b'), true);
+ expect((await loadConversations('https://example.com/#/a', true)).map(c => c.id)).toEqual(['a']);
+ expect((await loadConversations('https://example.com/#/b', true)).map(c => c.id)).toEqual(['b']);
+ expect(await loadConversations('https://example.com/')).toEqual([]);
+ await deleteConversation('https://example.com/#/a', 'a', true);
+ expect(await loadConversations('https://example.com/#/a', true)).toEqual([]);
+ expect((await loadConversations('https://example.com/#/b', true)).map(c => c.id)).toEqual(['b']);
+});

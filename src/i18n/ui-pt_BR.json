@@ -1283,5 +1283,12 @@
  "一起把这篇写好": "Vamos aprimorar este texto juntos",
  "正在写，已写 {0} 字…": "Escrevendo… {0} caracteres",
  "模型太久没有回应": "O modelo parou de responder",
- "模型太久没有回应，请重试或换一个模型": "O modelo parou de responder. Tente de novo ou escolha outro modelo"
+ "模型太久没有回应，请重试或换一个模型": "O modelo parou de responder. Tente de novo ou escolha outro modelo",
+ "AI 对话": "Chat com IA",
+ "引用选中文字": "Citar seleção",
+ "普通对话": "Conversa geral",
+ "页面已切换，请在当前页重新提问。": "A página mudou. Pergunte novamente na página atual.",
+ "提问时会附上当前页正文。": "As perguntas incluem o texto da página atual.",
+ "无法读取此页正文，可直接聊天或粘贴内容。": "Não é possível ler esta página. Converse ou cole texto.",
+ "请先在网页中选中文字。": "Selecione primeiro o texto na página."
 }

@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import { Template, Property, PromptVariable } from '../types/types';
 import { incrementStat, addHistoryEntry, getClipHistory } from '../utils/storage-utils';
 import { generateFrontmatter, saveToObsidian } from '../utils/obsidian-note-creator';
+import { openCurrentAiSidebar } from '../utils/ai-sidebar';
 import { extractPageContent, initializePageContent } from '../utils/content-extractor';
 import { compileTemplate } from '../utils/template-compiler';
 import { initializeIcons, getPropertyTypeIcon } from '../icons/icons';
@@ -294,6 +295,11 @@ function setupMessageListeners() {
 }
 
 document.addEventListener('DOMContentLoaded', async function() {
+	const aiSidebar = document.getElementById('open-ai-sidebar');
+	if (aiSidebar) {
+		aiSidebar.hidden = typeof chrome === 'undefined' || !chrome.sidePanel;
+		aiSidebar.addEventListener('click', () => { void openCurrentAiSidebar().then(() => window.close()).catch(error => { aiSidebar.title = String(error); }); });
+	}
 	loadedSettings = await loadSettings();
 	await initializeQiaomuRss();
 	if (isIframe) {
