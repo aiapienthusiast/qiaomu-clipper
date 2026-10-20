@@ -242,6 +242,9 @@
 				"mac": "Alt+Shift+R"
 			},
 			"description": "__MSG_commandToggleReader__"
+		},
+		"open_ai_sidebar": {
+			"description": "__MSG_qiaomuChatTitle__"
 		}
 	}
 }

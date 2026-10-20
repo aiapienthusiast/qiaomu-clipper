@@ -20,22 +20,22 @@ export const MAX_CONVERSATIONS = 15;
 export const MAX_MESSAGES = 40;
 
 // Same article, same chats: ignore the #fragment and trailing noise.
-export function chatKey(url: string): string {
+export function chatKey(url: string, preserveUrlHash = false): string {
 	let normalized = url;
-	try { const parsed = new URL(url); parsed.hash = ''; normalized = parsed.href; } catch { /* keep as is */ }
+	try { const parsed = new URL(url); if (!preserveUrlHash) parsed.hash = ''; normalized = parsed.href; } catch { /* keep as is */ }
 	let hash = 5381;
 	for (let i = 0; i < normalized.length; i++) hash = ((hash << 5) + hash + normalized.charCodeAt(i)) | 0;
 	return `${PREFIX}${(hash >>> 0).toString(36)}`;
 }
 
-export async function loadConversations(url: string): Promise<Conversation[]> {
-	const key = chatKey(url);
+export async function loadConversations(url: string, preserveUrlHash = false): Promise<Conversation[]> {
+	const key = chatKey(url, preserveUrlHash);
 	const saved = (await browser.storage.local.get(key))[key] as ArticleChats | undefined;
 	return [...(saved?.conversations ?? [])].sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
-export async function saveConversation(url: string, articleTitle: string, conversation: Conversation): Promise<void> {
-	const key = chatKey(url);
+export async function saveConversation(url: string, articleTitle: string, conversation: Conversation, preserveUrlHash = false): Promise<void> {
+	const key = chatKey(url, preserveUrlHash);
 	const saved = (await browser.storage.local.get([key, INDEX_KEY]));
 	const article: ArticleChats = (saved[key] as ArticleChats | undefined) ?? { url, title: articleTitle, updatedAt: 0, conversations: [] };
 	const stored: Conversation = { ...conversation, messages: conversation.messages.slice(-MAX_MESSAGES).map(({ role, content, quote, imageNumbers }) => ({ role, content, ...(quote ? { quote } : {}), ...(imageNumbers?.length ? { imageNumbers } : {}) })), updatedAt: Date.now() };
@@ -50,8 +50,8 @@ export async function saveConversation(url: string, articleTitle: string, conver
 	if (dropped.length) await browser.storage.local.remove(dropped.map(item => item.key));
 }
 
-export async function deleteConversation(url: string, id: string): Promise<void> {
-	const key = chatKey(url);
+export async function deleteConversation(url: string, id: string, preserveUrlHash = false): Promise<void> {
+	const key = chatKey(url, preserveUrlHash);
 	const article = (await browser.storage.local.get(key))[key] as ArticleChats | undefined;
 	if (!article) return;
 	article.conversations = article.conversations.filter(c => c.id !== id);

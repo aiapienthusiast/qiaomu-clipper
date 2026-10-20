@@ -44,7 +44,7 @@ export async function mountYouTubeStudy(doc: Document, article: HTMLElement, tit
 	const transcript = article.querySelector(TRANSCRIPT_SELECTOR);
 	if (transcript) transcriptHeadingTools(transcript).append(feedback); else (footer || article).append(feedback);
 	const controls = transcript ? transcriptHeadingTools(transcript) : feedback;
-	let chat: ReturnType<typeof mountClipChat> | undefined = existingChat;
+	let chat: Pick<ReturnType<typeof mountClipChat>, 'toggle'> | undefined = existingChat;
 	if (!text) {
 		status.textContent = article.dataset.videoPlatform === 'bilibili'
 			? t('未获取到字幕：视频可能没有字幕，B 站的 AI 字幕通常需要登录后才能获取。登录后重新进入学习模式可重试。')
