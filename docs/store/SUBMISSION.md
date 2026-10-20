@@ -161,13 +161,13 @@ Certification statements, after publisher review: no sale of user data; no use/t
 
 ## Reviewer test instructions (English)
 
-Optional account sign-in is not required to test clipping or AI with an API-key provider; ChatGPT/Codex/TokenDance account flows have not been verified with real accounts.
+Optional account sign-in is not required to test clipping or AI with an API-key provider. Local Codex image generation was verified with a signed-in Codex CLI and helper 1.16.9; other account-based image providers have not all been verified with real accounts.
 No Qiaomu account is needed for basic clipping, reading, editing, copy or download. No AI account or helper is required to verify the basic workflow.
 1. Install the uploaded package and open a public article, e.g. https://developer.chrome.com/docs/webstore/publish .
 2. Click the extension toolbar icon. Turn OFF Share to Qiaomu RSS for tests that should stay local.
 3. Use Read to view the current draft, and Edit to modify its title/properties/Markdown. Switch back and verify the edits persist. Copy or download Markdown and confirm the draft contents.
 4. With Obsidian installed and a local vault open, configure/select a vault and relative folder, then click Clip to Obsidian. Without the helper, the standard Obsidian URI workflow opens Obsidian. Chrome may ask to open the external application.
-5. Optional helper test: follow native/README.md in the public repository. Install the helper with YOUR installed extension ID, not the developer's unpacked ID, then choose a vault/folder in Settings and save. macOS/Linux Chrome is verified; Windows installation support awaits device validation. Update the helper from the 1.14.1 source when upgrading from store version 1.7.1.
+5. Optional helper test: use helper 1.16.9 and follow native/README.md in the public repository. Install the helper with YOUR installed extension ID, not the developer's unpacked ID, then choose a vault/folder in Settings and save. The signed, notarized macOS package and isolated native-message self-test were verified; this release's system upgrade and Windows installation still require device validation.
 6. Optional AI test: use YOUR configured provider/model/API key in AI settings. Open an article's AI panel and ask a question. The package does not include credentials or free credits. Check error recovery with no model configured; choose a plain template to save without AI.
 7. Optional RSS test: choose only a public article, enable Share to Qiaomu RSS and clip. This sends the URL/title/Markdown/image to https://rss.qiaomu.ai/api/clipper/clips and publishes to https://rss.qiaomu.ai/feeds/user-submitted.xml . This is a real public side effect, so skip if your review should not publish test content.
 8. Optional triple-key test: on a public page outside an input, press A three times to read, E three times to edit. Q triggers a real save using the default template and sharing choice; disable RSS before testing it. Shortcuts can be disabled per site.
