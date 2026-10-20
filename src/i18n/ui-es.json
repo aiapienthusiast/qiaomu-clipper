@@ -1290,5 +1290,8 @@
  "页面已切换，请在当前页重新提问。": "La página cambió. Vuelve a preguntar en la página actual.",
  "提问时会附上当前页正文。": "Las preguntas incluyen el texto de la página actual.",
  "无法读取此页正文，可直接聊天或粘贴内容。": "No se puede leer esta página. Chatea o pega texto.",
- "请先在网页中选中文字。": "Selecciona primero texto en la página."
+ "请先在网页中选中文字。": "Selecciona primero texto en la página.",
+ "字幕下载格式": "Formato de descarga de subtítulos",
+ "点字幕条上的下载图标时保存的格式。选定一种后一键下载，想换格式时在图标上点右键。": "El formato que se guarda al pulsar el icono de descarga de la barra de subtítulos. Elige uno para descargar con un solo clic; haz clic derecho en el icono para elegir otro formato.",
+ "每次选择（默认）": "Preguntar cada vez (predeterminado)"
 }

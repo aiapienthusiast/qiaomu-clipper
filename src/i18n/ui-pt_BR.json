@@ -1290,5 +1290,8 @@
  "页面已切换，请在当前页重新提问。": "A página mudou. Pergunte novamente na página atual.",
  "提问时会附上当前页正文。": "As perguntas incluem o texto da página atual.",
  "无法读取此页正文，可直接聊天或粘贴内容。": "Não é possível ler esta página. Converse ou cole texto.",
- "请先在网页中选中文字。": "Selecione primeiro o texto na página."
+ "请先在网页中选中文字。": "Selecione primeiro o texto na página.",
+ "字幕下载格式": "Formato de download das legendas",
+ "点字幕条上的下载图标时保存的格式。选定一种后一键下载，想换格式时在图标上点右键。": "O formato salvo ao clicar no ícone de download da barra de legendas. Escolha um para baixar com um só clique; clique com o botão direito no ícone para usar outro formato.",
+ "每次选择（默认）": "Perguntar sempre (padrão)"
 }

@@ -1290,5 +1290,8 @@
  "页面已切换，请在当前页重新提问。": "La page a changé. Posez à nouveau votre question sur la page actuelle.",
  "提问时会附上当前页正文。": "Le texte de la page actuelle accompagne les questions.",
  "无法读取此页正文，可直接聊天或粘贴内容。": "Impossible de lire cette page. Discutez ou collez du texte.",
- "请先在网页中选中文字。": "Sélectionnez d’abord du texte sur la page."
+ "请先在网页中选中文字。": "Sélectionnez d’abord du texte sur la page.",
+ "字幕下载格式": "Format de téléchargement des sous-titres",
+ "点字幕条上的下载图标时保存的格式。选定一种后一键下载，想换格式时在图标上点右键。": "Le format enregistré quand vous cliquez sur l’icône de téléchargement de la barre de sous-titres. Choisissez-en un pour télécharger d’un clic ; faites un clic droit sur l’icône pour en choisir un autre.",
+ "每次选择（默认）": "Demander à chaque fois (par défaut)"
 }

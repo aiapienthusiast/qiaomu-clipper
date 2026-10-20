@@ -570,6 +570,21 @@
         "src/core/ai-chat-page.test.ts",
         "src/utils/chat-history.test.ts"
       ]
+    },
+    {
+      "id": "caption-download-formats",
+      "title": "字幕条下载可选 Markdown / SRT / VTT / TXT，设置中可固定默认格式",
+      "origin": "feat/caption-download-formats",
+      "files": [
+        "src/utils/caption-download.ts",
+        "src/utils/youtube-transcript-bar.ts",
+        "src/managers/general-settings.ts"
+      ],
+      "tests": [
+        "src/utils/caption-download.test.ts",
+        "src/utils/youtube-transcript-bar-download.test.ts",
+        "src/utils/caption-download-wiring.test.ts"
+      ]
     }
   ]
 }

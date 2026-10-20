@@ -1290,5 +1290,8 @@
  "页面已切换，请在当前页重新提问。": "Die Seite hat gewechselt. Stellen Sie Ihre Frage auf der aktuellen Seite erneut.",
  "提问时会附上当前页正文。": "Fragen enthalten den Text der aktuellen Seite.",
  "无法读取此页正文，可直接聊天或粘贴内容。": "Diese Seite kann nicht gelesen werden. Chatten Sie direkt oder fügen Sie Text ein.",
- "请先在网页中选中文字。": "Wählen Sie zuerst Text auf der Seite aus."
+ "请先在网页中选中文字。": "Wählen Sie zuerst Text auf der Seite aus.",
+ "字幕下载格式": "Format für den Untertitel-Download",
+ "点字幕条上的下载图标时保存的格式。选定一种后一键下载，想换格式时在图标上点右键。": "Das Format, das beim Klick auf das Download-Symbol der Untertitelleiste gespeichert wird. Mit einer festen Wahl lädt ein Klick sofort herunter; per Rechtsklick auf das Symbol wählst du ein anderes Format.",
+ "每次选择（默认）": "Jedes Mal fragen (Standard)"
 }
