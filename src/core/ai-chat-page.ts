@@ -8,12 +8,10 @@ import { snapshotAiPage, parseAiPage, sameAiPage, type AiSnapshot } from '../uti
 async function start() {
 	let disposed = false, refreshGeneration = 0;
 	let chat: ReturnType<typeof mountClipChat> | undefined;
-	const quoteButton = document.getElementById('ai-page-quote') as HTMLButtonElement;
 	function dispose() {
 		if (disposed) return;
 		disposed = true;
 		refreshGeneration++;
-		quoteButton.onclick = null;
 		chat?.destroy();
 		window.removeEventListener('pagehide', dispose);
 		window.removeEventListener('qiaomu-ai-dispose', dispose);
@@ -28,8 +26,6 @@ async function start() {
 	const params = new URLSearchParams(location.search);
 	const tabId = Number(params.get('tab')), windowId = Number(params.get('window'));
 	const expected = params.get('url') || '';
-	const title = document.getElementById('ai-page-title')!;
-	const status = document.getElementById('ai-page-status')!;
 	let documentId: string | undefined;
 	let context = { title: t('普通对话'), url: expected || `qiaomu-chat://tab/${tabId}`, markdown: '', available: false };
 	const pageChanged = () => new Error(t('页面已切换，请在当前页重新提问。'));
@@ -56,9 +52,6 @@ async function start() {
 		await assertCurrent(generation);
 		documentId = snapshotDocument || documentId;
 		context = { ...parsed, available: Boolean(parsed.markdown) };
-		title.textContent = context.title;
-		title.title = context.url;
-		status.textContent = context.available ? t('提问时会附上当前页正文。') : t('无法读取此页正文，可直接聊天或粘贴内容。');
 		if (!context.markdown) context.markdown = '[No page content is available. Do not claim to have read this page.]';
 		return snapshot?.selection || '';
 	}
@@ -67,21 +60,10 @@ async function start() {
 	chat = mountClipChat({
 		getContext: () => context,
 		prepareContext: async () => { await refresh(); },
+		getSelection: refresh,
 		preserveUrlHash: true,
 		onClose: () => { dispose(); parent.postMessage('close-ai-sidebar', location.origin); },
 	});
 	chat.toggle(true);
-	quoteButton.onclick = async () => {
-		quoteButton.disabled = true;
-		try {
-			const selection = await refresh();
-			if (selection) chat?.quote(selection);
-			else status.textContent = t('请先在网页中选中文字。');
-		} catch (error) {
-			if (!disposed) status.textContent = String((error as Error).message);
-		} finally {
-			if (!disposed) quoteButton.disabled = false;
-		}
-	};
 }
 void start();

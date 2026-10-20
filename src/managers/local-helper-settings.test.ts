@@ -77,3 +77,40 @@ it('remembers the configured vault on recheck and keeps repairable vault errors 
  el('local-helper-recheck').click();
  await vi.waitFor(()=>expect(setLocalStorage).toHaveBeenCalledWith('lastSelectedVault','Moved'));
 });
+
+it('uninstalls the helper only after a confirmation that names the space it frees, and falls back to the install page', async () => {
+ state.outdated = false;
+ const sent: string[] = [];
+ state.send.mockImplementation(async (m:any) => { sent.push(m.action); return m.action === 'qiaomuLocalUninstallPlan' ? {ok:true,freedMb:1700} : m.action === 'qiaomuLocalUninstall' ? {ok:true,freedMb:1700} : m.action === 'qiaomuLocalStatus' ? {ok:true} : {ok:true,vaults:[]}; });
+ await initializeLocalVaultSettings();
+ const button = el('local-helper-uninstall') as HTMLButtonElement;
+ expect(button.hidden).toBe(false);
+ const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+ button.click();
+ await vi.waitFor(() => expect(confirm).toHaveBeenCalled());
+ expect(confirm.mock.calls[0][0]).toContain('1.7 GB');
+ expect(sent).not.toContain('qiaomuLocalUninstall');
+ confirm.mockReturnValue(true); button.click();
+ await vi.waitFor(() => expect(el('local-helper-note').textContent).toContain('已卸载'));
+ expect(sent).toContain('qiaomuLocalUninstall');
+ expect(button.hidden).toBe(true);
+ expect(el('local-helper-download').hidden).toBe(false);
+});
+it('keeps the helper when the password dialog is cancelled', async () => {
+ state.outdated = false;
+ state.send.mockImplementation(async (m:any) => m.action === 'qiaomuLocalUninstallPlan' ? {ok:true,freedMb:10} : m.action === 'qiaomuLocalUninstall' ? {ok:false,cancelled:true} : m.action === 'qiaomuLocalStatus' ? {ok:true} : {ok:true,vaults:[]});
+ await initializeLocalVaultSettings(); vi.spyOn(window, 'confirm').mockReturnValue(true);
+ el('local-helper-uninstall').click();
+ await vi.waitFor(() => expect(el('local-helper-note').textContent).toContain('已取消'));
+ expect((el('local-helper-uninstall') as HTMLButtonElement).hidden).toBe(false);
+});
+
+it('tells people with an older helper to update instead of asking for a password', async () => {
+ state.outdated = false;
+ const sent: string[] = [];
+ state.send.mockImplementation(async (m:any) => { sent.push(m.action); return m.action === 'qiaomuLocalUninstallPlan' ? {ok:false,error:'不支持的本地操作'} : m.action === 'qiaomuLocalStatus' ? {ok:true} : {ok:true,vaults:[]}; });
+ await initializeLocalVaultSettings(); const confirm = vi.spyOn(window, 'confirm');
+ el('local-helper-uninstall').click();
+ await vi.waitFor(() => expect(el('local-helper-note').textContent).toContain('版本较旧'));
+ expect(confirm).not.toHaveBeenCalled(); expect(sent).not.toContain('qiaomuLocalUninstall');
+});

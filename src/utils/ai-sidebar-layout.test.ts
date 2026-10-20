@@ -9,10 +9,11 @@ it('uses a full-width native panel with solid background and usable controls',()
  const lightCss=css.split('var(--background-secondary)').join('#f6f6f6').split('var(--background-primary)').join('#ffffff').split('var(--text-normal)').join('#222222').split('var(--text-muted)').join('#666666');
  document.head.innerHTML='<style>'+lightCss+'</style>';
  document.body.className='ai-sidebar-chat';
- document.body.innerHTML='<header class="ai-page-header"><button>Quote</button></header><aside class="clip-chat"><div class="clip-chat-resize"></div><button class="clip-chat-model">Model</button></aside>';
+ document.body.innerHTML='<aside class="clip-chat"><div class="clip-chat-resize"></div><div class="clip-chat-header"><button class="clip-chat-model">Model</button></div><form class="clip-chat-composer"><div class="clip-chat-context">Article</div><textarea></textarea><div class="clip-chat-composer-tools"><button class="qm-search-toggle" aria-pressed="true">Search</button></div></form></aside>';
  expect(getComputedStyle(document.querySelector('.clip-chat')!).width).toBe('100%');
  expect(getComputedStyle(document.querySelector('.clip-chat-resize')!).display).toBe('none');
- expect(getComputedStyle(document.querySelector('.ai-page-header button')!).width).toBe('auto');
- expect(getComputedStyle(document.querySelector('.ai-page-header button')!).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+ expect(getComputedStyle(document.querySelector('.clip-chat-composer')!).backgroundColor).toBe('rgb(255, 255, 255)');
+ expect(getComputedStyle(document.querySelector('.qm-search-toggle')!).width).toBe('28px');
+ expect(getComputedStyle(document.querySelector('.clip-chat-header')!).flexShrink).toBe('0');
  expect(getComputedStyle(document.querySelector('.clip-chat-model')!).color).not.toBe('transparent');
 });

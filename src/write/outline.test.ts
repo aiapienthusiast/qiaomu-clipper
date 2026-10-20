@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { Editor } from '@tiptap/core';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { buildExtensions } from './editor/extensions';
 import { activeHeading, headingsOf, mountOutline } from './outline';
 
@@ -38,4 +38,20 @@ it('shows title and headings when open, ticks when folded, and hides itself with
 	await new Promise(resolve => setTimeout(resolve, 260));
 	expect(aside.hidden).toBe(true);
 	rail.destroy();
+});
+
+it('follows the document pane independently of page or chat scrolling', async () => {
+ localStorage.setItem('qiaomuWriteOutline', 'open');
+ const ed = make('# First\n\n## Second');
+ const layout = document.createElement('div'); layout.className = 'qw-layout';
+ const pane = document.createElement('main'); pane.className = 'qw-scroll';
+ const aside = document.createElement('aside'); layout.append(pane, aside); document.body.append(layout);
+ const headings = headingsOf(ed); let moved = false;
+ headings.forEach((item, i) => vi.spyOn(ed.view.nodeDOM(item.pos) as HTMLElement, 'getBoundingClientRect').mockImplementation(() => ({top: moved ? i * 50 : 100 + i * 200} as DOMRect)));
+ const rail = mountOutline(aside, () => ed, () => 'Article'); rail.refresh();
+ await new Promise(r => setTimeout(r, 260));
+ expect(aside.querySelector('.active')?.textContent).toBe('First');
+ moved = true; pane.dispatchEvent(new Event('scroll'));
+ await new Promise(r => setTimeout(r, 40));
+ expect(aside.querySelector('.active')?.textContent).toBe('Second'); rail.destroy(); vi.restoreAllMocks();
 });

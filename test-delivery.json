@@ -570,6 +570,215 @@
         "src/core/ai-chat-page.test.ts",
         "src/utils/chat-history.test.ts"
       ]
+    },
+    {
+      "id": "jimeng-image-service",
+      "title": "即梦自部署生图、动态图片模型目录、旧配置迁移与真实错误提示",
+      "origin": "codex/jimeng-image-service",
+      "files": [
+        "src/write/image-models.ts",
+        "src/managers/image-model-settings.ts",
+        "src/write/ai/image-dialog.ts"
+      ],
+      "tests": [
+        "src/write/image-models.test.ts",
+        "src/managers/image-model-settings.test.ts",
+        "src/write/ai/image-dialog.test.ts"
+      ]
+    },
+    {
+      "id": "helper-uninstall",
+      "title": "设置页「卸载助手」：一键卸载本地助手、注册文件和已下载引擎",
+      "origin": "feat/helper-uninstall",
+      "files": [
+        "src/managers/general-settings.ts",
+        "src/settings.html",
+        "src/background.ts"
+      ],
+      "tests": [
+        "src/managers/local-helper-settings.test.ts"
+      ]
+    },
+    {
+      "id": "sidebar-image-generation",
+      "title": "普通网页 AI 侧栏调用生图模型、预览下载与聊天历史恢复",
+      "origin": "codex/sidebar-image-generation",
+      "files": [
+        "src/utils/chat-image-generation.ts",
+        "src/utils/chat-generated-images.ts",
+        "src/utils/clip-chat.ts",
+        "src/utils/chat-history.ts",
+        "src/utils/image-generation-error.ts",
+        "src/styles/clip-chat.scss"
+      ],
+      "tests": [
+        "src/utils/clip-chat-generation.test.ts",
+        "src/utils/chat-generated-images.test.ts",
+        "src/utils/chat-history.test.ts",
+        "src/utils/ai-sidebar-chat.test.ts",
+        "src/utils/clip-chat-images.test.ts"
+      ]
+    },
+    {
+      "id": "background-image-library",
+      "title": "后台生图与四入口图库：我的图片、任务、本地文件夹和 Unsplash；Key 优先配置、代理收在高级设置",
+      "origin": "codex/sidebar-image-generation",
+      "files": [
+        "src/utils/image-job-background.ts",
+        "src/utils/image-job-runner.ts",
+        "src/core/image-runner.ts",
+        "src/image-runner.html",
+        "src/utils/image-library-store.ts",
+        "src/utils/image-library.ts",
+        "src/utils/image-library-sources.ts",
+        "src/core/image-library.ts",
+        "src/image-library.html",
+        "src/styles/image-library.scss"
+      ],
+      "tests": [
+        "src/utils/image-job-background.test.ts",
+        "src/utils/image-job-runner.test.ts",
+        "src/utils/image-library-sources.test.ts",
+        "src/utils/chat-generated-images.test.ts",
+        "src/utils/clip-chat-generation.test.ts",
+        "src/write/ai/image-dialog.test.ts"
+      ]
+    },
+    {
+      "id": "local-codex-image-generation",
+      "title": "通过本地助手调用已登录 Codex 的内置生图，并按原任务恢复",
+      "origin": "codex/sidebar-image-generation",
+      "files": [
+        "src/utils/codex-image.ts",
+        "src/managers/image-model-settings.ts"
+      ],
+      "tests": [
+        "src/utils/codex-image.test.ts",
+        "src/utils/image-job-background.test.ts",
+        "src/write/image-models.test.ts",
+        "src/managers/image-model-settings.test.ts"
+      ]
+    },
+    {
+      "id": "provider-model-setup-flow",
+      "title": "服务商配置后在同一弹窗自动选择模型，支持返回、稍后添加与取消异步请求",
+      "origin": "codex/sidebar-image-generation",
+      "files": [
+        "src/managers/provider-dialogs.ts",
+        "src/managers/interpreter-settings.ts",
+        "src/styles/provider-dialog.scss"
+      ],
+      "tests": [
+        "src/managers/interpreter-settings.test.ts",
+        "src/utils/provider-models.test.ts"
+      ]
+    },
+    {
+      "id": "conversational-image-generation",
+      "title": "自然语言直接后台生图、聊天内预览与独立插入，写作顶栏图库及设置入口",
+      "origin": "codex/sidebar-image-generation",
+      "files": [
+        "src/utils/chat-image-generation.ts",
+        "src/utils/clip-chat.ts",
+        "src/write/ai/chat-panel.ts",
+        "src/write/ai/chat-store.ts",
+        "src/write/ai/protocol.ts",
+        "src/write/page.ts",
+        "src/styles/chat-generated-images.scss"
+      ],
+      "tests": [
+        "src/utils/clip-chat-generation.test.ts",
+        "src/write/ai/chat-images.test.ts",
+        "src/write/ai/chat-panel.test.ts",
+        "src/write/ai/protocol.test.ts",
+        "src/utils/chat-history.test.ts"
+      ]
+    },
+    {
+      "id": "assistant-image-web-search",
+      "title": "自然语言搜索 Unsplash、找图生图意图区分、DeepSeek 与 Brave 搜索及读取来源",
+      "origin": "codex/sidebar-image-generation",
+      "files": [
+        "src/utils/chat-agent.ts",
+        "src/utils/chat-tools-types.ts",
+        "src/utils/chat-tools-background.ts",
+        "src/utils/chat-tools-client.ts",
+        "src/utils/chat-tool-view.ts",
+        "src/utils/web-search.ts",
+        "src/managers/web-search-settings.ts",
+        "src/styles/chat-tools.scss"
+      ],
+      "tests": [
+        "src/utils/chat-agent.test.ts",
+        "src/utils/web-search.test.ts",
+        "src/managers/web-search-settings.test.ts",
+        "src/utils/clip-chat-generation.test.ts",
+        "src/write/ai/chat-images.test.ts",
+        "src/utils/image-library-sources.test.ts",
+        "src/utils/chat-tools-background.test.ts"
+      ]
+    },
+    {
+      "id": "shared-chat-model-picker",
+      "title": "普通侧栏和写作共用可搜索的模型选择器、最近使用及每模型思考强度",
+      "origin": "codex/sidebar-image-generation",
+      "files": [
+        "src/utils/model-picker.ts",
+        "src/styles/model-picker.scss",
+        "src/utils/clip-chat.ts",
+        "src/write/ai/chat-panel.ts"
+      ],
+      "tests": [
+        "src/utils/model-picker.test.ts",
+        "src/utils/chat-thinking.test.ts",
+        "src/write/ai/chat-panel.test.ts"
+      ]
+    },
+    {
+      "id": "reader-actions-write-article",
+      "title": "阅读与学习共用更多菜单、顶栏复制、Type 排版图标与视频简介字幕导入文章",
+      "origin": "codex/sidebar-image-generation",
+      "files": [
+        "src/utils/clip-bar.ts",
+        "src/utils/clip-bar-menu.ts",
+        "src/utils/reader-preview-shell.ts",
+        "src/core/reader-view.ts",
+        "src/write/source-import.ts",
+        "src/styles/clip-bar.scss"
+      ],
+      "tests": [
+        "src/utils/clip-bar.test.ts",
+        "src/utils/reader-preview-shell.test.ts",
+        "src/utils/reader-source-draft.test.ts",
+        "src/utils/transcript-export.test.ts",
+        "src/write/source-import.test.ts"
+      ]
+    },
+    {
+      "id": "chat-composer-scroll-layout",
+      "title": "写作独立滚动与 AI 对话输入区统一、引用预览、联网图标、思考菜单及弹窗写文章入口",
+      "origin": "codex/sidebar-image-generation",
+      "files": [
+        "src/core/popup.ts",
+        "src/popup.html",
+        "src/core/ai-chat-page.ts",
+        "src/utils/clip-chat.ts",
+        "src/utils/model-picker.ts",
+        "src/utils/chat-tool-view.ts",
+        "src/write/ai/chat-panel.ts",
+        "src/write/outline.ts",
+        "src/styles/write.scss",
+        "src/styles/clip-chat.scss"
+      ],
+      "tests": [
+        "src/core/ai-chat-page.test.ts",
+        "src/utils/clip-chat-images.test.ts",
+        "src/utils/chat-search-toggle.test.ts",
+        "src/utils/model-picker.test.ts",
+        "src/write/ai/chat-panel.test.ts",
+        "src/write/outline.test.ts",
+        "src/write/source-import.test.ts"
+      ]
     }
   ]
 }

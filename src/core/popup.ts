@@ -1,4 +1,4 @@
-import { openClipPreview } from '../utils/clip-preview';
+import { openClipPreview, updateClipPreview, type ClipPreview } from '../utils/clip-preview';
 import { saveLocalClip, LocalSavePayload } from '../utils/local-save';
 import { QiaomuClip, QiaomuResult } from '../utils/qiaomu-rss';
 import dayjs from 'dayjs';
@@ -1505,6 +1505,38 @@ async function copyContent() {
 window.addEventListener('resize', debouncedSetPopupDimensions);
 
 function setupCompactPopup() {
+    const writeArticle = document.getElementById('write-clip-article')!;
+    writeArticle.querySelector('span')!.textContent = t('写文章');
+    let writing = false, articlePreview: ClipPreview | undefined;
+    writeArticle.addEventListener('click', async event => {
+        event.preventDefault();
+        if (writing || !currentTemplate || !currentTabId) return;
+        writing = true; writeArticle.setAttribute('aria-disabled', 'true');
+        try {
+            const { extractedArticleSource, openClipArticle } = await import('../write/source-import');
+            const tab = await getCurrentTabInfo();
+            if (!tab.url) throw new Error(getMessage('pleaseReload'));
+            if (!articlePreview || articlePreview.clip.url !== tab.url) {
+                const markdown = (document.getElementById('note-content-field') as HTMLTextAreaElement).value;
+                const name = (document.getElementById('note-name-field') as HTMLTextAreaElement).value || tab.title || 'Untitled';
+                const extracted = await memoizedExtractPageContent(currentTabId);
+                articlePreview = {
+                    createdAt: Date.now(),
+                    local: { requestId: crypto.randomUUID(), content: markdown, name: `${sanitizeFileName(name)}.md`, folder: '', vault: '', behavior: 'create' },
+                    clip: { url: tab.url, title: name, markdown, image: tab.image },
+                    articleSource: extracted ? extractedArticleSource(extracted, tab.url) : undefined,
+                    aggregate: false, native: false,
+                };
+                // Persist the source so an unfinished transcript can be resumed from the writer.
+                await updateClipPreview(articlePreview);
+            }
+            await openClipArticle(articlePreview);
+            writeArticle.querySelector('span')!.textContent = t('继续写文章');
+        } catch (error) {
+            const status = document.getElementById('clip-action-status');
+            if (status) status.textContent = String(error);
+        } finally { writing = false; writeArticle.removeAttribute('aria-disabled'); }
+    });
     document.querySelectorAll('[data-i18n-aria-label]').forEach(element => {
         element.setAttribute('aria-label', getMessage(element.getAttribute('data-i18n-aria-label')!));
     });

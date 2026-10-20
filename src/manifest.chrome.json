@@ -15,6 +15,7 @@
 		"contextMenus",
 		"sidePanel",
 		"storage",
+		"offscreen",
 		"unlimitedStorage",
 		"scripting",
 		"declarativeNetRequest"
