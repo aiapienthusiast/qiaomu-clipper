@@ -33,6 +33,7 @@
 					<li data-section="study"><div class="nav-item-icon"><i data-lucide="headphones"></i></div><span>转写学习</span></li>
 					<li class="sidebar-heading">AI 模型设置</li>
 					<li data-section="interpreter"><div class="nav-item-icon"><i data-lucide="sparkles"></i></div><span>LLM 提供商与模型</span></li>
+					<li data-section="web-search"><div class="nav-item-icon"><i data-lucide="globe"></i></div><span>联网搜索</span></li>
 					<li data-section="image-models"><div class="nav-item-icon"><i data-lucide="image"></i></div><span>生图模型</span></li>
 					<li data-section="asr-models"><div class="nav-item-icon"><i data-lucide="mic"></i></div><span>ASR 语音识别</span></li>
 					</ul>
@@ -251,6 +252,7 @@
 										<a class="btn mod-cta" id="local-helper-download" href="https://github.com/joeseesun/qiaomu-clipper/releases/latest/download/qiaomu-clipper-helper.pkg" target="_blank" rel="noopener noreferrer" hidden>下载安装包（macOS）</a>
 										<button type="button" id="local-helper-recheck" class="btn">重新检查</button>
 										<button type="button" id="local-helper-copy" class="btn" hidden>让 AI 帮我安装</button>
+										<button type="button" id="local-helper-uninstall" class="btn" hidden>卸载助手</button>
 										<a class="btn" id="local-helper-more" href="https://github.com/joeseesun/qiaomu-clipper/releases" target="_blank" rel="noopener noreferrer" hidden>所有安装包</a>
 									</div>
 								</div>
@@ -480,6 +482,21 @@
 											<div class="checkbox-container">
 												<input type="checkbox" id="youtube-panel-actions-toggle" />
 											</div>
+										</div>
+									</div>
+									<div class="setting-item mod-horizontal">
+										<div class="setting-item-info">
+											<label for="caption-download-format">字幕下载格式</label>
+											<div class="setting-item-description">点字幕条上的下载图标时保存的格式。选定一种后一键下载，想换格式时在图标上点右键。</div>
+										</div>
+										<div class="setting-item-control">
+											<select id="caption-download-format">
+												<option value="ask" selected>每次选择（默认）</option>
+												<option value="md">Markdown</option>
+												<option value="srt">SRT</option>
+												<option value="vtt">VTT</option>
+												<option value="txt">TXT</option>
+											</select>
 										</div>
 									</div>
 									<div class="setting-item mod-horizontal mod-toggle">
@@ -838,11 +855,13 @@
 						</form>
 					</div>
 
+					<div id="web-search-section" class="settings-section"><div class="settings-section-header"><h2>联网搜索</h2></div><div class="setting-item-description">用于网页 AI 侧栏和写长文。切换聊天模型后仍可使用。</div><div id="web-search-home"></div></div>
+
 					<div id="image-models-section" class="settings-section">
 						<div class="settings-section-header">
 							<h2>生图模型</h2>
 						</div>
-						<div class="setting-item-description">给「写长文」里的 AI 配图和封面用。可以添加多个，选一个当默认。</div>
+						<div class="setting-item-description">用于网页 AI 侧栏、写长文和图库。可以添加多个生图服务，选一个当默认。</div>
 						<div id="image-models-home"></div>
 					</div>
 

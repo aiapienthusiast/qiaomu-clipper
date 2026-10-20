@@ -113,6 +113,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 		};
 
 		Reader.isReaderPage = true;
+		// Plain reading uses the same clip actions as previews and immersive study.
+		Reader.onEdit = () => {};
 		Reader.onNavigate = navigateInReader;
 		setPageUrl(url);
 
@@ -138,6 +140,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 		document.head.appendChild(highlighterLink);
 
 		await loadSettings();
+		const session = await createReaderSourceDraft(url, result.title || url);
+		await session.populate(result);
+		mountReaderPreviewShell(session.draft);
 
 		if (result.title) {
 			document.title = result.title;
@@ -315,6 +320,11 @@ function setFavicon(faviconUrl: string, pageUrl: string) {
 }
 
 function navigateInReader(newUrl: string) {
+	if (document.querySelector('.clip-bar')) {
+		// A new source gets its own draft identity and action handlers.
+		location.href = browser.runtime.getURL('reader.html?url=' + encodeURIComponent(newUrl));
+		return;
+	}
 	const readerUrl = browser.runtime.getURL('reader.html?url=' + encodeURIComponent(newUrl));
 	history.pushState(null, '', readerUrl);
 	loadArticle(newUrl);

@@ -4,7 +4,7 @@ import { generalSettings } from '../utils/storage-utils';
 import { updatePromptContextVisibility } from './interpreter-settings';
 import { initializePropertyTypesManager } from './property-types-manager';
 
-export type SettingsSection = 'general' | 'write' | 'study' | 'asr' | 'clip' | 'learning' | 'video' | 'properties' | 'highlighter' | 'interpreter' | 'asr-models' | 'image-models' | 'about' | 'reader' | 'templates' | 'templates-home';
+export type SettingsSection = 'general' | 'write' | 'study' | 'asr' | 'clip' | 'learning' | 'video' | 'properties' | 'highlighter' | 'interpreter' | 'asr-models' | 'web-search' | 'image-models' | 'about' | 'reader' | 'templates' | 'templates-home';
 
 export function showSettingsSection(requested: SettingsSection | 'video', templateId?: string): void {
 	// Subtitle bar settings now sit on the Subtitles and transcription page.
@@ -99,6 +99,7 @@ export function initializeSidebar(): void {
 				|| section === 'highlighter'
 				|| section === 'interpreter'
 				|| section === 'asr-models'
+				|| section === 'web-search'
 				|| section === 'image-models'
 				|| section === 'write'
 				|| section === 'about'

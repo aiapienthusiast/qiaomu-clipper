@@ -1,8 +1,10 @@
+import { normalizeToolResults, type ChatToolResult } from './chat-tools-types';
 import browser from './browser-polyfill';
 import type { ChatTurn } from './chat-llm';
+import type { ChatImageGeneration } from './chat-image-generation';
 
 // A question may quote a passage the reader selected in the article.
-export interface StoredTurn extends Omit<ChatTurn, 'images'> { quote?: string; imageNumbers?: number[] }
+export interface StoredTurn extends Omit<ChatTurn, 'images'> { quote?: string; imageNumbers?: number[]; generatedImages?: ChatImageGeneration[]; tools?: ChatToolResult[] }
 
 export interface Conversation {
 	id: string;
@@ -31,14 +33,17 @@ export function chatKey(url: string, preserveUrlHash = false): string {
 export async function loadConversations(url: string, preserveUrlHash = false): Promise<Conversation[]> {
 	const key = chatKey(url, preserveUrlHash);
 	const saved = (await browser.storage.local.get(key))[key] as ArticleChats | undefined;
-	return [...(saved?.conversations ?? [])].sort((a, b) => b.updatedAt - a.updatedAt);
+	return [...(saved?.conversations ?? [])].map(c => ({ ...c, messages: c.messages.map(m => ({ ...m, ...(m.tools ? { tools: normalizeToolResults(m.tools) } : {}) })) })).sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export async function saveConversation(url: string, articleTitle: string, conversation: Conversation, preserveUrlHash = false): Promise<void> {
 	const key = chatKey(url, preserveUrlHash);
 	const saved = (await browser.storage.local.get([key, INDEX_KEY]));
 	const article: ArticleChats = (saved[key] as ArticleChats | undefined) ?? { url, title: articleTitle, updatedAt: 0, conversations: [] };
-	const stored: Conversation = { ...conversation, messages: conversation.messages.slice(-MAX_MESSAGES).map(({ role, content, quote, imageNumbers }) => ({ role, content, ...(quote ? { quote } : {}), ...(imageNumbers?.length ? { imageNumbers } : {}) })), updatedAt: Date.now() };
+	const stored: Conversation = { ...conversation, messages: conversation.messages.slice(-MAX_MESSAGES).map(({ role, content, quote, imageNumbers, generatedImages, tools }) => ({
+		role, content, ...(tools?.length ? { tools: normalizeToolResults(tools) } : {}), ...(quote ? { quote } : {}), ...(imageNumbers?.length ? { imageNumbers } : {}),
+		...(generatedImages?.length ? { generatedImages: generatedImages.slice(0, 4).map(({ prompt, aspect, imageId, modelLabel, jobId, error }) => ({ prompt, aspect, ...(imageId ? { imageId } : {}), ...(modelLabel ? { modelLabel } : {}), ...(jobId ? { jobId } : {}), ...(error ? { error } : {}) })) } : {}),
+	})), updatedAt: Date.now() };
 	article.title = articleTitle;
 	article.updatedAt = stored.updatedAt;
 	article.conversations = [stored, ...article.conversations.filter(c => c.id !== stored.id)].slice(0, MAX_CONVERSATIONS);

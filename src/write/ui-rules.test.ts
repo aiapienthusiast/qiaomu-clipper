@@ -21,8 +21,8 @@ it('scopes every button so the app\'s global button rules and their :hover lose'
 	expect(list).toContain('html button.write-btn:not(.write-x)');
 });
 
-it('gives the sticky top bar and the floating menus a solid background', () => {
-	expect(writer).toMatch(/\.qw-top \{[^}]*position: sticky[^}]*background: var\(--background-primary\)/);
+it('gives the stationary top bar and the floating menus a solid background', () => {
+	expect(writer).toMatch(/\.qw-top \{[^}]*flex: 0 0 var\(--qw-top\)[^}]*background: var\(--background-primary\)/);
 	for (const rule of ['.qw-menu', '.qw-bubble', '.qw-ai-panel', 'dialog.qw-dialog']) {
 		const match = writer.match(new RegExp(`${rule.replace('.', '\\.')} \\{[^\\n]*`));
 		expect(match?.[0], rule).toMatch(/background: var\(--background-primary\)/);
@@ -49,7 +49,7 @@ it('gives the AI drawer a solid background and scopes its controls', () => {
 	expect(writer).toContain('html button.qw-chat-send:not(.qw-x)');
 	expect(writer).toContain('html & button.qw-prop-apply:not(.qw-x)');
 	// the send box is a field: one soft ring on focus, no stacked outline
-	expect(writer).toContain('box-shadow: var(--field-focus-ring), inset 0 0 0 1px var(--field-focus-border)');
+	expect(writer).toContain('border-color: var(--field-focus-border); box-shadow: var(--field-focus-ring)');
 });
 
 it('shares dialogs with the settings page, which does not load write.css', () => {

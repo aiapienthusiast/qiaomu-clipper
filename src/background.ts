@@ -1,3 +1,5 @@
+import { handleImageJobs } from './utils/image-job-background';
+import { handleChatToolPort } from './utils/chat-tools-background';
 import { openAiSidebar } from './utils/ai-sidebar';
 import { handleChatImageSource } from './utils/chat-image-source';
 import { validChatTurns } from './utils/chat-content';
@@ -38,6 +40,8 @@ registerPublishBridge();
 browser.runtime.onMessage.addListener(handleLearningNativeMessage);
 browser.runtime.onMessage.addListener(handleAsrMessage);
 browser.runtime.onMessage.addListener(handleChatImageSource);
+browser.runtime.onMessage.addListener(handleImageJobs);
+browser.runtime.onConnect.addListener(handleChatToolPort);
 
 // Accept RSS writes only from our own extension pages, never a website content script.
 const qiaomuInFlight = new Map<string, Promise<unknown>>();
@@ -47,11 +51,14 @@ const helperDown = (error: unknown) => { const reason = error instanceof Error ?
 
 browser.runtime.onMessage.addListener((request: unknown, sender: browser.Runtime.MessageSender) => {
 	const message = request as { action?: string; payload?: { requestId?: string; vaultPath?: string; vault?: string; folder?: string } };
-	if (!['qiaomuLocalStatus', 'qiaomuLocalSave', 'qiaomuLocalConfigure', 'qiaomuLocalChooseVault', 'qiaomuLocalChooseFolder', 'qiaomuLocalListVaults'].includes(message?.action || '')) return;
+	if (!['qiaomuLocalStatus', 'qiaomuLocalSave', 'qiaomuLocalConfigure', 'qiaomuLocalChooseVault', 'qiaomuLocalChooseFolder', 'qiaomuLocalListVaults', 'qiaomuLocalUninstallPlan', 'qiaomuLocalUninstall'].includes(message?.action || '')) return;
 	if (sender.id !== browser.runtime.id || !sender.url?.startsWith(browser.runtime.getURL(''))) return Promise.resolve({ ok: false, error: t('无效的本地保存请求') });
 	if (message.action === 'qiaomuLocalStatus') return callHelper({ action: 'status' }).catch((error: unknown) => ({ ok: false, reason: error instanceof Error ? error.message : String(error) }));
 	if (message.action === 'qiaomuLocalChooseFolder') return callHelper({ action: 'chooseNoteFolder', vault: message.payload?.vault, folder: message.payload?.folder })
 		.catch(error => ({ ...helperDown(error), error: t('{0}也可以手动填写相对路径。', [describeHelperFailure(error instanceof Error ? error.message : String(error))]) }));
+	// Taking the helper away is a settings-page action; the helper refuses while a subtitle job is running.
+	if (message.action === 'qiaomuLocalUninstallPlan') return callHelper({ action: 'helperUninstallPlan' }).catch(helperDown);
+	if (message.action === 'qiaomuLocalUninstall') return callHelper({ action: 'helperUninstall' }).catch(helperDown);
 	if (message.action === 'qiaomuLocalListVaults') return callHelper({ action: 'listVaults' }).catch(helperDown);
 	if (message.action === 'qiaomuLocalChooseVault') return callHelper({ action: 'chooseVault' })
 		.catch(helperDown);

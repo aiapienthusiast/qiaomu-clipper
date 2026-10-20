@@ -152,5 +152,68 @@ it('loads the models a service offers, narrowed to picture models', async () => 
 	expect((await fetchImageModels(accountSources()[0], '', '')).map(m => m.id)).toEqual(['gpt-image-1']);
 	settings.providers = [codex];
 	respond({ models: [{ slug: 'gpt-5.5' }, { slug: 'codex-mini' }, { slug: 'o3' }] });
-	expect((await fetchImageModels(accountSources()[0], '', '')).map(m => m.id)).toEqual(['gpt-5.5', 'codex-mini']);
+	expect(await fetchImageModels(accountSources()[0], '', '')).toEqual([{ id: 'imagegen', name: '内置 ImageGen' }]);
+	expect(fetch).not.toHaveBeenCalled();
+	expect(await fetchImageModels(IMAGE_SOURCES.find(s => s.id === 'codex-local')!, '', '')).toEqual([{ id: 'imagegen', name: '内置 ImageGen' }]);
+	expect(fetch).not.toHaveBeenCalled();
+});
+
+it('migrates Codex chat-model selections into internal orchestration and exposes only ImageGen', async () => {
+	settings.providers = [codex];
+	const legacy = account(codex, { name: '我的 Codex', model: 'gpt-5.6-sol', models: ['gpt-5.6-sol', 'codex-auto-review'], catalog: { baseUrl: '', models: [{ id: 'codex-auto-review' }] } });
+	const local = model({ id: 'local', engine: 'codex', sourceId: 'codex-local', apiKey: '', baseUrl: '', model: 'default', models: ['default', 'gpt-6-sol'] });
+	const normalized = normalizeStore({ models: [legacy, local], defaultId: legacy.id });
+	expect(normalized.models[0]).toMatchObject({ name: '我的 Codex', providerId: codex.id, model: 'imagegen', models: ['imagegen'], agentModel: 'gpt-5.6-sol' });
+	expect(normalized.models[0].catalog).toBeUndefined();
+	expect(normalized.models[1]).toMatchObject({ model: 'imagegen', models: ['imagegen'] });
+	expect(normalized.models[1].agentModel).toBeUndefined();
+	expect(normalizeStore(normalized)).toEqual(normalized);
+	expect(modelsOf(legacy)).toEqual(['imagegen']);
+	expect(labelOf(legacy)).toBe('我的 Codex · 内置 ImageGen');
+	vi.stubGlobal('fetch', vi.fn(async (url: string, init: any) => { calls.push({ url, init }); return new Response(`data: ${JSON.stringify({ type: 'response.output_item.done', item: { type: 'image_generation_call', result: PNG_B64 } })}`); }));
+	await generateImage(normalized.models[0], '山水', '1:1', undefined, 'imagegen', codex as any);
+	expect(JSON.parse(calls[0].init.body)).toMatchObject({ model: 'gpt-5.6-sol', tool_choice: { type: 'image_generation' } });
+	expect(normalized.defaultId).toBe(legacy.id);
+});
+
+it('migrates only the known Jimeng deployment without losing its key, address or default service', async () => {
+	const legacy = model({ sourceId: 'custom', baseUrl: 'https://www.t5t6.com/jimeng-api/v1/', name: '我的即梦', model: 'jimeng', models: ['jimeng', 'jimeng-5.0', 'jimeng-video-3.0'] });
+	const result = normalizeStore({ models: [legacy], defaultId: 'a' });
+	expect(result.models[0]).toMatchObject({ engine: 'jimeng', sourceId: 'jimeng', baseUrl: legacy.baseUrl, apiKey: 'sk-1', name: '我的即梦', model: 'jimeng-4.5', models: ['jimeng-4.5', 'jimeng-5.0'] });
+	expect(result.defaultId).toBe('a');
+	expect(normalizeStore(result)).toEqual(result);
+	for (const baseUrl of ['https://other.example/v1', 'https://www.t5t6.com.evil.example/jimeng-api/v1', 'https://www.t5t6.com/other/v1']) {
+		expect(normalizeStore({ models: [{ ...legacy, baseUrl }] }).models[0].engine).toBe('api');
+	}
+});
+
+it('uses the Jimeng protocol at any deployment address and keeps standard OpenAI requests unchanged', async () => {
+	respond({ data: [{ b64_json: PNG_B64 }] });
+	const config = model({ sourceId: 'jimeng', engine: 'jimeng' as never, baseUrl: 'https://my-jimeng.example/api/v1/', model: 'jimeng-5.0' });
+	await generateImage(config, '山水', '9:16');
+	expect(calls[0].url).toBe('https://my-jimeng.example/api/v1/images/generations');
+	expect(JSON.parse(calls[0].init.body)).toEqual({ model: 'jimeng-5.0', prompt: '山水', ratio: '9:16', resolution: '2k', response_format: 'url' });
+	expect(isReady({ ...config, baseUrl: '' })).toBe(false);
+	await generateImage(model(), '山水', '9:16');
+	expect(JSON.parse(calls[1].init.body).size).toBe('1024x1536');
+});
+
+it('preserves business errors returned with HTTP 200 instead of claiming the image was empty', async () => {
+	respond({ code: -1000, message: '不支持的参数: size。请使用 ratio 和 resolution 参数控制图像尺寸。', data: null });
+	await expect(generateImage(model(), 'x')).rejects.toThrow('不支持的参数: size');
+});
+
+it('discovers future image models by output capabilities and never offers video models', async () => {
+	const source = IMAGE_SOURCES.find(s => s.id === 'custom')!;
+	respond({ data: [
+		{ id: 'jimeng-5.1', type: 'image', display_name: '即梦 5.1' },
+		{ id: 'future-model', capabilities: { output_modalities: ['image'] } },
+		{ id: 'sees-images', architecture: { input_modalities: ['image'], output_modalities: ['text'] } },
+		{ id: 'jimeng-video-3.0' }, { id: 'image-to-video', type: 'video' },
+	] });
+	expect((await fetchImageModels(source, 'https://example.com/v1', 'k')).map(m => m.id)).toEqual(['jimeng-5.1', 'future-model']);
+	respond({ data: [{ id: 'jimeng' }, { id: 'jimeng-video-3.0' }] });
+	expect((await fetchImageModels(source, 'https://example.com/v1', 'k')).map(m => m.id)).toEqual(['jimeng']);
+	respond({ data: [{ id: 'jimeng-video-3.0' }] });
+	expect(await fetchImageModels(source, 'https://example.com/v1', 'k')).toEqual([]);
 });
