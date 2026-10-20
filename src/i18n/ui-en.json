@@ -1423,5 +1423,8 @@
  "字幕尚未就绪，获取完成后会自动补入文章。": "Captions are not ready yet. They will be added to the article when available.",
  "无法打开来源，请重试": "Could not open the source. Please retry.",
  "回到来源获取字幕": "Return to source for captions",
- "视频简介": "Video description"
+ "视频简介": "Video description",
+ "字幕下载格式": "Subtitle download format",
+ "点字幕条上的下载图标时保存的格式。选定一种后一键下载，想换格式时在图标上点右键。": "The format saved when you click the download icon on the subtitle bar. Pick one to download in a single click; right-click the icon to choose another format.",
+ "每次选择（默认）": "Ask each time (default)"
 }

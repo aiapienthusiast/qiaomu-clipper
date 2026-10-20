@@ -1423,5 +1423,8 @@
  "字幕尚未就绪，获取完成后会自动补入文章。": "Die Untertitel sind noch nicht bereit. Sie werden dem Artikel hinzugefügt, sobald sie verfügbar sind.",
  "无法打开来源，请重试": "Die Quelle konnte nicht geöffnet werden. Bitte erneut versuchen.",
  "回到来源获取字幕": "Zur Quelle zurückkehren, um Untertitel abzurufen",
- "视频简介": "Videobeschreibung"
+ "视频简介": "Videobeschreibung",
+ "字幕下载格式": "Format für den Untertitel-Download",
+ "点字幕条上的下载图标时保存的格式。选定一种后一键下载，想换格式时在图标上点右键。": "Das Format, das beim Klick auf das Download-Symbol der Untertitelleiste gespeichert wird. Mit einer festen Wahl lädt ein Klick sofort herunter; per Rechtsklick auf das Symbol wählst du ein anderes Format.",
+ "每次选择（默认）": "Jedes Mal fragen (Standard)"
 }

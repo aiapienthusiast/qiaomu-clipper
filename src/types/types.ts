@@ -103,6 +103,8 @@ export interface Settings {
 	learningIncludeQuote?: boolean;
 	learningIncludeSource?: boolean;
 	youtubeAutoTranscript?: boolean;
+	// Format the transcript bar's download icon saves in one click; 'ask' opens a menu of formats.
+	captionDownloadFormat?: 'ask' | 'md' | 'srt' | 'vtt' | 'txt';
 	youtubeHideNativeTranscript?: boolean;
 	highlighterEnabled: boolean;
 	alwaysShowHighlights: boolean;

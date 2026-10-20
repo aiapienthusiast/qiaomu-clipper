@@ -1423,5 +1423,8 @@
  "字幕尚未就绪，获取完成后会自动补入文章。": "Los subtítulos aún no están listos. Se añadirán al artículo cuando estén disponibles.",
  "无法打开来源，请重试": "No se pudo abrir la fuente. Inténtalo de nuevo.",
  "回到来源获取字幕": "Volver a la fuente para obtener subtítulos",
- "视频简介": "Descripción del vídeo"
+ "视频简介": "Descripción del vídeo",
+ "字幕下载格式": "Formato de descarga de subtítulos",
+ "点字幕条上的下载图标时保存的格式。选定一种后一键下载，想换格式时在图标上点右键。": "El formato que se guarda al pulsar el icono de descarga de la barra de subtítulos. Elige uno para descargar con un solo clic; haz clic derecho en el icono para elegir otro formato.",
+ "每次选择（默认）": "Preguntar cada vez (predeterminado)"
 }
