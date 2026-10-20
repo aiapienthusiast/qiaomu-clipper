@@ -290,12 +290,12 @@ export async function initializeLocalVaultSettings(): Promise<void> {
 	uninstall?.addEventListener('click', async () => {
 		uninstall.disabled = true;
 		try {
-			const plan = await browser.runtime.sendMessage({ action: 'qiaomuLocalUninstallPlan' }) as { ok?: boolean; freedMb?: number };
+			const plan = await browser.runtime.sendMessage({ action: 'qiaomuLocalUninstallPlan' }) as { ok?: boolean; freedMb?: number; preservesSharedModels?: boolean };
 			const freed = plan?.ok ? Math.max(1, plan.freedMb || 0) : 0;
 			// A helper from before this feature answers with an error: say so instead of failing at the password step.
-			if (!plan?.ok) { note.textContent = t('当前助手版本较旧，不能在这里卸载。请先下载安装最新助手，再回来卸载。'); return; }
+			if (!plan?.ok || plan.preservesSharedModels !== true) { note.textContent = t('当前助手版本较旧，不能在这里卸载。请先下载安装最新助手，再回来卸载。'); return; }
 			const gb = freed >= 1024 ? `${(freed / 1024).toFixed(1)} GB` : `${freed} MB`;
-			if (!window.confirm(t('卸载本地助手？将删除助手和已下载的识别引擎（约 {0}），需要输入这台 Mac 的密码。你的笔记不会被删除，需要时可以重新安装。', [freed ? gb : t('一些空间')]))) return;
+			if (!window.confirm(t('卸载本地助手？将删除助手及其独立运行环境（约 {0}），需要输入这台 Mac 的密码。笔记和共享模型缓存会保留，需要时可以重新安装。', [freed ? gb : t('一些空间')]))) return;
 			note.textContent = t('正在卸载…');
 			const result = await browser.runtime.sendMessage({ action: 'qiaomuLocalUninstall' }) as { ok?: boolean; cancelled?: boolean; error?: string; freedMb?: number; reason?: string };
 			if (result?.ok) { showOffline(t('助手已卸载，释放约 {0}。需要时可以重新下载安装。', [result.freedMb && result.freedMb >= 1024 ? `${(result.freedMb / 1024).toFixed(1)} GB` : `${result.freedMb || 0} MB`])); return; }

@@ -1,7 +1,7 @@
 {
 	"name": "qiaomu-clipper",
-	"version": "1.18.9",
-	"description": "Save web clips to Obsidian and Qiaomu RSS.",
+	"version": "1.19.0",
+	"description": "Turn what you read and watch into notes and articles. Clip pages, study captions, ask AI, write Markdown and add images.",
 	"bin": {
 		"obsidian-clipper": "./build/cli/cli.cjs"
 	},

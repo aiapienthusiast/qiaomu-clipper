@@ -886,11 +886,12 @@ def uninstall(base, message):
     engine = message.get('engine')
     if engine not in eng.ENGINES: raise ValueError('只能卸载由插件安装的识别引擎')
     if active_job(base)[0] or active_install(base)[0]: return {'ok': False, 'error': 'busy'}
-    shutil.rmtree(eng.venv_dir(engine), ignore_errors=True)
-    freed = 0
-    if message.get('model'):
-        folder = eng.hf_home() / 'hub' / ('models--' + eng.ENGINES[engine]['model'].replace('/', '--')); freed = eng.model_bytes(eng.ENGINES[engine]['model'])
-        shutil.rmtree(folder, ignore_errors=True)
+    folder = eng.venv_dir(engine)
+    freed = eng.folder_bytes(folder)
+    if folder.is_symlink(): folder.unlink()
+    else: shutil.rmtree(folder, ignore_errors=True)
+    # Older clients send model=True. Never remove the shared HF cache: other
+    # applications can use the same weights, regardless of who downloaded first.
     return {'ok': True, 'freedMb': round(freed / 1048576)}
 
 def run_install(base_dir):

@@ -650,6 +650,8 @@
       "origin": "codex/sidebar-image-generation",
       "files": [
         "src/utils/codex-image.ts",
+        "native/codex_images.py",
+        "native/test_codex_images.py",
         "src/managers/image-model-settings.ts"
       ],
       "tests": [
@@ -793,6 +795,23 @@
         "src/utils/caption-download.test.ts",
         "src/utils/youtube-transcript-bar-download.test.ts",
         "src/utils/caption-download-wiring.test.ts"
+      ]
+    },
+    {
+      "id": "shared-model-cache-uninstall-safety",
+      "title": "卸载助手和引擎保留共享模型，拒绝旧助手不安全卸载",
+      "origin": "codex/release-1-19-0",
+      "files": [
+        "native/uninstall.py",
+        "native/test_uninstall.py",
+        "native/asr.py",
+        "native/test_asr_install.py",
+        "src/managers/general-settings.ts",
+        "src/managers/asr-settings.ts"
+      ],
+      "tests": [
+        "src/managers/local-helper-settings.test.ts",
+        "src/managers/asr-settings.test.ts"
       ]
     }
   ]

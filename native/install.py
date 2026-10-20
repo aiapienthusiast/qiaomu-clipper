@@ -78,7 +78,7 @@ def registered(label,data):
     except OSError: return 'HKCU\\'+key,None
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--vault');p.add_argument('--extension-id',action='append',default=[],help='repeatable; default: auto-detect');p.add_argument('--check',action='store_true',help='diagnose an existing install without changing anything')
-    p.add_argument('--uninstall',action='store_true',help='remove the helper, its registrations and downloaded engines (asks for the Mac password to delete the installed package)')
+    p.add_argument('--uninstall',action='store_true',help='remove the helper, its registrations and private environments; preserve shared model caches (asks for the Mac password to delete the installed package)')
     a=p.parse_args()
     if a.uninstall:
         sys.path.insert(0,str(Path(__file__).resolve().parent));import uninstall

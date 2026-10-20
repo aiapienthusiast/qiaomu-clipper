@@ -136,8 +136,16 @@ def image_bytes(item, cwd):
     if item.get('failure') or item.get('status') in ('failed', 'cancelled'):
         raise ValueError('codex-image-failed')
     raw = None
+    # The app-server can save its own artifact outside the job workspace while
+    # also returning the full image inline. Prefer those bytes: no file access
+    # is needed, and the scoped-file fallback can remain strict.
+    if isinstance(item.get('result'), str) and item['result']:
+        value = re.sub(r'^data:[^;]+;base64,', '', item['result'])
+        if len(value) > MAX_IMAGE * 4 // 3 + 4:
+            raise ValueError('invalid-image')
+        raw = base64.b64decode(value, validate=True)
     saved = item.get('savedPath')
-    if isinstance(saved, str) and saved:
+    if raw is None and isinstance(saved, str) and saved:
         path = Path(unquote(urlparse(saved).path) if saved.startswith('file://') else saved)
         if not path.is_absolute():
             path = cwd / path
@@ -146,11 +154,6 @@ def image_bytes(item, cwd):
             raise ValueError('codex-image-path-invalid')
         if path.is_file() and 0 < path.stat().st_size <= MAX_IMAGE:
             raw = path.read_bytes()
-    if raw is None and isinstance(item.get('result'), str):
-        value = re.sub(r'^data:[^;]+;base64,', '', item['result'])
-        if len(value) > MAX_IMAGE * 4 // 3 + 4:
-            raise ValueError('invalid-image')
-        raw = base64.b64decode(value, validate=True)
     if not raw or len(raw) > MAX_IMAGE:
         raise ValueError('empty-image')
     kind = ('image/png' if raw.startswith(b'\x89PNG\r\n\x1a\n') else

@@ -21,6 +21,16 @@ class CodexImagesTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'invalid-image'):
                 images.image_bytes({'result': base64.b64encode(b'html').decode()}, root)
 
+    def test_inline_result_does_not_read_codex_global_artifact_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            item = {'result': base64.b64encode(PNG).decode(),
+                    'savedPath': '/outside/generated_images/thread/call.png'}
+            with patch.object(Path, 'read_bytes', side_effect=AssertionError('must use inline image')):
+                self.assertEqual(images.image_bytes(item, root), (PNG, 'image/png'))
+            with self.assertRaisesRegex(ValueError, 'path-invalid'):
+                images.image_bytes({'result': '', 'savedPath': item['savedPath']}, root)
+
     def test_native_chunks_and_no_restart(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -49,7 +49,7 @@ agent 注意：不要猜扩展 ID（商店版与本地加载版不同，猜错�
 
 日记使用电脑真实日期和该库 `.obsidian/daily-notes.json` 的目录配置；支持常见数字日期格式。复杂日期格式或已配置日记模板时明确报错，可通过更多菜单“添加到 Obsidian”保留原始行为。
 
-助手安装文件位于 `~/.local/share/qiaomu-clipper/`，Chrome 注册文件位于用户级 `NativeMessagingHosts/ai.qiaomu.clipper.json`。助手不常驻（只有「生成字幕」任务运行期间，会有一个后台识别进程，结束即退出）。卸载：扩展设置 →「本地助手」→「卸载助手」，确认后输入 Mac 密码，会一并删除安装包文件、各浏览器的注册文件、助手目录和已下载的识别引擎（不动笔记）；助手连不上时，在终端运行 `/Library/QiaomuClipper/bin/qiaomu-helper --uninstall`。如只想停用连接，移除注册文件即可；如需恢复 URI 保存，可清除扩展本地存储的 `qiaomuNativeConfigured` 标记。不要清除全部扩展存储，以免丢失模板和待提交内容。
+助手安装文件位于 `~/.local/share/qiaomu-clipper/`，Chrome 注册文件位于用户级 `NativeMessagingHosts/ai.qiaomu.clipper.json`。助手不常驻（只有「生成字幕」任务运行期间，会有一个后台识别进程，结束即退出）。卸载：扩展设置 →「本地助手」→「卸载助手」，确认后输入 Mac 密码，会一并删除安装包文件、各浏览器的注册文件、助手目录和独立运行环境；保留笔记和共享模型缓存；助手连不上时，在终端运行 `/Library/QiaomuClipper/bin/qiaomu-helper --uninstall`。如只想停用连接，移除注册文件即可；如需恢复 URI 保存，可清除扩展本地存储的 `qiaomuNativeConfigured` 标记。不要清除全部扩展存储，以免丢失模板和待提交内容。
 
 测试：`python3 -m unittest discover -s native -p 'test_*.py'`。
 

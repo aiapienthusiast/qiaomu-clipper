@@ -1,4 +1,4 @@
-"""Remove the local helper completely: browser registrations, the user folder, downloaded engines and the installed package.
+"""Remove the helper's registrations, private environments, user folder and installed package.
 
 Used by the extension's "卸载助手" button (through host.py) and by `qiaomu-helper --uninstall`.
 Never touches notes, the Obsidian vault, or models other tools downloaded into the shared Hugging Face cache.
@@ -36,13 +36,8 @@ def folder_bytes(folder):
     return total
 
 def engine_models():
-    """Hugging Face folders of the engines this helper installed (not the whole shared cache)."""
-    try:
-        sys.path.insert(0,str(BASE)); sys.path.insert(0,str(Path(__file__).resolve().parent))
-        import asr_engines as eng
-        home=eng.hf_home()/'hub'
-        return [home/('models--'+spec['model'].replace('/','--')) for spec in eng.ENGINES.values() if spec.get('model')]
-    except Exception: return []
+    """Model caches are shared; supporting a model does not establish ownership."""
+    return []
 
 def plan():
     """What would go, and how much space it frees. Reads only."""
@@ -51,7 +46,7 @@ def plan():
     size+=sum(folder_bytes(m) for m in models)
     system=sys.platform=='darwin' and SYSTEM_ROOT.is_dir()
     if system: size+=folder_bytes(SYSTEM_ROOT)
-    return {'registrations':[str(p) for p in manifests()],'user':str(BASE) if BASE.is_dir() else None,'models':[str(m) for m in models],'system':str(SYSTEM_ROOT) if system else None,'freedMb':round(size/1048576),'needsAdmin':system}
+    return {'registrations':[str(p) for p in manifests()],'user':str(BASE) if BASE.is_dir() else None,'models':[str(m) for m in models],'system':str(SYSTEM_ROOT) if system else None,'freedMb':round(size/1048576),'needsAdmin':system,'preservesSharedModels':True}
 
 def remove_system():
     """Delete the installed package files with the standard macOS password dialog. -> (done, cancelled, message)"""
@@ -67,7 +62,7 @@ def remove_system():
 
 def shell_quote(value): return "'"+value.replace("'","'\\''")+"'"
 
-def remove_user(models):
+def remove_user():
     for path in manifests():
         try: path.unlink()
         except OSError: pass
@@ -78,7 +73,6 @@ def remove_user(models):
                 try: winreg.DeleteKey(winreg.HKEY_CURRENT_USER,'Software\\'+vendor+'\\NativeMessagingHosts\\'+NAME)
                 except OSError: pass
         except ImportError: pass
-    for model in models: shutil.rmtree(model,ignore_errors=True)
     shutil.rmtree(BASE,ignore_errors=True)
 
 def run():
@@ -86,7 +80,7 @@ def run():
     found=plan()
     done,cancelled,message=remove_system()
     if not done: return {'ok':False,'cancelled':cancelled,'error':'没能删除系统里的助手文件：'+message if not cancelled else '已取消'}
-    remove_user([Path(m) for m in found['models']])
+    remove_user()
     return {'ok':True,'freedMb':found['freedMb'],'left':[str(p) for p in manifests()]+([str(BASE)] if BASE.exists() else [])}
 
 if __name__=='__main__':
